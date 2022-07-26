@@ -2,6 +2,10 @@
 
 ![Test Status](https://github.com/glaserL/viasp/actions/workflows/build_and_test.yml/badge.svg)
 
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stephanzwicknagl/viasp/master?filepath=example_notebook%2Fimport_mypackage.ipynb)
+
+
 **viASP visualizes an interactive explanation of your ASP program and its stable models**
 ![Example visualization](docs/img/header.png)
 
