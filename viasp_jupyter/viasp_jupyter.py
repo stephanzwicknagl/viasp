@@ -4,6 +4,8 @@ import viasp_dash
 from jupyter_dash import JupyterDash
 from viasp import Control
 
+JupyterDash.infer_jupyter_proxy_config()
+
 
 def load(argv):
     options = ["0"]
