@@ -6,8 +6,19 @@ from viasp import Control
 
 from jupyter_dash.comms import _jupyter_config
 
-_viasp_backend_url = _jupyter_config['base_subpath'].rstrip('/') + '/proxy/5050/'
+JupyterDash.infer_jupyter_proxy_config()
+
+if ('base_subpath' in _jupyter_config):
+    _viasp_backend_url = (
+        _jupyter_config['base_subpath'].rstrip('/') + '/proxy/5050'
+    )
 print(_viasp_backend_url)
+
+if ('server_url' in _jupyter_config):
+    _default_server_url = _jupyter_config['server_url']
+
+print(_default_server_url)
+
 def load(argv):
     options = ["0"]
 
@@ -33,4 +44,5 @@ app.layout = viasp_dash.ViaspDash(
     backendURL=_viasp_backend_url
 )
 
-subprocess.Popen(["viasp"],stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+subprocess.Popen(["viasp"], stdout=subprocess.DEVNULL,
+                 stderr=subprocess.DEVNULL)
