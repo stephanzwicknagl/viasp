@@ -17,10 +17,12 @@ if ('server_url' in _jupyter_config):
     _default_server_url = _jupyter_config['server_url']
 
 
-if (_default_server_url in globals() and _default_requests_pathname_prefix in globals()):
-    _viasp_backend_url = _default_server_url+_default_requests_pathname_prefix
-else:
-    _viasp_backend_url = "http://localhost:5050"
+# if (_default_server_url in globals() and _default_requests_pathname_prefix in globals()):
+    # _viasp_backend_url = _default_server_url+_default_requests_pathname_prefix
+# else:
+    # _viasp_backend_url = "http://localhost:5050"
+
+_viasp_backend_url = _default_server_url+_default_requests_pathname_prefix
 print(_viasp_backend_url)
 
 
