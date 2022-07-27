@@ -2,7 +2,6 @@ import subprocess
 
 import viasp_dash
 from jupyter_dash import JupyterDash
-from jupyter_dash.JupyterDash import infer_jupyter_proxy_config as infer_proxy
 from viasp import Control
 
 

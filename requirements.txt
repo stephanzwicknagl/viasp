@@ -12,3 +12,4 @@ dash
 dash-html-components
 igraph>=0.8
 numpy
+jupyter-dash
