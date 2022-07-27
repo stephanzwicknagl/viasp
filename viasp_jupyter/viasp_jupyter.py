@@ -9,20 +9,25 @@ from jupyter_dash.comms import _jupyter_config
 JupyterDash.infer_jupyter_proxy_config()
 
 if ('base_subpath' in _jupyter_config):
-    _viasp_backend_url = (
+    _default_requests_pathname_prefix = (
         _jupyter_config['base_subpath'].rstrip('/') + '/proxy/5050'
     )
-print(_viasp_backend_url)
 
 if ('server_url' in _jupyter_config):
     _default_server_url = _jupyter_config['server_url']
 
-print(_default_server_url)
+
+if (_default_server_url in locals() and _default_requests_pathname_prefix in locals()):
+    _viasp_backend_url = _default_server_url+_default_requests_pathname_prefix
+else:
+    _viasp_backend_url = "http://localhost:5050"
+print(_viasp_backend_url)
+
 
 def load(argv):
     options = ["0"]
 
-    ctl = Control(options, viasp_backend_url=_default_server_url+_viasp_backend_url)
+    ctl = Control(options, viasp_backend_url=_viasp_backend_url)
     for path in argv:
         ctl.load(path)
     if not argv:
@@ -41,7 +46,7 @@ app = JupyterDash(__name__)
 
 app.layout = viasp_dash.ViaspDash(
     id="myID",
-    backendURL=_default_server_url+_viasp_backend_url
+    backendURL=_viasp_backend_url
 )
 
 subprocess.Popen(["viasp"], stdout=subprocess.DEVNULL,
