@@ -22,7 +22,7 @@ print(_default_server_url)
 def load(argv):
     options = ["0"]
 
-    ctl = Control(options, viasp_backend_url=_viasp_backend_url)
+    ctl = Control(options, viasp_backend_url=_default_server_url+_viasp_backend_url)
     for path in argv:
         ctl.load(path)
     if not argv:
@@ -41,7 +41,7 @@ app = JupyterDash(__name__)
 
 app.layout = viasp_dash.ViaspDash(
     id="myID",
-    backendURL=_viasp_backend_url
+    backendURL=_default_server_url+_viasp_backend_url
 )
 
 subprocess.Popen(["viasp"], stdout=subprocess.DEVNULL,
