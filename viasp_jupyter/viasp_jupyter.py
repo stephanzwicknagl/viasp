@@ -52,5 +52,5 @@ app.layout = viasp_dash.ViaspDash(
 )
 
 subprocess.Popen(["viasp", "--host", _viasp_backend_url, "-p",
-                 '443'])  # , stdout=subprocess.DEVNULL,
+                 '5050'])  # , stdout=subprocess.DEVNULL,
                 #  stderr=subprocess.DEVNULL)
