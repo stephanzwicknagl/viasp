@@ -28,7 +28,6 @@ class ClingoClient(ViaspClient):
             self.backend_url = kwargs["viasp_backend_url"]
         else:
             self.backend_url = DEFAULT_BACKEND_URL
-        print(f"Connecting to backend at {self.backend_url}")
         if not backend_is_running(self.backend_url):
             log(f"Backend at is unavailable ({DEFAULT_BACKEND_URL})", Level.WARN)
 

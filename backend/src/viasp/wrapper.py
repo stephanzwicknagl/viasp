@@ -50,6 +50,7 @@ class Control(InnerControl):
 
     def __init__(self, *args, **kwargs):
         self.viasp = ShowConnector(**kwargs)
+        print(f"Connecting to backend at {kwargs['viasp_backend_url']}")
         if "_viasp_client" in kwargs:
             del kwargs["_viasp_client"]
         if "viasp_backend_url" in kwargs:
