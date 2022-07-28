@@ -22,8 +22,8 @@ VERSION = '1.3.2'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-        'viasp-backend',#>=1.3.2,
-        'viasp-dash',#>=1.1.6
+        # 'viasp-backend',#>=1.3.2, # make dependency installed from repo, not from pypi
+        # 'viasp-dash',#>=1.1.6
         'jupyter-dash',
         'jupyter-server-proxy'
 ]
