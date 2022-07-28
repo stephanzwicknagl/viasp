@@ -22,10 +22,10 @@ VERSION = '1.3.2'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-        # 'viasp-backend',#>=1.3.2, # make dependency installed from repo, not from pypi
-        # 'viasp-dash',#>=1.1.6
-        'jupyter-dash',
-        'jupyter-server-proxy'
+    # 'viasp-backend',#>=1.3.2, # make dependency installed from repo, not from pypi
+    # 'viasp-dash',#>=1.1.6
+    'jupyter-dash',
+    'jupyter-server-proxy'
 ]
 
 # What packages are optional?
@@ -82,7 +82,8 @@ class UploadCommand(Command):
             pass
 
         self.status('Building Source and Wheel (universal) distribution…')
-        os.system('{0} setup.py sdist bdist_wheel --universal'.format(sys.executable))
+        os.system(
+            '{0} setup.py sdist bdist_wheel --universal'.format(sys.executable))
 
         self.status('Uploading the package to PyPI via Twine…')
         os.system('twine upload dist/*')
@@ -90,7 +91,7 @@ class UploadCommand(Command):
         self.status('Pushing git tags…')
         os.system('git tag v{0}'.format(about['__version__']))
         os.system('git push --tags')
-        
+
         sys.exit()
 
 
@@ -105,7 +106,8 @@ setup(
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
     url=URL,
-    packages=find_packages(exclude=('tests',), include=('frontend.*', 'backend.*')),
+    packages=find_packages(exclude=('tests',)) + find_packages(
+        where='./frontend') + find_packages(where='./backend/src'),
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
 
