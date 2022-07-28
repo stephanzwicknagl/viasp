@@ -24,7 +24,8 @@ VERSION = '1.3.2'
 REQUIRED = [
         'viasp-backend',#>=1.3.2,
         'viasp-dash',#>=1.1.6
-        'jupyter-dash'
+        'jupyter-dash',
+        'jupyter-server-proxy'
 ]
 
 # What packages are optional?
