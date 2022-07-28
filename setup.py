@@ -22,8 +22,8 @@ VERSION = '1.3.2'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    # 'viasp-backend',#>=1.3.2, # make dependency installed from repo, not from pypi
-    # 'viasp-dash',#>=1.1.6
+    'viasp-backend',#>=1.3.2,
+    'viasp-dash',#>=1.1.6
     'jupyter-dash',
     'jupyter-server-proxy'
 ]
@@ -106,8 +106,7 @@ setup(
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
     url=URL,
-    packages=find_packages(exclude=('tests',)) + find_packages(
-        where='./frontend', exclude=('tests',)) + find_packages(where='./backend/src', exclude=('test',)),
+    packages=find_packages(exclude=('tests',)),
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
 
