@@ -107,7 +107,7 @@ setup(
     python_requires=REQUIRES_PYTHON,
     url=URL,
     packages=find_packages(exclude=('tests',)) + find_packages(
-        where='./frontend') + find_packages(where='./backend/src'),
+        where='./frontend', exclude=('tests',)) + find_packages(where='./backend/src', exclude=('test',)),
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
 
