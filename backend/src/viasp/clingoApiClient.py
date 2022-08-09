@@ -29,7 +29,7 @@ class ClingoClient(ViaspClient):
         else:
             self.backend_url = DEFAULT_BACKEND_URL
         if not backend_is_running(self.backend_url):
-            log(f"Backend at is unavailable ({DEFAULT_BACKEND_URL})", Level.WARN)
+            log(f"Backend at is unavailable ({self.backend_url})", Level.WARN)
 
     def is_available(self):
         return backend_is_running(self.backend_url)
