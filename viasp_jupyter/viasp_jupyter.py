@@ -6,24 +6,29 @@ from viasp import Control
 
 from jupyter_dash.comms import _jupyter_config
 
+
+# get proxy information for running in binder
+# and set the backend url, which will be used
+# by the frontend
 JupyterDash.infer_jupyter_proxy_config()
+
+if ('server_url' in _jupyter_config):
+    _default_server_url = _jupyter_config['server_url']
 
 if ('base_subpath' in _jupyter_config):
     _default_requests_pathname_prefix = (
         _jupyter_config['base_subpath'].rstrip('/') + '/proxy/5050'
     )
 
-if ('server_url' in _jupyter_config):
-    _default_server_url = _jupyter_config['server_url']
 
+if (_default_server_url in globals() and
+        _default_requests_pathname_prefix in globals()):
+    _viasp_backend_url = _default_server_url+_default_requests_pathname_prefix
+else:
+    _viasp_backend_url = "http://localhost:5050"
 
-# if (_default_server_url in globals() and _default_requests_pathname_prefix in globals()):
-    # _viasp_backend_url = _default_server_url+_default_requests_pathname_prefix
-# else:
-    # _viasp_backend_url = "http://localhost:5050"
+print("Starting backend at {}".format(_viasp_backend_url))
 
-_viasp_backend_url = _default_server_url+_default_requests_pathname_prefix
-print("Binder backendURL: {}".format(_viasp_backend_url))
 
 def load(argv):
     options = ["0"]
@@ -50,5 +55,5 @@ app.layout = viasp_dash.ViaspDash(
     backendURL=_viasp_backend_url
 )
 
-subprocess.Popen(["viasp"])  # , stdout=subprocess.DEVNULL,
-                #  stderr=subprocess.DEVNULL)
+subprocess.Popen(["viasp"], stdout=subprocess.DEVNULL,
+                 stderr=subprocess.DEVNULL)
