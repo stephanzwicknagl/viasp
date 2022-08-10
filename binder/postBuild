@@ -3,5 +3,3 @@
 pip install -e .
 pip install -e backend
 pip install -e frontend
-
-echo "In Postbuild script!"
