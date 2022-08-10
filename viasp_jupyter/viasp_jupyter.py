@@ -17,7 +17,7 @@ if ('server_url' in _jupyter_config and 'base_subpath' in _jupyter_config):
     _default_server_url = _jupyter_config['server_url']
 
     _default_requests_pathname_prefix = (
-        _jupyter_config['base_subpath'] + 'proxy/5050'
+        _jupyter_config['base_subpath'].rstrip('/') + '/proxy/5050'
     )
 
     _viasp_backend_url = _default_server_url+_default_requests_pathname_prefix
