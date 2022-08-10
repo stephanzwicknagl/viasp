@@ -11,6 +11,18 @@ from shutil import rmtree
 
 from setuptools import find_packages, setup, Command
 
+from setuptools.command.install import install
+import subprocess
+
+
+class InstallLocalPackage(install):
+    def run(self):
+        install.run(self)
+        subprocess.call(['echo', 'Installing local package'])
+        subprocess.call(['pip', 'install', '-e', '.'])
+        subprocess.call(['pip', 'install', '-e', 'backend'])
+        subprocess.call(['pip', 'install', '-e', 'frontend'])
+
 # Package meta-data.
 NAME = 'viasp'
 DESCRIPTION = 'a visualization tool for clingo.'
@@ -130,5 +142,6 @@ setup(
     # $ setup.py publish support.
     cmdclass={
         'upload': UploadCommand,
+        'install': InstallLocalPackage
     },
 )
