@@ -22,7 +22,8 @@ if ('server_url' in _jupyter_config):
 # else:
     # _viasp_backend_url = "http://localhost:5050"
 
-
+_viasp_backend_url = _default_server_url+_default_requests_pathname_prefix
+print("Binder backendURL: {}".format(_viasp_backend_url))
 
 def load(argv):
     options = ["0"]
@@ -46,7 +47,7 @@ app = JupyterDash(__name__)
 
 app.layout = viasp_dash.ViaspDash(
     id="myID",
-    backendURL="http://localhost:5050"
+    backendURL=_viasp_backend_url
 )
 
 subprocess.Popen(["viasp"])  # , stdout=subprocess.DEVNULL,
