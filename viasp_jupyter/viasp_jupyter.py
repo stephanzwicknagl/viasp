@@ -54,5 +54,5 @@ app.layout = viasp_dash.ViaspDash(
 )
 
 log = open('log.txt', 'a')
-subprocess.Popen(["viasp", "&"], stdout=log,
+subprocess.Popen(["viasp"], stdout=log,
                  stderr=subprocess.DEVNULL)
