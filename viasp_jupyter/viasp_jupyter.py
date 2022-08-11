@@ -10,10 +10,10 @@ from jupyter_dash.comms import _jupyter_config
 # get proxy information for running in binder
 # and set the backend url, which will be used
 # by the frontend
-try:
-    JupyterDash.infer_jupyter_proxy_config()
-except OSError:
-    pass
+# try:
+#     JupyterDash.infer_jupyter_proxy_config()
+# except EnvironmentError:
+#     pass
 if ('server_url' in _jupyter_config and 'base_subpath' in _jupyter_config):
     _default_server_url = _jupyter_config['server_url']
 
@@ -53,6 +53,6 @@ app.layout = viasp_dash.ViaspDash(
     backendURL=_viasp_backend_url
 )
 
-log = open('log.txt', 'a')
-subprocess.Popen(["viasp"], stdout=log,
+# log = open('log.txt', 'a')
+subprocess.Popen(["viasp"], stdout=subprocess.DEVNULL,
                  stderr=subprocess.DEVNULL)
