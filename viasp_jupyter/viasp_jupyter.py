@@ -14,7 +14,6 @@ try:
     JupyterDash.infer_jupyter_proxy_config()
 except OSError:
     pass
-print(_jupyter_config)
 if ('server_url' in _jupyter_config and 'base_subpath' in _jupyter_config):
     _default_server_url = _jupyter_config['server_url']
 
@@ -54,6 +53,6 @@ app.layout = viasp_dash.ViaspDash(
     backendURL=_viasp_backend_url
 )
 
-# log = open('log.txt', 'a')
-# subprocess.Popen(["viasp", "&"], stdout=log,
-#                  stderr=subprocess.DEVNULL)
+log = open('log.txt', 'a')
+subprocess.Popen(["viasp", "&"], stdout=log,
+                 stderr=subprocess.DEVNULL)
