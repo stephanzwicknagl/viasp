@@ -7,7 +7,6 @@ from viasp import Control
 from jupyter_dash.comms import _jupyter_config
 
 
-app = JupyterDash(__name__)
 # get proxy information for running in binder
 # and set the backend url, which will be used
 # by the frontend
@@ -46,10 +45,11 @@ def load(argv):
     ctl.viasp.show()
 
 
+app = JupyterDash(__name__)
 app.layout = viasp_dash.ViaspDash(
     id="myID",
     backendURL=_viasp_backend_url
 )
 
-subprocess.Popen(["viasp"])#, stdout=subprocess.DEVNULL,
-                 #stderr=subprocess.DEVNULL)
+subprocess.Popen(["viasp"])
+# , stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
