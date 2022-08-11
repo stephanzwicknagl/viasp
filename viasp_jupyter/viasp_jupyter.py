@@ -1,4 +1,5 @@
 import subprocess
+import os
 
 import viasp_dash
 from jupyter_dash import JupyterDash
@@ -10,10 +11,11 @@ from jupyter_dash.comms import _jupyter_config
 # get proxy information for running in binder
 # and set the backend url, which will be used
 # by the frontend
-# try:
-#     JupyterDash.infer_jupyter_proxy_config()
-# except EnvironmentError:
-#     pass
+if ('BINDER_SERVICE_HOST' in os.environ):
+    try:
+        JupyterDash.infer_jupyter_proxy_config()
+    except EnvironmentError:
+        pass
 if ('server_url' in _jupyter_config and 'base_subpath' in _jupyter_config):
     _default_server_url = _jupyter_config['server_url']
 
