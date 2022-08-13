@@ -18,6 +18,6 @@ build/
 # notes
 *.md
 # ignore build of viasp dash
-frontend/viasp_dash/*
+# frontend/viasp_dash/*
 # data
 *.json

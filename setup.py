@@ -11,6 +11,18 @@ from shutil import rmtree
 
 from setuptools import find_packages, setup, Command
 
+from setuptools.command.install import install
+import subprocess
+
+
+class InstallLocalPackage(install):
+    def run(self):
+        install.run(self)
+        subprocess.call(['echo', 'Installing local package'])
+        subprocess.call(['pip', 'install', '-e', '.'])
+        subprocess.call(['pip', 'install', '-e', 'backend'])
+        subprocess.call(['pip', 'install', '-e', 'frontend'])
+
 # Package meta-data.
 NAME = 'viasp'
 DESCRIPTION = 'a visualization tool for clingo.'
@@ -22,8 +34,8 @@ VERSION = '1.3.2'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    'viasp-backend',#>=1.3.2,
-    'viasp-dash',#>=1.1.6
+    # 'viasp-backend',#>=1.3.2,
+    # 'viasp-dash',#>=1.1.6
     'jupyter-dash',
     'jupyter-server-proxy'
 ]
@@ -106,7 +118,7 @@ setup(
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
     url=URL,
-    packages=find_packages(exclude=('tests',)),
+    packages=find_packages(exclude=('frontend.tests',)),
     # If your package is a single module, use this instead of 'packages':
     # py_modules=['mypackage'],
 
@@ -130,5 +142,6 @@ setup(
     # $ setup.py publish support.
     cmdclass={
         'upload': UploadCommand,
+        'install': InstallLocalPackage
     },
 )

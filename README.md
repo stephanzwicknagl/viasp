@@ -3,7 +3,7 @@
 ![Test Status](https://github.com/glaserL/viasp/actions/workflows/build_and_test.yml/badge.svg)
 
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stephanzwicknagl/viasp/main?filepath=examples%2Fintro_viasp.ipynb) Try it out in Binder!
+Try it out in Binder! [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stephanzwicknagl/viasp/jupyter_integration?filepath=examples%2Fintro_viasp.ipynb)
 
 
 **viASP visualizes an interactive explanation of your ASP program and its stable models**

@@ -1,0 +1,56 @@
+{
+  "src/lib/main/ViaspDash.react.js": {
+    "description": "ViaspDash is the main dash component",
+    "displayName": "ViaspDash",
+    "methods": [],
+    "props": {
+      "id": {
+        "type": {
+          "name": "string"
+        },
+        "required": false,
+        "description": "The ID used to identify this component in Dash callbacks."
+      },
+      "setProps": {
+        "type": {
+          "name": "func"
+        },
+        "required": false,
+        "description": "Dash-assigned callback that should be called to report property changes\nto Dash, to make them available for callbacks."
+      },
+      "colors": {
+        "type": {
+          "name": "object"
+        },
+        "required": false,
+        "description": "Colors to be used in the application.",
+        "defaultValue": {
+          "value": "{}",
+          "computed": false
+        }
+      },
+      "clickedOn": {
+        "type": {
+          "name": "object"
+        },
+        "required": false,
+        "description": "Object to set by the notifyDash callback",
+        "defaultValue": {
+          "value": "{}",
+          "computed": false
+        }
+      },
+      "backendURL": {
+        "type": {
+          "name": "string"
+        },
+        "required": false,
+        "description": "The url to the viasp backend server",
+        "defaultValue": {
+          "value": "DEFAULT_BACKEND_URL",
+          "computed": true
+        }
+      }
+    }
+  }
+}
