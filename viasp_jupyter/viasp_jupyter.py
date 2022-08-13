@@ -1,17 +1,25 @@
+"""
+    Create Environment and functions for running viASP in Jupyter Notebook.
+    If executed in binder, proxies are considered.
+
+    Functions:
+        load(argv)
+"""
+
 import subprocess
 import os
 
 import viasp_dash
 from jupyter_dash import JupyterDash
+from jupyter_dash.comms import _jupyter_config
 from viasp import Control
 
-from jupyter_dash.comms import _jupyter_config
 
 
-# get proxy information for running in binder
-# and set the backend url, which will be used
+# if running in binder, get proxy information
+# and set the backend URL, which will be used
 # by the frontend
-if ('BINDER_SERVICE_HOST' in os.environ):
+if 'BINDER_SERVICE_HOST' in os.environ:
     try:
         JupyterDash.infer_jupyter_proxy_config()
     except EnvironmentError:
@@ -24,11 +32,10 @@ if ('server_url' in _jupyter_config and 'base_subpath' in _jupyter_config):
     )
 
     _viasp_backend_url = _default_server_url+_default_requests_pathname_prefix
-
 else:
     _viasp_backend_url = "http://localhost:5050"
 
-print("Starting backend at {}".format(_viasp_backend_url))
+print(f"Starting backend at {_viasp_backend_url}")
 
 
 def load(argv):
@@ -55,6 +62,6 @@ app.layout = viasp_dash.ViaspDash(
     backendURL=_viasp_backend_url
 )
 
-# log = open('log.txt', 'a')
-subprocess.Popen(["viasp"], stdout=subprocess.DEVNULL,
-                 stderr=subprocess.DEVNULL)
+log = open('log.txt', 'a', encoding="utf-8")
+subprocess.Popen(["viasp"], stdout=log,
+                 stderr=log)
