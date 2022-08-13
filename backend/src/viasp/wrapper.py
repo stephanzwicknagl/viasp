@@ -55,6 +55,8 @@ class Control(InnerControl):
             del kwargs["_viasp_client"]
         if "viasp_backend_url" in kwargs:
             del kwargs["viasp_backend_url"]
+        if "control" in kwargs:
+            del kwargs["control"]
         self.viasp.register_function_call("__init__", signature(super().__init__), args, kwargs)
         super().__init__(*args, **kwargs)
 
