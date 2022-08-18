@@ -13,7 +13,7 @@ import atexit
 from viasp import clingoApiClient
 
 # Start the backend
-log = open('log.txt', 'a', encoding="utf-8")
+log = open('viasp.log', 'a', encoding="utf-8")
 viaspBackend = Popen(["viasp"], stdout=log, stderr=log)
 # make sure the backend is up, before continuing with other modules
 while True:
@@ -22,11 +22,16 @@ while True:
 
 def terminate_process(process):
     """ kill the backend on keyboard interruptions"""
-    print("Killing Backend")
+    print("\nKilling Backend")
     try:
         process.terminate()
     except OSError:
         print("Could not terminate viasp")
 
+def close_file(file):
+    """ close the log file"""
+    file.close()
+
 # kill the backend on keyboard interruptions
 atexit.register(terminate_process, viaspBackend)
+atexit.register(close_file, log)

@@ -62,7 +62,3 @@ app.layout = viasp_dash.ViaspDash(
     id="myID",
     backendURL=_viasp_backend_url
 )
-
-# log = open('log.txt', 'a', encoding="utf-8")
-# subprocess.Popen(["viasp"], stdout=log,
-#                  stderr=log)
