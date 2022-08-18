@@ -9,6 +9,7 @@
 import subprocess
 import os
 
+from viasp import start_backend
 import viasp_dash
 from jupyter_dash import JupyterDash
 from jupyter_dash.comms import _jupyter_config
@@ -61,7 +62,3 @@ app.layout = viasp_dash.ViaspDash(
     id="myID",
     backendURL=_viasp_backend_url
 )
-
-log = open('log.txt', 'a', encoding="utf-8")
-subprocess.Popen(["viasp"], stdout=log,
-                 stderr=log)

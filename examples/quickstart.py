@@ -1,5 +1,7 @@
 import sys
 
+# pylint: disable=unused-import,wrong-import-order
+from viasp import start_backend
 import viasp_dash
 from dash import Dash
 from viasp import Control

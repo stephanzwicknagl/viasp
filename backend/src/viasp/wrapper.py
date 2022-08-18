@@ -55,8 +55,22 @@ class Control(InnerControl):
             del kwargs["_viasp_client"]
         if "viasp_backend_url" in kwargs:
             del kwargs["viasp_backend_url"]
-        self.viasp.register_function_call("__init__", signature(super().__init__), args, kwargs)
-        super().__init__(*args, **kwargs)
+        if "control" in kwargs:
+            self._free = kwargs['control']._free
+            self._mem = kwargs['control']._mem
+            # c_handle = kwargs['control'].c_handle
+            # c_cb = kwargs['control'].c_cb
+            # c_args = kwargs['control'].c_args
+            self._rep = kwargs['control']._rep
+            self._handler = kwargs['control']._handler
+            self._statistics = kwargs['control']._statistics
+            self._statistics_call = kwargs['control']._statistics_call
+            self._error = kwargs['control']._error
+            del kwargs["control"]
+            self.viasp.register_function_call("__init__", signature(super().__init__), args, kwargs)
+        else:
+            self.viasp.register_function_call("__init__", signature(super().__init__), args, kwargs)
+            super().__init__(*args, **kwargs)
 
     def load(self, path: str) -> None:
         if path == "-":
