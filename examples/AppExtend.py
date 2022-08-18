@@ -15,23 +15,17 @@ class ViaspApp(Application):
 
         outer_ctl = Control(options, control=ctl, viasp_backend_url="http://localhost:5050")
 
-        for path in files: ctl.load(path)
-        if not files:
-            ctl.load("-")
-        ctl.ground([("base",[])], context=self)
 
         for path in files: outer_ctl.load(path)
         if not files:
             outer_ctl.load("-")
         outer_ctl.ground([("base", [])])
-        outer_ctl.solve()
 
-        with ctl.solve(yield_=True) as handle:
+        with outer_ctl.solve(yield_=True) as handle:
             for m in handle:
-                print("Answer:\n{}".format(m))
+                # print("Answer:\n{}".format(m))
                 outer_ctl.viasp.mark(m)
-            # print(handle.get())
-
+            print(handle.get())
         outer_ctl.viasp.show()
 
 app = Dash(__name__)
@@ -44,4 +38,3 @@ app.layout = viasp_dash.ViaspDash(
 if __name__ == "__main__":
     clingo_main(ViaspApp(), sys.argv[1:])
     app.run_server()
-    print("done")
