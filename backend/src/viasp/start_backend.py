@@ -13,7 +13,8 @@ import atexit
 from viasp import clingoApiClient
 
 # Start the backend
-viaspBackend = Popen(["viasp"], stdout=None, stderr=None)
+log = open('log.txt', 'a', encoding="utf-8")
+viaspBackend = Popen(["viasp"], stdout=log, stderr=log)
 # make sure the backend is up, before continuing with other modules
 while True:
     if clingoApiClient.backend_is_running():
