@@ -1,10 +1,8 @@
 import sys
 
-# pylint: disable=unused-import,wrong-import-order
-from viasp import start_backend
 import viasp_dash
 from dash import Dash
-from viasp import Control
+from viasp import Control, start_backend
 
 
 def main():
@@ -25,6 +23,7 @@ def main():
     ctl.viasp.show()
 
 
+start_backend.run()
 app = Dash(__name__)
 
 app.layout = viasp_dash.ViaspDash(
