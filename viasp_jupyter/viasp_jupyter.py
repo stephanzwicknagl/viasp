@@ -6,17 +6,15 @@
         load(argv)
 """
 
-import subprocess
 import os
 
-from viasp import start_backend
 import viasp_dash
 from jupyter_dash import JupyterDash
 from jupyter_dash.comms import _jupyter_config
-from viasp import Control
+from viasp import Control, start_backend
 
 
-
+start_backend.run()
 # if running in binder, get proxy information
 # and set the backend URL, which will be used
 # by the frontend
