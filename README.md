@@ -59,7 +59,7 @@ viASP only works if you run your ASP programs using the python API, e.g.:
 from viasp import Control
 
 program = """
-rain; sprinkler.
+1{rain; sprinkler}1.
 wet :- rain.
 wet :- sprinkler.
 """
