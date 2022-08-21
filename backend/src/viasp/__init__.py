@@ -1,1 +1,1 @@
-from .wrapper import Control, AppControl
+from .wrapper import Control

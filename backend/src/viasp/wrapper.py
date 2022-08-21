@@ -51,51 +51,15 @@ class Control(InnerControl):
     def __init__(self, *args, **kwargs):
         self.viasp = ShowConnector(**kwargs)
         print(f"Connecting to backend at {kwargs['viasp_backend_url']}")
-        if "_viasp_client" in kwargs:
-            del kwargs["_viasp_client"]
-        if "viasp_backend_url" in kwargs:
-            del kwargs["viasp_backend_url"]
-        self.viasp.register_function_call("__init__", signature(super().__init__), args, kwargs)
-        super().__init__(*args, **kwargs)
-
-    def load(self, path: str) -> None:
-        if path == "-":
-            path = STDIN_TMP_STORAGE_PATH
-            tmp = sys.stdin.readlines()
-            with open(path, "w", encoding="utf-8") as f:
-                f.writelines(tmp)
-        else:
-            shutil.copy(path, STDIN_TMP_STORAGE_PATH)
-            path = STDIN_TMP_STORAGE_PATH
-        self.viasp.register_function_call("load", signature(self.load), [], kwargs={"path": path})
-        super().load(path=str(path))
-
-    def __getattribute__(self, name):
-        attr = InnerControl.__getattribute__(self, name)
-        if is_non_cython_function_call(attr) and name != "load":
-            def wrapper_func(*args, **kwargs):
-                self.viasp.register_function_call(attr.__name__, signature(attr), args, kwargs)
-                result = attr(*args, **kwargs)
-                return result
-
-            return wrapper_func
-        else:
-            return attr
-
-
-class AppControl(InnerControl):
-
-    def __init__(self, *args, **kwargs):
-        self.viasp = ShowConnector(**kwargs)
-        print(f"Connecting to backend at {kwargs['viasp_backend_url']}")
+        self.passed_control = None
         if "_viasp_client" in kwargs:
             del kwargs["_viasp_client"]
         if "viasp_backend_url" in kwargs:
             del kwargs["viasp_backend_url"]
         if "control" in kwargs:
-            self.inctl = kwargs['control']
-            del kwargs["control"]
-            self.viasp.register_function_call("__init__", signature(self.inctl.__init__), args, kwargs)
+            self.passed_control = kwargs['control']
+            del kwargs['control']
+            self.viasp.register_function_call("__init__", signature(self.passed_control.__init__), args, kwargs)
         else:
             self.viasp.register_function_call("__init__", signature(super().__init__), args, kwargs)
             super().__init__(*args, **kwargs)
@@ -109,12 +73,18 @@ class AppControl(InnerControl):
         else:
             shutil.copy(path, STDIN_TMP_STORAGE_PATH)
             path = STDIN_TMP_STORAGE_PATH
-        self.viasp.register_function_call("load", signature(self.inctl.load), [], kwargs={"path": path})
-        self.inctl.load(path=str(path))
-        
+
+        if self.passed_control != None:
+            self.viasp.register_function_call("load", signature(self.passed_control.load), [], kwargs={"path": path})
+            self.passed_control.load(path=str(path))
+        else:
+            self.viasp.register_function_call("load", signature(self.load), [], kwargs={"path": path})
+            super().load(path=str(path))
+
+
     def __getattribute__(self, name):
-        if name == "ground" or name == "solve": 
-            attr = self.inctl.__getattribute__(name)
+        if (name == "ground" or name == "solve" or name == "_free") and self.passed_control != None: 
+            attr = self.passed_control.__getattribute__(name)
         else:
             attr = InnerControl.__getattribute__(self, name)
         if is_non_cython_function_call(attr) and name != "load":

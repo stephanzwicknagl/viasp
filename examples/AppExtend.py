@@ -3,7 +3,7 @@ from clingo.application import Application, clingo_main
 
 import viasp_dash
 from dash import Dash
-from viasp import AppControl, start_backend
+from viasp import Control, start_backend
 
 
 class ViaspApp(Application):
@@ -13,7 +13,7 @@ class ViaspApp(Application):
     def main(self, ctl, files):
         options = ["0"]
 
-        outer_ctl = AppControl(options, control=ctl, viasp_backend_url="http://localhost:5050")
+        outer_ctl = Control(options, control=ctl, viasp_backend_url="http://localhost:5050")
 
 
         for path in files: outer_ctl.load(path)
