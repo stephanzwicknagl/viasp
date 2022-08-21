@@ -3,7 +3,7 @@
 ![Test Status](https://github.com/glaserL/viasp/actions/workflows/build_and_test.yml/badge.svg)
 
 
-Try it out in Binder! [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stephanzwicknagl/viasp/jupyter_integration?filepath=examples%2Fintro_viasp.ipynb)
+Try it out in Binder! [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stephanzwicknagl/viasp/main?filepath=examples%2Fintro_viasp.ipynb)
 
 
 **viASP visualizes an interactive explanation of your ASP program and its stable models**
@@ -32,18 +32,15 @@ will install all necessary dependencies.
 viASP has two parts, its frontend [Dash](https://dash.plotly.com) component and the backend server. To get everything
 running, do the following:
 
-1. `viasp` (or `viasp &` to run it in the background)
-2. Start your dash app, a basic version can be found at [`examples/minimal_dash.py`](examples/minimal_dash.py)
-3. Replace `clingo.Control` with `viasp.Control` in your python scripts and use `viasp.mark(model)` to select the models
+1. Start your dash app, a basic version can be found at [`examples/minimal_dash.py`](examples/minimal_dash.py). This will also automatically start the backend server.
+2. Replace `clingo.Control` with `viasp.Control` in your python scripts and use `viasp.mark(model)` to select the models
    you want to show
 
 ### Quick start
 
 If you don't have any scripts handy that use the python API of clingo, you can use our quickstart script.
 
-**IMPORTANT** You will still need to start viasp (`viasp` or `viasp &`)
-
-Then run [`examples/quickstart.py`](examples/quickstart.py).
+Simply run [`examples/quickstart.py`](examples/quickstart.py).
 
 It works very similar to the usual `clingo`, you can call it as `python quickstart.py encoding.lp` or
 even `cat encoding | python quickstart.py`
@@ -62,7 +59,7 @@ viASP only works if you run your ASP programs using the python API, e.g.:
 from viasp import Control
 
 program = """
-rain; sprinkler.
+1{rain; sprinkler}1.
 wet :- rain.
 wet :- sprinkler.
 """
