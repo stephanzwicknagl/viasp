@@ -44,8 +44,6 @@ def object_hook(obj):
         return StableModel(**obj)
     elif t == "ClingoMethodCall":
         return ClingoMethodCall(**obj)
-    # elif t == "Application":
-    #     return Application(**obj)  #???
     return obj
 
 
