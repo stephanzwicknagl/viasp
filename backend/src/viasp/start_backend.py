@@ -10,13 +10,13 @@
 
 from subprocess import Popen
 import atexit
-from viasp import clingoApiClient, shared
+from viasp import clingoApiClient
+from viasp.shared.defaults import DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT, DEFAULT_BACKEND_PROTOCOL
 
-def run(host=shared.defaults.DEFAULT_BACKEND_HOST,
-        port=shared.defaults.DEFAULT_BACKEND_PORT):
+def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     """ start the backend on host:port """
 
-    backend_url = f"{shared.defaults.DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
+    backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
     command = ["viasp", "--host", host, "--port", str(port)]
 
     log = open('viasp.log', 'a', encoding="utf-8")
