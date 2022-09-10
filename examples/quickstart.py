@@ -1,14 +1,13 @@
 import sys
 
-import viasp_dash
-from dash import Dash
-from viasp import Control, start_backend
+from viasp import Control2, startup
+from clingo import Control
 
 
 def main():
-    options = ["0"]
+    options = ['0']
 
-    ctl = Control(options, viasp_backend_url="http://localhost:5050")
+    ctl = Control2(options,  control=Control(options), viasp_backend_url="http://localhost:5050")
     for path in sys.argv[1:]:
         ctl.load(path)
     if not sys.argv[1:]:
@@ -23,13 +22,7 @@ def main():
     ctl.viasp.show()
 
 
-start_backend.run()
-app = Dash(__name__)
-
-app.layout = viasp_dash.ViaspDash(
-    id="myID",
-    backendURL="http://localhost:5050"
-)
+app = startup.run()
 
 if __name__ == '__main__':
     main()

@@ -10,7 +10,7 @@ import clingo
 import networkx as nx
 from _clingo.lib import clingo_model_type_brave_consequences, clingo_model_type_cautious_consequences, \
     clingo_model_type_stable_model
-from clingo import Model as clingo_Model, ModelType, Symbol
+from clingo import Model as clingo_Model, ModelType, Symbol, Application
 from clingo.ast import AST
 
 from .interfaces import ViaspClient
@@ -86,6 +86,8 @@ def encode_object(o):
         return x
     elif isinstance(o, ViaspClient):
         return {"_type": "ViaspClient"}
+    elif isinstance(o, Application):
+        return {"_type": "Application"}
     elif isinstance(o, PosixPath):
         return str(o)
     elif isinstance(o, ModelType):

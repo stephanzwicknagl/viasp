@@ -1,6 +1,8 @@
 """
-    The module can be imported to start the backend and kill
-    it automatically on keyboard interruptions.
+    The module can be imported to create the dash app,
+    set the standard layout and start the backend.
+
+    The backend is killed automatically on keyboard interruptions.
 
     Make sure to import it as the first viasp module,
     before other modules (which are dependent on the backend).
@@ -10,14 +12,25 @@
 
 from subprocess import Popen
 import atexit
-from viasp import clingoApiClient, shared
+from dash import Dash
+import viasp_dash
+from viasp import clingoApiClient
+from viasp.shared.defaults import (
+                                  DEFAULT_BACKEND_HOST,
+                                  DEFAULT_BACKEND_PORT,
+                                  DEFAULT_BACKEND_PROTOCOL)
 
-def run(host=shared.defaults.DEFAULT_BACKEND_HOST,
-        port=shared.defaults.DEFAULT_BACKEND_PORT):
-    """ start the backend on host:port """
+def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
+    """ create the dash app, set layout and start the backend on host:port """
 
-    backend_url = f"{shared.defaults.DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
+    backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
     command = ["viasp", "--host", host, "--port", str(port)]
+
+    app = Dash(__name__)
+    app.layout = viasp_dash.ViaspDash(
+        id="myID",
+        backendURL=backend_url
+    )
 
     log = open('viasp.log', 'a', encoding="utf-8")
     viasp_backend = Popen(command, stdout=log, stderr=log)
@@ -41,3 +54,5 @@ def run(host=shared.defaults.DEFAULT_BACKEND_HOST,
     # kill the backend on keyboard interruptions
     atexit.register(terminate_process, viasp_backend)
     atexit.register(close_file, log)
+
+    return app
