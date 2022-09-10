@@ -8,13 +8,12 @@
 
 import os
 
-import viasp_dash
 from jupyter_dash import JupyterDash
 from jupyter_dash.comms import _jupyter_config
-from viasp import Control, start_backend
+from viasp import Control, startup
 
 
-start_backend.run()
+app = startup.run()
 # if running in binder, get proxy information
 # and set the backend URL, which will be used
 # by the frontend
@@ -53,10 +52,3 @@ def load(argv):
             ctl.viasp.mark(m)
         print(handle.get())
     ctl.viasp.show()
-
-
-app = JupyterDash(__name__)
-app.layout = viasp_dash.ViaspDash(
-    id="myID",
-    backendURL=_viasp_backend_url
-)
