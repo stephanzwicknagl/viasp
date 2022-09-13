@@ -29,7 +29,7 @@ DESCRIPTION = 'a visualization tool for clingo.'
 URL = 'https://github.com/glaserL/viasp'
 EMAIL = 'Luis.Glaser@uni-potsdam.de'
 AUTHOR = 'Luis Glaser'
-REQUIRES_PYTHON = '>=3.10.0'
+REQUIRES_PYTHON = '>=3.7.0'
 VERSION = '1.3.2'
 
 # What packages are required for this module to be executed?
