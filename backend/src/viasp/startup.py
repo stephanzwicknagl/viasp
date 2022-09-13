@@ -45,7 +45,7 @@ def run(mode="dash", host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     while True:
         if clingoApiClient.backend_is_running(backend_url):
             break
-        if time() - t > 10:
+        if time() - t > 30:
             raise Exception("Backend did not start in time.")
 
     def terminate_process(process):
