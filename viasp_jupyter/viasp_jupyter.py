@@ -13,7 +13,7 @@ from jupyter_dash.comms import _jupyter_config
 from viasp import Control, startup
 
 
-app = startup.run()
+app = startup.run(mode="jupyter")
 # if running in binder, get proxy information
 # and set the backend URL, which will be used
 # by the frontend

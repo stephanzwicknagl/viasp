@@ -1,1 +1,1 @@
-from .wrapper import Control
+from .wrapper import Control, Control2

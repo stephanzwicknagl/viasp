@@ -86,17 +86,15 @@ class Control2:
     
     
     def __init__(self, *args, **kwargs):
-        if "files" in kwargs:
-            self.arguments = ([opt for opt in sys.argv[1:] if opt not in kwargs["files"]])
-            kwargs["arguments"] = self.arguments
-            del kwargs["files"]
-
-        if "control"  in kwargs:
+        if 'files' in kwargs:
+            arguments = ([opt for opt in sys.argv[1:] if opt not in kwargs['files']])
+            args = (arguments,)
+            del kwargs['files']
+        if 'control' in kwargs:
             self.passed_control = kwargs['control']
             del kwargs['control']
         else:
-            self.passed_control = Control(kwargs["arguments"])
-
+            self.passed_control = InnerControl(*args)
         self.viasp = ShowConnector(**kwargs)
 
         if "_viasp_client" in kwargs:
