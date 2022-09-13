@@ -19,7 +19,8 @@ class App(Application):
             for m in handle:
                 ctl.viasp.mark(m)
             print(handle.get())
-        ctl.viasp.show()
+            unsat = handle.get().unsatisfiable
+        ctl.viasp.show(unsat=unsat)
 
 app = startup.run()
 
