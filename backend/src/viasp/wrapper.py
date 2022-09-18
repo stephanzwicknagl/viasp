@@ -41,7 +41,7 @@ class ShowConnector:
     def show(self, unsat=False):
         if not unsat:
             self._database.set_target_stable_model(self._marked)
-            self._database.show(unsat)
+            self._database.show()
         else:
             path = STDIN_TMP_STORAGE_PATH
             path_unsat = SHARED_PATH / "viasp_unsat_stdin_tmp.lp"
@@ -71,6 +71,11 @@ class ShowConnector:
 
     def register_function_call(self, name, sig, args, kwargs):
         self._database.register_function_call(name, sig, args, kwargs)
+
+    def relax_constraints(self):
+        return self._database.relax_constraints()
+        # return self._database.get_relaxed_program()
+
 
 
 class Control(InnerControl):

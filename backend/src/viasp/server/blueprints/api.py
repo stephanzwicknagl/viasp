@@ -152,3 +152,17 @@ def show_selected_models():
 
         set_graph(g)
     return "ok", 200
+
+@bp.route("/control/relax", methods=["POST"])
+@cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
+def transform_relax():
+    with open("transform.log", "a") as f:
+        f.write(f"In relax\n")
+
+    db = ProgramDatabase()
+    analyzer = ProgramAnalyzer()
+    with open("transform.log", "a") as f:
+        f.write(f"Get program: {db.get_program()}\n")
+    relaxed = analyzer.relax_constraints(db.get_program())
+
+    return jsonify(relaxed)

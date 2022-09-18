@@ -64,6 +64,25 @@ class FilteredTransformer(Transformer):
             return getattr(self, attr)(ast, *args, **kwargs)
         return ast.update(**self.visit_children(ast, *args, **kwargs))
 
+    def relax(self, ast: AST, *args: Any, **kwargs: Any) -> Union[AST, None]:
+        """
+        Dispatch to a relax method in a base class to relax constraints 
+        in a progoram flow similar to visit.
+        """
+        if ast.ast_type in self._forbidden:
+            error(f"Filtering forbidden part of clingo language {ast} ({ast.ast_type})")
+            self._filtered.append(TransformationError(ast, FailedReason.FAILURE))
+            return
+        if ast.ast_type in self._warnings:
+            warn(
+                f"Found unsupported part of clingo language {ast} ({ast.ast_type})\nThis may lead to faulty visualizations!")
+            self._filtered.append(TransformationError(ast, FailedReason.WARNING))
+        
+        attr = 'relax_' + str(ast.ast_type).replace('ASTType.', '')
+        if hasattr(self, attr):
+            return getattr(self, attr)(ast, *args, **kwargs)
+        return getattr(self, 'relax_All')(ast, *args, **kwargs)
+
 
 class DependencyCollector(Transformer):
 
@@ -97,6 +116,8 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         self.constants: Set[Symbol] = set()
         self.constraints: Set[Rule] = set()
         self.pass_through: Set[AST] = set()
+        self.constraint_counter: int = 1
+        self.relaxed_program: List[AST] = []
 
     def _get_conflict_free_version_of_name(self, name: str) -> Collection[str]:
         candidates = [name for name, _ in self.dependants.keys()]
@@ -215,6 +236,34 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         deps = remove_loops(deps)
         program = list(nx.topological_sort(deps))
         return program
+
+    def relax_Rule(self, rule: Rule):
+        if is_constraint(rule):
+            rule.head = self._make_head_literal(rule.head.location)
+        self._register_relaxed_program(rule)
+
+    def relax_Program(self, program: ast.Program):
+        # program e.g. = #program base.
+        # do nothing
+        pass
+
+    def relax_All(self, statement: AST):
+        # everything thats not a rule is just passed through
+        self._register_relaxed_program(statement)
+
+    def _register_relaxed_program(self, rule: AST):
+        self.relaxed_program.append(rule)
+    
+    def relax_constraints(self, program: str) -> None:
+        parse_string(program, lambda statement: self.relax(statement))
+        stringified = "".join(map(str, self.relaxed_program)) + ":~unsat(R).[1,R]"
+        return stringified
+    
+    def _make_head_literal(self, location: ast.Location = None) -> Literal:
+        arg = ast.SymbolicTerm(location, clingo.Function(f'r{self.constraint_counter}', [],True))
+        atom = ast.SymbolicAtom(ast.Function(location,'unsat', [arg],0))
+        self.constraint_counter += 1
+        return ast.Literal(location, 0, atom)
 
 
 class ProgramReifier(DependencyCollector):

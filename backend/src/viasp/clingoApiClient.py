@@ -70,3 +70,7 @@ class ClingoClient(ViaspClient):
             log(f"Reconstructing in progress.")
         else:
             error(f"Reconstructing failed [{r.status_code}] ({r.reason})")
+
+    def relax_constraints(self):
+        r = requests.post(f"{self.backend_url}/control/relax")
+        return r.json()
