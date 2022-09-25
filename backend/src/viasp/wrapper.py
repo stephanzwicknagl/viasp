@@ -17,16 +17,6 @@ from .shared.model import StableModel
 def is_non_cython_function_call(attr: classmethod):
     return hasattr(attr, "__call__") and not attr.__name__.startswith("_") and not attr.__name__.startswith("<")
 
-def transform_constraints(program):
-    regex = r"(?<=\.)\s*:-|^\s*:-"
-    
-    matchNum = 1
-    while re.search(regex, program) != None:
-        program = re.sub(regex, f"unsat(r{matchNum}):-", program, 1)
-        matchNum += 1
-
-    program = program + ":~unsat(R).[1,R]"
-    return program
 
 class ShowConnector:
 
@@ -38,25 +28,9 @@ class ShowConnector:
             self._database = ClingoClient(**kwargs)
         self._connection = None
 
-    def show(self, unsat=False):
-        if not unsat:
-            self._database.set_target_stable_model(self._marked)
-            self._database.show()
-        else:
-            path = STDIN_TMP_STORAGE_PATH
-            path_unsat = SHARED_PATH / "viasp_unsat_stdin_tmp.lp"
-            with open(path) as f:
-                program = ''.join(f.read().splitlines())
-            transformed_constraints = transform_constraints(program)
-            with open(path_unsat, "w", encoding="utf-8") as f:
-                f.write(transformed_constraints)
-            ctl_unsat = Control2()
-            ctl_unsat.load(path_unsat)
-            ctl_unsat.ground([("base", [])])
-            with ctl_unsat.solve(yield_=True) as handle:
-                for m in handle:
-                    ctl_unsat.viasp.mark(m)
-            ctl_unsat.viasp.show(unsat=False)
+    def show(self):
+        self._database.set_target_stable_model(self._marked)
+        self._database.show()
 
     def unmark(self, model: Model):
         serialized = clingo_model_to_stable_model(model)
@@ -74,7 +48,6 @@ class ShowConnector:
 
     def relax_constraints(self):
         return self._database.relax_constraints()
-        # return self._database.get_relaxed_program()
 
 
 
