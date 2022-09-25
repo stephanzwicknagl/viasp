@@ -73,4 +73,9 @@ class ClingoClient(ViaspClient):
 
     def relax_constraints(self):
         r = requests.post(f"{self.backend_url}/control/relax")
-        return r.json()
+        if r.ok:
+            log(f"Program constraints transformed.")
+            return r.json()
+        else:
+            error(f"Transforming constraints failed [{r.status_code}] ({r.reason})")    
+            return None
