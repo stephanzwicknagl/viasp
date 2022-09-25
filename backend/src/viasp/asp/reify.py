@@ -239,11 +239,11 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
     def relax_Rule(self, rule: Rule):
         if is_constraint(rule):
-            rule.head = self._make_head_literal(rule.head.location)
+            rule.head = self._make_head_literal(rule)
         self._register_relaxed_program(rule)
 
     def relax_Program(self, program: ast.Program):
-        # program e.g. = #program base.
+        # e.g. #program base.
         # do nothing
         pass
 
@@ -256,14 +256,27 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     
     def relax_constraints(self, program: str) -> None:
         parse_string(program, lambda statement: self.relax(statement))
-        stringified = "".join(map(str, self.relaxed_program)) + ":~unsat(R).[1,R]"
+        stringified = "".join(map(str, self.relaxed_program)) + ":~unsat(R,T).[1,R,T]"
         return stringified
     
-    def _make_head_literal(self, location: ast.Location = None) -> Literal:
-        arg = ast.SymbolicTerm(location, clingo.Function(f'r{self.constraint_counter}', [],True))
-        atom = ast.SymbolicAtom(ast.Function(location,'unsat', [arg],0))
+    def _make_head_literal(self, rule: Rule) -> Literal:
+        location = rule.head.location
+        inner_args = self._get_arguments(rule)
+        args = [ast.SymbolicTerm(location, clingo.Function(f'r{self.constraint_counter}', [],True))]
+        if inner_args:
+            args = args + [inner_args]
+        atom = ast.SymbolicAtom(ast.Function(location,'unsat', args,0))
         self.constraint_counter += 1
         return ast.Literal(location, 0, atom)
+    
+    def _get_arguments(self, rule: Rule) -> List[ast.SymbolicTerm]:
+        args = []
+        for literal in rule.body:
+            unpacked = literal.atom.symbol
+            for arg in unpacked.arguments:
+                if arg.ast_type == ASTType.Variable or arg.ast_type == ASTType.Function:
+                    args.append(arg)
+        return ast.Function(rule.head.location, '', args, 0) if len(args) > 0 else None
 
 
 class ProgramReifier(DependencyCollector):
