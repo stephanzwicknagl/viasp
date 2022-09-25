@@ -1,6 +1,7 @@
 import json
 import sys
 import shutil
+import re
 from inspect import signature
 from typing import List
 
@@ -8,7 +9,7 @@ from clingo import Control as InnerControl, Model
 from dataclasses import asdict, is_dataclass
 
 from .clingoApiClient import ClingoClient
-from .shared.defaults import STDIN_TMP_STORAGE_PATH
+from .shared.defaults import STDIN_TMP_STORAGE_PATH, SHARED_PATH
 from .shared.io import clingo_model_to_stable_model
 from .shared.model import StableModel
 
@@ -44,6 +45,10 @@ class ShowConnector:
 
     def register_function_call(self, name, sig, args, kwargs):
         self._database.register_function_call(name, sig, args, kwargs)
+
+    def relax_constraints(self):
+        return self._database.relax_constraints()
+
 
 
 class Control(InnerControl):

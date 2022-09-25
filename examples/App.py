@@ -19,7 +19,21 @@ class App(Application):
             for m in handle:
                 ctl.viasp.mark(m)
             print(handle.get())
+            unsat=handle.get().unsatisfiable
         ctl.viasp.show()
+
+        if unsat:
+            relaxed_prg = ctl.viasp.relax_constraints()
+            print(relaxed_prg)
+            ctl = Control2()
+            ctl.add("base", [], relaxed_prg)
+            ctl.ground([("base", [])])
+            with ctl.solve(yield_ = True) as handle:
+                for m in handle:
+                    ctl.viasp.mark(m)
+                print(handle.get())
+            ctl.viasp.show()
+        
 
 app = startup.run()
 
