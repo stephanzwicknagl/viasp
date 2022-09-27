@@ -12,7 +12,7 @@ function loadMyAsyncData(id, backendURL) {
 }
 
 export function Row(props) {
-    const {transformation, notifyClick} = props;
+    const {transformation, notifyClick, isLast} = props;
 
     const [nodes, setNodes] = React.useState(null);
     const [isOverflowH, setIsOverflowH] = React.useState(false);
@@ -79,7 +79,8 @@ export function Row(props) {
         {!showNodes ? null :
             <div ref={ref} className="row_row">{nodes.map((child) => <Node key={child.uuid} node={child}
                                                                            showMini={isOverflowH}
-                                                                           notifyClick={notifyClick}/>)}</div>
+                                                                           notifyClick={notifyClick}
+                                                                           isLast={isLast}/>)}</div>
         }</div>
 }
 

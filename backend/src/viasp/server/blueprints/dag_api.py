@@ -5,11 +5,11 @@ from typing import Union, Collection, Dict, List
 
 import igraph
 import networkx as nx
-from flask import Blueprint, request, jsonify, abort, Response
+from flask import Blueprint, request, jsonify, abort, Response, url_for, make_response
 from flask_cors import cross_origin
 from networkx import DiGraph
 
-from ...shared.defaults import GRAPH_PATH
+from ...shared.defaults import STATIC_PATH
 from ...shared.io import DataclassJSONDecoder, DataclassJSONEncoder
 from ...shared.model import Transformation, Node, Signature
 from ...shared.util import get_start_node_from_graph
@@ -273,3 +273,15 @@ def search():
                 result.append(transformation)
         return jsonify(result[:10])
     return jsonify([])
+
+@bp.route("/graph/clingraph/<uuid>", methods=["GET"])
+@cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
+def get_image(uuid):
+    with open("transform.log", "a") as f:
+        f.write(f"uuid: {uuid}\n")
+    # check if file with name uuid exists in static folder
+    filename = os.path.join("clingraph", f"{uuid}.png")
+    if not os.path.isfile(os.path.join(STATIC_PATH, filename)):
+        return None
+    url = url_for('static', filename=filename)
+    return jsonify(url)

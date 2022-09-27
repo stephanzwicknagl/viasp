@@ -20,19 +20,22 @@ import {FilterProvider} from "../contexts/Filters";
 function GraphContainer(props) {
     const {setDetail, notifyDash} = props;
     const {state: {transformations}} = useTransformations()
+    const lastIndex = transformations.length - 1;
     return <div className="graph_container">
         <Facts notifyClick={(clickedOn) => {
             notifyDash(clickedOn)
             setDetail(clickedOn.uuid)
         }}/><Settings/>
-        {transformations.map(({transformation}) => {
+        {transformations.map(({transformation}, i) => {
             return <Row
                 key={transformation.id}
                 transformation={transformation}
                 notifyClick={(clickedOn) => {
                     notifyDash(clickedOn)
                     setDetail(clickedOn.uuid)
-                }}/>
+                }}
+                isLast={i === lastIndex}        
+                />
         })}</div>
 }
 
