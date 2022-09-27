@@ -5,11 +5,11 @@ from typing import Union, Collection, Dict, List
 
 import igraph
 import networkx as nx
-from flask import Blueprint, request, jsonify, abort, Response, url_for, make_response
+from flask import Blueprint, request, jsonify, abort, Response, url_for
 from flask_cors import cross_origin
 from networkx import DiGraph
 
-from ...shared.defaults import STATIC_PATH
+from ...shared.defaults import GRAPH_PATH, STATIC_PATH
 from ...shared.io import DataclassJSONDecoder, DataclassJSONEncoder
 from ...shared.model import Transformation, Node, Signature
 from ...shared.util import get_start_node_from_graph
