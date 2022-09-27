@@ -1,7 +1,8 @@
 import sys
 from clingo.application import clingo_main, Application
 from clingo.script import enable_python
-from viasp import Control2, startup
+from viasp import Control2
+from viasp.server import startup
 
 enable_python()
 
