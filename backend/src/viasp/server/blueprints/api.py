@@ -3,7 +3,13 @@ from typing import Tuple, Any, Dict, Iterable
 from flask import request, Blueprint, jsonify, abort, Response
 from flask_cors import cross_origin
 
-from .dag_api import set_graph
+from clingo import Control
+from clingraph.orm import Factbase
+from clingraph.graphviz import compute_graphs, render
+from ...shared.defaults import STATIC_PATH
+import os
+
+from .dag_api import set_graph, last_nodes_in_graph, get_graph
 from ..database import CallCenter, ProgramDatabase
 from ...asp.justify import build_graph
 from ...asp.reify import ProgramAnalyzer, reify_list
@@ -112,6 +118,15 @@ def wrap_marked_models(marked_models: Iterable[StableModel]):
         result.append(wrapped)
     return result
 
+def factify_marked_models(marked_models: Iterable[StableModel]):
+    result = []
+    for model in marked_models:
+        wrapped = []
+        for part in model.atoms:
+            wrapped.append(f"{part}.")
+        result.append(wrapped)
+    return result
+
 
 def _set_warnings(warnings):
     dc.warnings = warnings
@@ -160,3 +175,28 @@ def transform_relax():
     analyzer = ProgramAnalyzer()
     relaxed = analyzer.relax_constraints(db.get_program())
     return jsonify(relaxed)
+
+@bp.route("/control/clingraph", methods=["POST"])
+@cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
+def clingraph_generate():
+    marked_models = dc.models
+    marked_models = factify_marked_models(marked_models)
+    viz_encoding = request.json["viz-encoding"]
+    engine = request.json["engine"]
+
+    filenames = last_nodes_in_graph(get_graph())
+
+    # for every model that was maked
+    for i, model in enumerate(marked_models):
+        # use clingraph to generate a graph
+        control = Control()
+        control.add("base", [], ''.join(model))
+        control.add("base", [], viz_encoding)
+        control.ground([("base", [])])
+        with control.solve(yield_=True) as handle:
+            for m in handle:
+                fb = Factbase.from_model(m, default_graph="base")
+                graphs = compute_graphs(fb)
+                render(graphs, format="png", directory=os.path.join(STATIC_PATH, "clingraph"), name_format=filenames[i], engine=engine)
+
+    return "ok", 200

@@ -277,11 +277,12 @@ def search():
 @bp.route("/graph/clingraph/<uuid>", methods=["GET"])
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def get_image(uuid):
-    with open("transform.log", "a") as f:
-        f.write(f"uuid: {uuid}\n")
     # check if file with name uuid exists in static folder
     filename = os.path.join("clingraph", f"{uuid}.png")
     if not os.path.isfile(os.path.join(STATIC_PATH, filename)):
         return None
     url = url_for('static', filename=filename)
     return jsonify(url)
+
+def last_nodes_in_graph(graph):
+    return [n.uuid for n in graph.nodes() if graph.out_degree(n) == 0]
