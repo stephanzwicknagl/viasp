@@ -48,6 +48,9 @@ class ShowConnector:
 
     def relax_constraints(self):
         return self._database.relax_constraints()
+    
+    def clingraph(self, viz_encoding, engine="dot"):
+        self._database.clingraph(viz_encoding, engine)
 
 
 
