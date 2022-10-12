@@ -64,7 +64,7 @@ def dataclass_to_dict(o):
         return {"_type": "Transformation", "id": o.id, "rules": o.rules}
     elif isinstance(o, StableModel):
         return {"_type": "StableModel", "cost": o.cost, "optimality_proven": o.optimality_proven, "type": o.type,
-                "atoms": o.atoms, "terms": o.terms, "shown": o.shown, "csp": o.csp, "theory": o.theory}
+                "atoms": o.atoms, "terms": o.terms, "shown": o.shown, "theory": o.theory}
     elif isinstance(o, ClingoMethodCall):
         return {"_type": "ClingoMethodCall", "name": o.name, "kwargs": o.kwargs, "uuid": o.uuid}
 
@@ -117,7 +117,7 @@ def encode_object(o):
 def model_to_dict(model: clingo_Model) -> dict:
     model_dict = {"cost": model.cost, "optimality_proven": model.optimality_proven, "type": model.type,
                   "atoms": model.symbols(atoms=True), "terms": model.symbols(terms=True),
-                  "shown": model.symbols(shown=True), "csp": model.symbols(csp=True),
+                  "shown": model.symbols(shown=True),
                   "theory": model.symbols(theory=True), "_type": "StableModel"}
     return model_dict
 
@@ -125,7 +125,6 @@ def model_to_dict(model: clingo_Model) -> dict:
 def clingo_model_to_stable_model(model: clingo_Model) -> StableModel:
     return StableModel(model.cost, model.optimality_proven, model.type, encode_object(model.symbols(atoms=True)),
                        encode_object(model.symbols(terms=True)), encode_object(model.symbols(shown=True)),
-                       encode_object(model.symbols(csp=True)),
                        encode_object(model.symbols(theory=True)))
 
 

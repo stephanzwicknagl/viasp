@@ -64,7 +64,6 @@ class StableModel:
     atoms: Collection[Symbol]
     terms: Collection[Symbol]
     shown: Collection[Symbol]
-    csp: Collection[Symbol]
     theory: Collection[Symbol]
 
 
