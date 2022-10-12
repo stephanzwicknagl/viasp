@@ -71,11 +71,14 @@ class ClingoClient(ViaspClient):
         else:
             error(f"Reconstructing failed [{r.status_code}] ({r.reason})")
 
-    def relax_constraints(self):
-        r = requests.post(f"{self.backend_url}/control/relax")
+    def relax_constraints(self, *args, **kwargs):
+        serialized = json.dumps({"args": args, "kwargs": kwargs}, cls=DataclassJSONEncoder)
+        r = requests.post(f"{self.backend_url}/control/relax",
+                          data=serialized,
+                          headers={'Content-Type': 'application/json'})
         if r.ok:
             log(f"Program constraints transformed.")
-            return r.json()
+            return ''.join(r.json())
         else:
             error(f"Transforming constraints failed [{r.status_code}] ({r.reason})")    
             return None
