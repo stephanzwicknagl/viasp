@@ -67,9 +67,15 @@ class ProgramRelaxer(Relaxer):
         Only rules are modified, but all statement types are visited to return a complete program.
     """
 
-    def __init__(self, head_name="unsat", get_variables=True):
-        self.head_name: str = head_name
-        self.get_variables: bool = get_variables
+    def __init__(self, *args, **kwargs):#head_name="unsat", get_variables=True):
+        if "head_name" in kwargs:
+            self.head_name: str = kwargs["head_name"]
+        else:
+            self.head_name: str = "unsat"
+        if "get_variables" in kwargs:
+            self.collect_variables: bool = kwargs["collect_variables"]
+        else:
+            self.collect_variables: bool = True
         self.relaxed_program: List[AST] = []
         self.term_relaxer = TermRelaxer()
         self.constraint_counter: int = 1
@@ -102,7 +108,7 @@ class ProgramRelaxer(Relaxer):
         stringified = list(map(str, self.relaxed_program))
 
         stringified.append(f":~ {self.head_name}(R,T).[1,R,T]" if
-                    self.get_variables else f":~ {self.head_name}(R).[1,R]")
+                    self.collect_variables else f":~ {self.head_name}(R).[1,R]")
         return stringified
 
     def _register_relaxed_program(self, rule: AST):
@@ -122,7 +128,7 @@ class ProgramRelaxer(Relaxer):
         return i
 
     def _get_variables(self, rule: AST):
-        if not self.get_variables:
+        if not self.collect_variables:
             return set()
         # reset the arg collector
         self.term_relaxer.empty_collector()

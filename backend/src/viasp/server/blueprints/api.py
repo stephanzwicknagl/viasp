@@ -158,7 +158,7 @@ def show_selected_models():
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def transform_relax():
     db = ProgramDatabase()
-    relaxer = ProgramRelaxer(head_name="unsat", get_variables=True)
+    relaxer = ProgramRelaxer(*request.json["args"], **request.json["kwargs"])
     relaxed = relaxer.relax_constraints(db.get_program())
     return jsonify(relaxed)
 
