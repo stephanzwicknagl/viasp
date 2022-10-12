@@ -67,7 +67,7 @@ class ProgramRelaxer(Relaxer):
         Only rules are modified, but all statement types are visited to return a complete program.
     """
 
-    def __init__(self, *args, **kwargs):#head_name="unsat", get_variables=True):
+    def __init__(self, *args, **kwargs):
         if "head_name" in kwargs:
             self.head_name: str = kwargs["head_name"]
         else:
@@ -98,19 +98,6 @@ class ProgramRelaxer(Relaxer):
         self._register_relaxed_program(prg)
         return prg
 
-    def relax_constraints(self, program: str) -> list[str]:
-        """
-            Relax constraints in a program and add minimization statement.
-
-            E.g.: :- a(X). -> unsat(r1,(X,)):- a(X).:~unsat(R,T).[1,R,T]
-        """
-        parse_string(program, lambda statement: self.visit(statement))
-        stringified = list(map(str, self.relaxed_program))
-
-        stringified.append(f":~ {self.head_name}(R,T).[1,R,T]" if
-                    self.collect_variables else f":~ {self.head_name}(R).[1,R]")
-        return stringified
-
     def _register_relaxed_program(self, rule: AST):
         self.relaxed_program.append(rule)
 
@@ -136,3 +123,99 @@ class ProgramRelaxer(Relaxer):
         for term in rule.body:
             _ = self.term_relaxer.visit(term)
         return self.term_relaxer.collector
+
+    def visit_Definition(self, definition):
+        """
+            Visit a definition.
+        """
+        self._register_relaxed_program(definition)
+        return definition
+
+    def visit_ShowSignature(self, show_signature):
+        """
+            Visit a show signature.
+        """
+        self._register_relaxed_program(show_signature)
+        return show_signature
+
+    def visit_Defined(self, defined):
+        """
+            Visit a defined.
+        """
+        self._register_relaxed_program(defined)
+        return defined
+
+    def visit_ShowTerm(self, show_term):
+        """
+            Visit a show term.
+        """
+        self._register_relaxed_program(show_term)
+        return show_term
+    
+    def visit_Minimize(self, minimize):
+        """
+            Visit a minimize statement.
+        """
+        self._register_relaxed_program(minimize)
+        return minimize
+    
+    def visit_Script(self, script):
+        """
+            Visit a script.
+        """
+        self._register_relaxed_program(script)
+        return script
+
+    def visit_External(self, external):
+        """
+            Visit an external statement.
+        """
+        self._register_relaxed_program(external)
+        return external
+
+    def visit_Edge(self, edge):
+        """
+            Visit an edge statement.
+        """
+        self._register_relaxed_program(edge)
+        return edge
+    
+    def visit_Heuristic(self, heuristic):
+        """
+            Visit a heuristic statement.
+        """
+        self._register_relaxed_program(heuristic)
+        return heuristic
+    
+    def visit_ProjectAtom(self, project_atom):
+        """
+            Visit a project atom.
+        """
+        self._register_relaxed_program(project_atom)
+        return project_atom
+    
+    def visit_ProjectSignature(self, project_signature):
+        """
+            Visit a project signature.
+        """
+        self._register_relaxed_program(project_signature)
+        return project_signature
+    
+    def visit_TheoryDefinition(self, theory_definition):
+        """
+            Visit a theory definition.
+        """
+        self._register_relaxed_program(theory_definition)
+        return theory_definition
+    
+def relax_constraints(relaxer: ProgramRelaxer, program: str) -> list[str]:
+    """Relax constraints in a program and add minimization statement.
+
+        E.g.: :- a(X). -> unsat(r1,(X,)):- a(X).:~unsat(R,T).[1,R,T]
+    """
+    parse_string(program, relaxer.visit)
+    stringified = list(map(str, relaxer.relaxed_program))
+
+    stringified.append(f":~ {relaxer.head_name}(R,T).[1,R,T]" if
+                relaxer.collect_variables else f":~ {relaxer.head_name}(R).[1,R]")
+    return stringified

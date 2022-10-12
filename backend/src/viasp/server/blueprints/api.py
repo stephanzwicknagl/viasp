@@ -7,7 +7,7 @@ from .dag_api import set_graph
 from ..database import CallCenter, ProgramDatabase
 from ...asp.justify import build_graph
 from ...asp.reify import ProgramAnalyzer, reify_list
-from ...asp.relax import ProgramRelaxer
+from ...asp.relax import ProgramRelaxer, relax_constraints
 from ...shared.model import ClingoMethodCall, StableModel
 from ...asp.replayer import apply_multiple
 
@@ -159,7 +159,7 @@ def show_selected_models():
 def transform_relax():
     db = ProgramDatabase()
     relaxer = ProgramRelaxer(*request.json["args"], **request.json["kwargs"])
-    relaxed = relaxer.relax_constraints(db.get_program())
+    relaxed = relax_constraints(relaxer, db.get_program())
     return jsonify(relaxed)
 
 
