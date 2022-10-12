@@ -132,13 +132,17 @@ class Control2:
         self.viasp.register_function_call("load", signature(self.passed_control.load), [], kwargs={"path": path}) #? or self.passed_control.load
         self.passed_control.load(path=str(path))
 
+    def add(self, *args, **kwargs):
+        print(signature(self.passed_control._add2))
+        self.viasp.register_function_call("add", signature(self.passed_control._add2), [], kwargs=dict(zip(['name', 'parameters', 'program'], args)))
+        self.passed_control.add(*args, **kwargs)
 
     def __getattribute__(self, name):
         try:
             attr = object.__getattribute__(self, name)
         except AttributeError:
             attr = self.passed_control.__getattribute__(name) 
-        if is_non_cython_function_call(attr) and name != "load":
+        if is_non_cython_function_call(attr) and name != "load" and name != "add":
             def wrapper_func(*args, **kwargs):
                 self.viasp.register_function_call(attr.__name__, signature(attr), args, kwargs)
                 result = attr(*args, **kwargs)
