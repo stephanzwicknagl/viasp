@@ -27,7 +27,7 @@ class ProgramDatabase:
 
     def save_program(self, program: str):
         with open(self.path, "w", encoding="utf-8") as f:
-            f.writelines(program.split("\n"))
+            f.writelines(program)#.split("\n"))
 
     def clear_program(self):
         with open(self.path, "w", encoding="utf-8") as f:
