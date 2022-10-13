@@ -1,4 +1,4 @@
-from viasp import startup
+from viasp.server import startup
 
 app = startup.run()
 

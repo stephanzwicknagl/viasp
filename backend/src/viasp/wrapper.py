@@ -59,6 +59,9 @@ class ShowConnector:
                 default=True (collect variables from body as a tuple in the head literal)
         """
         return self._database.relax_constraints(*args, **kwargs)
+    
+    def clingraph(self, viz_encoding, engine="dot"):
+        self._database.clingraph(viz_encoding, engine)
 
 
 

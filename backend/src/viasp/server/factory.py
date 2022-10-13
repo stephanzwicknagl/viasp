@@ -15,7 +15,7 @@ def register_blueprints(app):
 
 
 def create_app():
-    app = Flask('api', static_folder=None)
+    app = Flask('api',static_url_path='/static', static_folder='/static')
     app.json_encoder = DataclassJSONEncoder
     app.json_decoder = DataclassJSONDecoder
     app.config['CORS_HEADERS'] = 'Content-Type'

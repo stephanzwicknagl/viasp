@@ -82,3 +82,18 @@ class ClingoClient(ViaspClient):
         else:
             error(f"Transforming constraints failed [{r.status_code}] ({r.reason})")    
             return None
+
+    def clingraph(self, viz_encoding_path, engine):
+        with open(viz_encoding_path, "r") as f:
+            prg = f.read().splitlines()
+            prg = ''.join(prg)
+        
+        serialized = json.dumps({"viz-encoding":prg, "engine":engine}, cls=DataclassJSONEncoder)
+
+        r = requests.post(f"{self.backend_url}/control/clingraph",
+                              data=serialized,
+                              headers={'Content-Type': 'application/json'})
+        if r.ok:
+            log(f"Cligraph visualization in progress.")
+        else:
+            error(f"Cligraph visualization failed [{r.status_code}] ({r.reason})")

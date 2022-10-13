@@ -1,5 +1,6 @@
 import sys
-from viasp import Control2, startup
+from viasp import Control2
+from viasp.server import startup
 
 
 def main():

@@ -10,7 +10,8 @@ import os
 
 from jupyter_dash import JupyterDash
 from jupyter_dash.comms import _jupyter_config
-from viasp import Control, startup
+from viasp import Control
+from viasp.server import startup
 
 
 app = startup.run(mode="jupyter")
