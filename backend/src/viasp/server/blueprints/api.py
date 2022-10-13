@@ -6,7 +6,7 @@ from flask_cors import cross_origin
 from clingo import Control
 from clingraph.orm import Factbase
 from clingraph.graphviz import compute_graphs, render
-from ...shared.defaults import STATIC_PATH
+from ...shared.defaults import CLINGRAPH_PATH
 import os
 
 from .dag_api import set_graph, last_nodes_in_graph, get_graph
@@ -198,6 +198,6 @@ def clingraph_generate():
             for m in handle:
                 fb = Factbase.from_model(m, default_graph="base")
                 graphs = compute_graphs(fb)
-                render(graphs, format="png", directory=os.path.join(STATIC_PATH, "clingraph"), name_format=filenames[i], engine=engine)
+                render(graphs, format="png", directory=CLINGRAPH_PATH, name_format=filenames[i], engine=engine)
 
     return "ok", 200
