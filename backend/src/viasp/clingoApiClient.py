@@ -86,7 +86,7 @@ class ClingoClient(ViaspClient):
     def clingraph(self, viz_encoding_path, engine):
         with open(viz_encoding_path, "r") as f:
             prg = f.read().splitlines()
-            prg = ''.join(prg)
+            prg = '\n'.join(prg)
         
         serialized = json.dumps({"viz-encoding":prg, "engine":engine}, cls=DataclassJSONEncoder)
 
