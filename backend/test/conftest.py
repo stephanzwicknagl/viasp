@@ -80,8 +80,8 @@ def clingo_call_run_sample():
     signature_object = Control()
     return [
         ClingoMethodCall.merge("__init__", signature(signature_object.__init__), [["0"]], {}),
-        ClingoMethodCall.merge("add", signature(signature_object.add), ["base", []],
-                               {"program": "a. {b}. c :- not b."}),
+        ClingoMethodCall.merge("add", signature(signature_object.add), [],
+                               {"name": "base", "parameters": [], "program": "a. {b}. c :- not b."}),
         ClingoMethodCall.merge("ground", signature(signature_object.ground), [[("base", [])]], {}),
         ClingoMethodCall.merge("solve", signature(signature_object.solve), [], {"yield_": True})
     ]
