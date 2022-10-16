@@ -76,7 +76,7 @@ def test_transformation_error():
 
 
 def test_stable_model():
-    object_to_serialize = StableModel([0], False, ModelType.StableModel, [], [], [], [], [])
+    object_to_serialize = StableModel([0], False, ModelType.StableModel, [], [], [], [])
     serialized = json.dumps(object_to_serialize, cls=DataclassJSONEncoder)
     assert serialized
 
