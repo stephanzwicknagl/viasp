@@ -49,7 +49,7 @@ def test_load_from_file(client):
     # Assert program was called correctly
     res = client.get("control/program")
     assert res.status_code == 200
-    assert res.data == b"sample.{encoding} :- sample."
+    assert res.data.replace(b"\n",b"") == b"sample.{encoding} :- sample.", f"{res.data} should be equal to sample.encoding :- sample."
 
 
 def test_load_from_stdin(client):
