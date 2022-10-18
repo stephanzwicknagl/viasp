@@ -1,2 +1,1 @@
-sample.
-{encoding} :- sample.
+sample.{encoding} :- sample.
