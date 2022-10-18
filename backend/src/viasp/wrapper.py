@@ -58,7 +58,27 @@ class ShowConnector:
             collect_variables: bool
                 default=True (collect variables from body as a tuple in the head literal)
         """
-        return self._database.relax_constraints(*args, **kwargs)
+        r = self._database.relax_constraints(*args, **kwargs)
+        with open("transform.log", "a") as f:
+                f.write("\n\n")
+                f.write(r["program"])
+        
+        return self.ast_from_str(r["program"])
+
+
+    def ast_from_str(self, program: str):
+
+# Id, Variable, SymbolicTerm, UnaryOperation, BinaryOperation, Interval, Function, Pool, BooleanConstant, SymbolicAtom, Comparison, Guard, ConditionalLiteral, Aggregate, BodyAggregateElement, BodyAggregate, HeadAggregateElement, HeadAggregate, Disjunction, TheorySequence, TheoryFunction, TheoryUnparsedTermElement, TheoryUnparsedTerm, TheoryGuard, TheoryAtomElement,TheoryAtom, Literal,TheoryOperatorDefinition, TheoryTermDefinition, TheoryGuardDefinition, TheoryAtomDefinition, Rule, Definition, ShowSignature, ShowTerm, Minimize, Script, Program, External, Edge, Heuristic, ProjectAtom, ProjectSignature, Defined, TheoryDefinition
+        x = f"""
+from clingo import ast, Symbol, Function
+from clingo import *
+from clingo.ast import Location, Position
+self.arr={program}
+print("tada")
+"""
+        exec(x)
+        return self.arr
+
     
     def clingraph(self, viz_encoding, engine="dot"):
         self._database.clingraph(viz_encoding, engine)
@@ -136,7 +156,6 @@ class Control2:
         self.passed_control.load(path=str(path))
 
     def add(self, *args, **kwargs):
-        print(signature(self.passed_control._add2))
         self.viasp.register_function_call("add", signature(self.passed_control._add2), [], kwargs=dict(zip(['name', 'parameters', 'program'], args)))
         self.passed_control.add(*args, **kwargs)
 

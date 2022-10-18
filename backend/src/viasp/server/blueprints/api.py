@@ -7,7 +7,6 @@ from clingo import Control
 from clingraph.orm import Factbase
 from clingraph.graphviz import compute_graphs, render
 from ...shared.defaults import CLINGRAPH_PATH
-import os
 
 from .dag_api import set_graph, last_nodes_in_graph, get_graph
 from ..database import CallCenter, ProgramDatabase
@@ -175,7 +174,7 @@ def transform_relax():
     db = ProgramDatabase()
     relaxer = ProgramRelaxer(*request.json["args"], **request.json["kwargs"])
     relaxed = relax_constraints(relaxer, db.get_program())
-    return jsonify(relaxed)
+    return jsonify({"program": relaxed.__repr__()})
 
 @bp.route("/control/clingraph", methods=["POST"])
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
