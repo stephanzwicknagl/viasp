@@ -2,7 +2,7 @@ from clingo.ast import (AST, Transformer, SymbolicTerm, Function, Literal,
                     SymbolicAtom, parse_string, Sign)
 from clingo import Function as ClingoFunction
 from .utils import is_constraint
-
+from typing import List
 
 class TermRelaxer(Transformer):
     """
@@ -24,7 +24,7 @@ class ProgramRelaxer():
 
     def __init__(self, *args, **kwargs):
         self.head_name: str = kwargs["head_name"] if "head_name" in kwargs else "unsat"
-        self.collect_variables: bool = kwargs["collect_variables"] if "get_variables" in kwargs else True
+        self.collect_variables: bool = kwargs["collect_variables"] if "collect_variables" in kwargs else True
         self.term_relaxer = TermRelaxer()
         self.constraint_counter: int = 1
         self.unwanted = ["BooleanConstant", "BodyAggregate", "TheoryAtom", "Aggregate"]
@@ -51,7 +51,7 @@ class ProgramRelaxer():
         location = rule.head.location
         args = [SymbolicTerm(location, ClingoFunction(f'r{self._constraint_number()}', [], True))]
         if variables:
-            args.append(Function(location, '', list(variables),0))
+            args.append(Function(location, '', variables,0))
         
         return Literal(location = location,
                     sign = 0,
@@ -65,8 +65,8 @@ class ProgramRelaxer():
         self.constraint_counter += 1
         return i
 
-    def _get_variables(self, rule: AST) -> set():
-        collector = set()
+    def _get_variables(self, rule: AST) -> List[AST]:
+        collector = []
         # iterate over body elements
         for b in rule.body:
             # if b is a literal, 
@@ -76,11 +76,12 @@ class ProgramRelaxer():
                 # and b is positive: visit it
                 if atom_type not in self.unwanted and b.sign == Sign.NoSign:
                     self.term_relaxer.visit(b.atom, adder=self.add_to_collector(collector))
-        return collector
+        # return collected variables. Keep order but remove duplicates
+        return sorted(set(collector), key=lambda x: collector.index(x))
 
-    def add_to_collector(self, collector: set()) -> callable:
-        def adder(Variable):
-            collector.add(Variable)
+    def add_to_collector(self, collector: List[AST]) -> callable:
+        def adder(Variable: AST) -> None:
+            collector.append(Variable)
         return adder
     
 
@@ -93,8 +94,8 @@ def relax_constraints(relaxer: ProgramRelaxer, program: str) -> AST:
         :param program: The program to relax.
     """
     # Add minimization statement
-    program += f":~ {relaxer.head_name}(R,T).[1,R,T]" if \
-                relaxer.collect_variables else f":~ {relaxer.head_name}(R).[1,R]"
+    program += f"\n:~ {relaxer.head_name}(R,T).[1,R,T]" if \
+                    relaxer.collect_variables else f"\n:~ {relaxer.head_name}(R).[1,R]"
     relaxed_program = []
     parse_string(program, lambda stm: relaxed_program.append(relaxer.visit_Statement(stm)))
     return relaxed_program
