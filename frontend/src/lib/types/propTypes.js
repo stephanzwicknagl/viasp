@@ -24,3 +24,7 @@ export const NODE = PropTypes.exact({
     rule_nr: PropTypes.number,
     uuid: PropTypes.string
 })
+export const BOX = PropTypes.exact({
+    _type: PropTypes.oneOf(['Box']),
+    uuid: PropTypes.string
+})

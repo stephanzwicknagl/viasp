@@ -8,17 +8,8 @@ import {useHighlightedNode} from "../contexts/HighlightedNode";
 import {useSettings} from "../contexts/Settings";
 import {NODE, SYMBOL} from "../types/propTypes";
 import {useFilters} from "../contexts/Filters";
+import { Box } from "./Box.react";
 
-function loadImage(id, backendURL) {
-    console.log("load image")
-    return fetch(`${backendURL("graph/clingraph")}/${id}`).then(r => {
-        if (r.ok) {
-            console.log("in load Image:", r.body)
-            return r.json()
-        }
-        throw new Error(r.statusText);
-    });
-}
 
 function any(iterable) {
     for (let index = 0; index < iterable.length; index++) {
@@ -101,8 +92,6 @@ export function Node(props) {
     const [, dispatch] = useShownNodes()
     const {state} = useSettings();
     const classNames = useHighlightedNodeToCreateClassName(node)
-    const [imageToShow, setImageURL] = React.useState(null) 
-    const { backendURL } = useSettings();
 
 
     const ref = React.useCallback(x => {
@@ -120,23 +109,6 @@ export function Node(props) {
 
     })
     console.log("isLast:", isLast)
-    if (isLast){
-        React.useEffect(() => {
-            let mounted = true;
-            console.log("looking for image for node:", node.uuid)
-            loadImage(node.uuid, backendURL)
-                .then(data => {
-                    console.log("then:", data);
-                    if (mounted) {
-                        console.log("if mounted:", data)
-                        setImageURL(data)
-                    }
-                })
-            return () => mounted = false;
-        }, []);
-        console.log(imageToShow)
-        console.log("Have loaded the image")
-    }
 
     // const imageToShow = node.clingraph ? node.clingraph : "https://www.w3schools.com/html/img_girl.jpg";
 
@@ -150,8 +122,8 @@ export function Node(props) {
             <div style={{"backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark}}
                  className={"noselect bauchbinde"}>...</div> : null}
         {isLast ? <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}>
-            <img src={imageToShow} alt="No image" /> 
-        </div> : null} 
+            <div ref={ref} className="box_node"><Box  node={node}/></div>
+        </div> : null}
     </div>
 }
 
@@ -167,6 +139,10 @@ Node.propTypes = {
     /**
      * If true, shows the minified node without displaying its symbols
      */
-    showMini: PropTypes.bool
+    showMini: PropTypes.bool,
+    /**
+     * If true, shows the box with clingrpah visualization underneath
+     */
+    isLast: PropTypes.bool
 }
 
