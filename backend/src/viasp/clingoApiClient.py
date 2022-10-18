@@ -78,7 +78,7 @@ class ClingoClient(ViaspClient):
                           headers={'Content-Type': 'application/json'})
         if r.ok:
             log(f"Program constraints transformed.")
-            return ''.join(r.json())
+            return r.json()
         else:
             error(f"Transforming constraints failed [{r.status_code}] ({r.reason})")    
             return None
