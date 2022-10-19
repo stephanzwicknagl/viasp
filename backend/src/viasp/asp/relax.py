@@ -5,9 +5,7 @@ from .utils import is_constraint
 from typing import List
 
 class TermRelaxer(Transformer):
-    """
-        Transformer for visiting a term and collecting variables for the head.
-        Only Variables from positive literals, comparisons and guards are collected.
+    """ Transformer for visiting variables and collecting them.
     """
     def visit_Variable(self, Variable: AST, **kwargs) -> AST:
         """
@@ -18,8 +16,7 @@ class TermRelaxer(Transformer):
 
 
 class ProgramRelaxer():
-    """
-        Class for modifying rules in a program.
+    """ Class for modifying rules in a program.
     """
 
     def __init__(self, *args, **kwargs):
@@ -35,15 +32,11 @@ class ProgramRelaxer():
             Visit a statement. If it is an integrity constraint, give it a new head literal.
         """
         if is_constraint(stm):
-            # Create and set new head 
             stm.head = self._make_head_literal(stm)
         return stm
 
     def _make_head_literal(self, rule: AST) -> AST:
-        """
-            Returns a new head literal for a rule.
-
-            :param rule: The rule to relax.
+        """ Returns a new head literal for a rule.
         """
         # Collect variables from body if collect_variables 
         variables = self._get_variables(rule) if self.collect_variables else None
