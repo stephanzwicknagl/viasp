@@ -59,10 +59,6 @@ class ShowConnector:
                 default=True (collect variables from body as a tuple in the head literal)
         """
         r = self._database.relax_constraints(*args, **kwargs)
-        with open("transform.log", "a") as f:
-                f.write("\n\n")
-                f.write(r["program"])
-        
         return self.ast_from_str(r["program"])
 
 
@@ -74,7 +70,6 @@ from clingo import ast, Symbol, Function
 from clingo import *
 from clingo.ast import Location, Position
 self.arr={program}
-print("tada")
 """
         exec(x)
         return self.arr
