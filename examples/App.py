@@ -22,12 +22,32 @@ class App(Application):
             print(handle.get())
             unsat=handle.get().unsatisfiable
         ctl.viasp.show()
+        # ctl.viasp.clingraph(
+        #     viz_encoding="clingraph/example5_viz.lp",
+        #     engine="dot"
+        # )
+
+        # if unsat:
+        #     relaxed_prg = ctl.viasp.relax_constraints() # return ast
+        #     print(relaxed_prg)
+        #     ctl = Control2()
+        #     from clingo.ast import ProgramBuilder
+        #     with ProgramBuilder(ctl) as bld:
+        #         for i in relaxed_prg:
+        #             bld.add(i)
+        #     ctl.ground([("base", [])])
+        #     with ctl.solve(yield_ = True) as handle:
+        #         for m in handle:
+        #             print(m)
+        #             ctl.viasp.mark(m)
+        #         print(handle.get())
+        #     ctl.viasp.show()
 
         if unsat:
-            relaxed_prg = ctl.viasp.relax_constraints()
-            print(relaxed_prg)
+            relaxed_prg = list(map(str,ctl.viasp.relax_constraints()))
+            print(''.join(relaxed_prg))
             ctl = Control2()
-            ctl.add("base", [], relaxed_prg)
+            ctl.add("base", [], ''.join(relaxed_prg))
             ctl.ground([("base", [])])
             with ctl.solve(yield_ = True) as handle:
                 for m in handle:
