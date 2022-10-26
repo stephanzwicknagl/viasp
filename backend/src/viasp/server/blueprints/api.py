@@ -181,7 +181,7 @@ def transform_relax():
     db = ProgramDatabase()
     relaxer = ProgramRelaxer(*request.json["args"], **request.json["kwargs"])
     relaxed = relax_constraints(relaxer, db.get_program())
-    return jsonify({"program": relaxed.__repr__()})  # Literal(location, a, [])
+    return jsonify(relaxed)
 
 @bp.route("/control/clingraph", methods=["POST", "GET"])
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])

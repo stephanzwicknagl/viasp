@@ -58,23 +58,9 @@ class ShowConnector:
             collect_variables: bool
                 default=True (collect variables from body as a tuple in the head literal)
         """
-        r = self._database.relax_constraints(*args, **kwargs)
-        return self.ast_from_str(r["program"])
+        return self._database.relax_constraints(*args, **kwargs)
 
 
-    def ast_from_str(self, program: str):
-
-# Id, Variable, SymbolicTerm, UnaryOperation, BinaryOperation, Interval, Function, Pool, BooleanConstant, SymbolicAtom, Comparison, Guard, ConditionalLiteral, Aggregate, BodyAggregateElement, BodyAggregate, HeadAggregateElement, HeadAggregate, Disjunction, TheorySequence, TheoryFunction, TheoryUnparsedTermElement, TheoryUnparsedTerm, TheoryGuard, TheoryAtomElement,TheoryAtom, Literal,TheoryOperatorDefinition, TheoryTermDefinition, TheoryGuardDefinition, TheoryAtomDefinition, Rule, Definition, ShowSignature, ShowTerm, Minimize, Script, Program, External, Edge, Heuristic, ProjectAtom, ProjectSignature, Defined, TheoryDefinition
-        x = f"""
-from clingo import ast, Symbol, Function
-from clingo import *
-from clingo.ast import Location, Position
-self.arr={program}
-"""
-        exec(x)
-        return self.arr
-
-    
     def clingraph(self, viz_encoding, engine="dot"):
         self._database.clingraph(viz_encoding, engine)
 
