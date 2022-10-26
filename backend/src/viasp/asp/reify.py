@@ -18,6 +18,8 @@ def is_fact(rule, dependencies):
 
 
 def make_signature(literal: clingo.ast.Literal) -> Tuple[str, int]:
+    if str(literal.atom.ast_type) == "ASTType.BodyAggregate":
+        return literal, 0
     unpacked = literal.atom.symbol
     return unpacked.name, len(unpacked.arguments) if hasattr(unpacked, "arguments") else 0
 
