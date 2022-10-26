@@ -1,7 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import {Row} from "../components/Row.react";
-import "../components/main.css"
+import {Row, Boxrow} from "../components/Row.react";
+import {Box} from "../components/Box.react";
+import "../components/main.css";
 import {Detail} from "../components/Detail.react";
 import {Search} from "../components/Search.react";
 import {Facts} from "../components/Facts.react";
@@ -17,26 +18,65 @@ import {DEFAULT_BACKEND_URL, SettingsProvider, useSettings} from "../contexts/Se
 import {FilterProvider} from "../contexts/Filters";
 
 
+function loadClingraphUsed(backendURL) {
+    return fetch(`${backendURL("control/clingraph")}`).then(r => {
+        if (r.ok) {
+            return r.json()
+        }
+        throw new Error(r.statusText);
+    });
+}
+
 function GraphContainer(props) {
-    const {setDetail, notifyDash} = props;
+    const {setDetail, notifyDash, usingClingraph} = props;
     const {state: {transformations}} = useTransformations()
     const lastIndex = transformations.length - 1;
+    const { backendURL } = useSettings();
+
+
     return <div className="graph_container">
         <Facts notifyClick={(clickedOn) => {
             notifyDash(clickedOn)
             setDetail(clickedOn.uuid)
         }}/><Settings/>
         {transformations.map(({transformation}, i) => {
-            return <Row
-                key={transformation.id}
-                transformation={transformation}
-                notifyClick={(clickedOn) => {
-                    notifyDash(clickedOn)
-                    setDetail(clickedOn.uuid)
-                }}
-                isLast={i === lastIndex}        
-                />
-        })}</div>
+            if (i === lastIndex && usingClingraph) {
+                return <div>
+                        <Row
+                            key={transformation.id}
+                            transformation={transformation}
+                            notifyClick={(clickedOn) => {
+                                notifyDash(clickedOn)
+                                setDetail(clickedOn.uuid)
+                            }}
+                            isLast={i === lastIndex}
+                            usingClingraph={usingClingraph}
+                        />
+                        <Boxrow
+                            key={transformation.id}
+                            transformation={transformation}
+                            notifyClick={(clickedOn) => {
+                                notifyDash(clickedOn)
+                                setDetail(clickedOn.uuid)
+                            }}
+                            isLast={i === lastIndex}
+                            usingClingraph={usingClingraph}
+                        /></div>
+            }
+            else {
+                return <Row
+                    key={transformation.id}
+                    transformation={transformation}
+                    notifyClick={(clickedOn) => {
+                        notifyDash(clickedOn)
+                        setDetail(clickedOn.uuid)
+                    }}
+                    isLast={i === lastIndex}
+                    usingClingraph={usingClingraph}
+                    />
+            }
+        })}
+        </div>
 }
 
 GraphContainer.propTypes = {
@@ -48,6 +88,10 @@ GraphContainer.propTypes = {
      * If the detail component should be opened, set use this function to set the uuid
      */
     setDetail: PropTypes.func,
+    /**
+     * UsingClingraph is a boolean that is set to true if the backend is using clingraph
+     */
+    usingClingraph: PropTypes.bool
 }
 
 function MainWindow(props) {
@@ -55,6 +99,18 @@ function MainWindow(props) {
     const [detail, setDetail] = React.useState(null)
     const {backendURL} = useSettings();
     const {state: {transformations}} = useTransformations()
+    const [usingClingraph, setUsingClingraph] = React.useState("false")
+
+    React.useEffect(() => {
+        let mounted = true;
+        loadClingraphUsed(backendURL)
+            .then(data => {
+                if (mounted) {
+                    setUsingClingraph(data.using_clingraph)
+                }
+            });
+        return () => mounted = false;
+    }, []);
 
     const [, dispatch] = useMessages()
     React.useEffect(() => {
@@ -67,9 +123,9 @@ function MainWindow(props) {
         <div className="content">
             <ShownNodesProvider initialState={initialState} reducer={nodeReducer}>
                 <Search setDetail={setDetail}/>
-                <GraphContainer setDetail={setDetail} notifyDash={notifyDash}/>
+                <GraphContainer setDetail={setDetail} notifyDash={notifyDash} usingClingraph={usingClingraph}/>
                 {
-                    transformations.length === 0 ? null : <Edges/>
+                    transformations.length === 0 ? null : <Edges usingClingraph={usingClingraph}/>
                 }
             </ShownNodesProvider>
         </div>

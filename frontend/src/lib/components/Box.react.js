@@ -4,14 +4,12 @@ import PropTypes from "prop-types";
 import {useColorPalette} from "../contexts/ColorPalette";
 import {useSettings} from "../contexts/Settings";
 import {BOX} from "../types/propTypes";
-import {useEffect, useState} from "react";
 import { useHighlightedNode } from "../contexts/HighlightedNode";
 
 
 function loadImage(id, backendURL) {
     return fetch(`${backendURL("graph/clingraph")}/${id}`).then(r => {
         if (r.ok) {
-            console.log("in load Image:", r.body)
             return r.json()
         }
         throw new Error(r.statusText);
@@ -19,13 +17,12 @@ function loadImage(id, backendURL) {
 }
 
 function useHighlightedNodeToCreateClassName(node) {
-    console.log("in useHighlightedNodeToCreateClassName")
-    // const [highlightedBox,] = useHighlightedNode()
-    let classNames = `box_border mouse_over_shadow ${node.uuid} ${highlightedNode === node.uuid ? "highlighted_box" : null}`
+    const [highlightedBox,] = useHighlightedNode()
+    let classNames = `box_border mouse_over_shadow ${node} ${highlightedBox === node ? "highlighted_box" : null}`
 
     React.useEffect(() => {
-        classNames = `box_border mouse_over_shadow ${node.uuid} ${highlightedNode === node.uuid ? "highlighted_box" : null}`
-    }, [node.uuid, node.uuid]
+        classNames = `box_border mouse_over_shadow ${node} ${highlightedBox === node ? "highlighted_box" : null}`
+    }, [node, node]
     )
     return classNames
 }
@@ -36,11 +33,11 @@ export function Box(props) {
     const colorPalette = useColorPalette();
     const [imageToShow, setImageURL] = React.useState(null) 
     const { backendURL } = useSettings();
-    // const classNames = useHighlightedNodeToCreateClassName(node)
+    const classNames = useHighlightedNodeToCreateClassName(node)
 
     React.useEffect(() => {
         let mounted = true;
-        loadImage(node.uuid, backendURL)
+        loadImage(node, backendURL)
             .then(data => {
                 if (mounted) {
                     setImageURL(data)
@@ -48,7 +45,6 @@ export function Box(props) {
             });
         return () => mounted = false;
     }, []);
-    console.log(imageToShow);
     if (imageToShow) {
         console.log("Have loaded the image");
     }	
@@ -57,10 +53,11 @@ export function Box(props) {
     }
 
 
-    return <div className="box_box"
-                style={{"backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark}}>
+    return <div className={classNames}
+                style={{"backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark}}
+                id={node}>
         <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}>
-            <img src={imageToShow} alt="Clingraph visualization could not be loaded" /> 
+            <img src={imageToShow} alt="Clingraph" /> 
         </div> 
     </div>
 }

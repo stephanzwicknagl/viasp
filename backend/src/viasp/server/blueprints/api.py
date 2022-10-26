@@ -1,7 +1,9 @@
 from typing import Tuple, Any, Dict, Iterable
+from unittest.mock import NonCallableMagicMock
 
 from flask import request, Blueprint, jsonify, abort, Response
 from flask_cors import cross_origin
+from uuid import uuid4
 
 from clingo import Control
 from clingraph.orm import Factbase
@@ -20,6 +22,7 @@ bp = Blueprint("api", __name__, template_folder='../templates/')
 
 calls = CallCenter()
 ctl = None
+using_clingraph = []
 
 
 def handle_call_received(call: ClingoMethodCall) -> None:
@@ -131,6 +134,10 @@ def factify_marked_models(marked_models: Iterable[StableModel]):
 def _set_warnings(warnings):
     dc.warnings = warnings
 
+def used_clingraph():
+    global using_clingraph
+    return using_clingraph
+
 
 @bp.route("/control/warnings", methods=["POST"])
 def set_warnings():
@@ -174,29 +181,38 @@ def transform_relax():
     db = ProgramDatabase()
     relaxer = ProgramRelaxer(*request.json["args"], **request.json["kwargs"])
     relaxed = relax_constraints(relaxer, db.get_program())
-    return jsonify({"program": relaxed.__repr__()})
+    return jsonify({"program": relaxed.__repr__()})  # Literal(location, a, [])
 
-@bp.route("/control/clingraph", methods=["POST"])
+@bp.route("/control/clingraph", methods=["POST", "GET"])
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def clingraph_generate():
-    marked_models = dc.models
-    marked_models = factify_marked_models(marked_models)
-    viz_encoding = request.json["viz-encoding"]
-    engine = request.json["engine"]
+    global using_clingraph
 
-    filenames = last_nodes_in_graph(get_graph())
+    if request.method == "POST":
+        marked_models = dc.models
+        marked_models = factify_marked_models(marked_models)
+        viz_encoding = request.json["viz-encoding"]
+        engine = request.json["engine"]
 
-    # for every model that was maked
-    for i, model in enumerate(marked_models):
-        # use clingraph to generate a graph
-        control = Control()
-        control.add("base", [], ''.join(model))
-        control.add("base", [], viz_encoding)
-        control.ground([("base", [])])
-        with control.solve(yield_=True) as handle:
-            for m in handle:
-                fb = Factbase.from_model(m, default_graph="base")
-                graphs = compute_graphs(fb)
-                render(graphs, format="png", directory=CLINGRAPH_PATH, name_format=filenames[i], engine=engine)
 
+        # for every model that was maked
+        for model in marked_models:
+            # use clingraph to generate a graph
+            control = Control()
+            control.add("base", [], ''.join(model))
+            control.add("base", [], viz_encoding)
+            control.ground([("base", [])])
+            with control.solve(yield_=True) as handle:
+                for m in handle:
+                    fb = Factbase.from_model(m, default_graph="base")
+                    graphs = compute_graphs(fb)
+
+                    filename = uuid4().hex
+                    using_clingraph.append(filename)
+                    
+                    render(graphs, format="png", directory=CLINGRAPH_PATH, name_format=filename, engine=engine)
+    if request.method == "GET":
+        if len(using_clingraph) > 0:
+            return jsonify({"using_clingraph": True}), 200
+        return jsonify({"using_clingraph": False}), 200
     return "ok", 200

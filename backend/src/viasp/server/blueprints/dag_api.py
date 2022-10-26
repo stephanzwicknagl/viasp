@@ -127,6 +127,17 @@ def get_src_tgt_mapping_from_graph(ids=None):
         graph.remove_node(node)
     return [{"src": src.uuid, "tgt": tgt.uuid} for src, tgt in graph.edges()]
 
+def get_src_tgt_mapping_from_clingraph(ids=None):
+    from .api import using_clingraph, last_nodes_in_graph
+    last = last_nodes_in_graph(get_graph())
+    imgs = using_clingraph
+    with open("transform.log", "a") as f:
+        f.write("in get_src_tgt_mapping_from_clingraph\n")
+        f.write(f"last: {last}\n")
+        f.write(f"imgs: {imgs}\n")
+        f.write(f"zip: {list(zip(last,imgs))}\n")
+    return [{"src": src, "tgt": tgt} for src, tgt in list(zip(last, imgs))]
+
 
 @bp.route("/graph/transformations", methods=["GET"])
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
@@ -151,6 +162,19 @@ def get_edges():
     elif request.method == "GET":
         to_be_returned = get_src_tgt_mapping_from_graph()
 
+    jsonified = jsonify(to_be_returned)
+    return jsonified
+
+@bp.route("/clingraph/edges", methods=["GET", "POST"])
+@cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
+def get_clingraph_edges():
+    to_be_returned = []
+    if request.method == "POST":
+        to_be_returned = get_src_tgt_mapping_from_clingraph(request.json)
+    elif request.method == "GET":
+        to_be_returned = get_src_tgt_mapping_from_clingraph()
+    with open("transform.log", "a") as f:
+        f.write(str(to_be_returned) + "\n")
     jsonified = jsonify(to_be_returned)
     return jsonified
 
@@ -286,3 +310,12 @@ def get_image(uuid):
 
 def last_nodes_in_graph(graph):
     return [n.uuid for n in graph.nodes() if graph.out_degree(n) == 0]
+
+@bp.route("/clingraph/children/<transformation_id>", methods=["GET"])
+@cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
+def get_clingraph_children(transformation_id):
+    if request.method == "GET":
+        from .api import using_clingraph
+        to_be_returned = using_clingraph[::-1]
+        return jsonify(to_be_returned)
+    raise NotImplementedError

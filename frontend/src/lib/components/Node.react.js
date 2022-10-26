@@ -86,7 +86,7 @@ function useHighlightedNodeToCreateClassName(node) {
 }
 
 export function Node(props) {
-    const {node, notifyClick, showMini, isLast} = props;
+    const {node, notifyClick, showMini, isLast, usingClingraph} = props;
     const [isOverflowV, setIsOverflowV] = React.useState(false);
     const colorPalette = useColorPalette();
     const [, dispatch] = useShownNodes()
@@ -108,7 +108,6 @@ export function Node(props) {
     React.useEffect(() => {
 
     })
-    console.log("isLast:", isLast)
 
     // const imageToShow = node.clingraph ? node.clingraph : "https://www.w3schools.com/html/img_girl.jpg";
 
@@ -121,9 +120,6 @@ export function Node(props) {
         {!showMini && isOverflowV ?
             <div style={{"backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark}}
                  className={"noselect bauchbinde"}>...</div> : null}
-        {isLast ? <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}>
-            <div ref={ref} className="box_node"><Box  node={node}/></div>
-        </div> : null}
     </div>
 }
 
