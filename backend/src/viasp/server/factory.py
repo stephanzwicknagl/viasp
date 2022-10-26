@@ -3,6 +3,8 @@ from werkzeug.utils import find_modules, import_string
 
 from flask_cors import CORS
 from viasp.shared.io import DataclassJSONEncoder, DataclassJSONDecoder
+from ..shared.defaults import CLINGRAPH_PATH, GRAPH_PATH, PROGRAM_STORAGE_PATH, STDIN_TMP_STORAGE_PATH
+import os, shutil, atexit
 
 
 def register_blueprints(app):
@@ -25,5 +27,18 @@ def create_app():
 
     app.json_encoder = DataclassJSONEncoder
     app.json_decoder = DataclassJSONDecoder
+
+    
+    @atexit.register
+    def shutdown():
+        """ when quitting app, remove all files in 
+                the static/clingraph folder
+                and auxiliary program files
+        """
+        if os.path.exists(CLINGRAPH_PATH):
+            shutil.rmtree(CLINGRAPH_PATH)
+        for file in [GRAPH_PATH, PROGRAM_STORAGE_PATH, STDIN_TMP_STORAGE_PATH]:
+            if os.path.exists(file):
+                os.remove(file)
 
     return app
