@@ -3,7 +3,7 @@ from clingo.ast import (AST, Transformer, SymbolicTerm, Function, Literal,
 from clingo import Function as ClingoFunction
 from .utils import is_constraint
 from typing import List
-
+from clingo.ast import ASTType
 class TermRelaxer(Transformer):
     """ Transformer for visiting variables and collecting them.
     """
@@ -24,7 +24,7 @@ class ProgramRelaxer():
         self.collect_variables: bool = kwargs["collect_variables"] if "collect_variables" in kwargs else True
         self.term_relaxer = TermRelaxer()
         self.constraint_counter: int = 1
-        self.unwanted = ["ASTType.BooleanConstant", "ASTType.BodyAggregate", "ASTType.TheoryAtom", "ASTType.Aggregate"]
+        self.unwanted = [ASTType.BooleanConstant, ASTType.BodyAggregate, ASTType.TheoryAtom, ASTType.Aggregate]
 
 
     def visit_Statement(self, stm: AST) -> AST:
@@ -63,11 +63,10 @@ class ProgramRelaxer():
         # iterate over body elements
         for b in rule.body:
             # if b is a literal, 
-            if str(b.ast_type) == "ASTType.Literal":
-                atom_type = str(b.atom.ast_type)
+            if b.ast_type == ASTType.Literal:
                 # if b.atom is not BooleanConstant, BodyAggregate, TheoryAtom, Aggregate
                 # and b is positive: visit it
-                if atom_type not in self.unwanted and b.sign == Sign.NoSign:
+                if b.atom.ast_type not in self.unwanted and b.sign == Sign.NoSign:
                     self.term_relaxer.visit(b.atom, adder=self.add_to_collector(collector))
         # return collected variables. Keep order but remove duplicates
         return sorted(set(collector), key=lambda x: collector.index(x))
