@@ -5,6 +5,7 @@ from typing import Union, Collection, Dict, List
 
 import igraph
 import networkx as nx
+import numpy as np
 from flask import Blueprint, request, jsonify, abort, Response, url_for
 from flask_cors import cross_origin
 from networkx import DiGraph
@@ -60,7 +61,7 @@ def get_graph():
 
 
 def nx_to_igraph(nx_graph: DiGraph):
-    return igraph.Graph.Adjacency((nx.to_numpy_matrix(nx_graph) > 0).tolist())
+    return igraph.Graph.Adjacency((np.array(nx.to_numpy_array(nx_graph)) > 0).tolist()) # was nx.to_numpy_matrix(nx_graph) but will be deprecated in future
 
 
 def igraph_to_networkx_layout(i_layout, nx_map):
@@ -173,8 +174,6 @@ def get_clingraph_edges():
         to_be_returned = get_src_tgt_mapping_from_clingraph(request.json)
     elif request.method == "GET":
         to_be_returned = get_src_tgt_mapping_from_clingraph()
-    with open("transform.log", "a") as f:
-        f.write(str(to_be_returned) + "\n")
     jsonified = jsonify(to_be_returned)
     return jsonified
 
