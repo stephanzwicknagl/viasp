@@ -14,14 +14,16 @@ from viasp import Control
 from viasp.server import startup
 
 
-app = startup.run(mode="jupyter")
+app = startup.run(mode="dash")
 # if running in binder, get proxy information
 # and set the backend URL, which will be used
 # by the frontend
 if 'BINDER_SERVICE_HOST' in os.environ:
     try:
+        print("Trying to get proxy information from Jupyter")
         JupyterDash.infer_jupyter_proxy_config()
     except EnvironmentError:
+        print("Could not get proxy information from Jupyter")
         pass
 if ('server_url' in _jupyter_config and 'base_subpath' in _jupyter_config):
     _default_server_url = _jupyter_config['server_url']
