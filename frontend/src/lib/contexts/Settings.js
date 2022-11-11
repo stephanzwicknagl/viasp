@@ -2,7 +2,7 @@
 import React from "react"
 import PropTypes from "prop-types";
 
-export const DEFAULT_BACKEND_URL = "http://localhost:";
+export const DEFAULT_BACKEND_URL = "http://localhost:5050";
 // REDUCER STUFF
 const TOGGLE_SHOW = "APP/SETTINGS/TOGGLE_SHOW"
 const SET_BACKEND_URL = "APP/SETTINGS/BACKEND_URL/SET"
