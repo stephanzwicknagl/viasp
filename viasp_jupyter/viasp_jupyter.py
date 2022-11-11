@@ -35,7 +35,7 @@ else:
 
 print(f"Starting backend at {_viasp_backend_url}")
 
-app = startup.run(mode="jupyter", host=_viasp_backend_url)
+app = startup.run(mode="jupyter", proxy_url=_viasp_backend_url)
 
 def load(argv):
     options = ["0"]
