@@ -14,7 +14,6 @@ from viasp import Control
 from viasp.server import startup
 
 
-app = startup.run(mode="dash")
 # if running in binder, get proxy information
 # and set the backend URL, which will be used
 # by the frontend
@@ -38,6 +37,7 @@ else:
 
 print(f"Starting backend at {_viasp_backend_url}")
 
+app = startup.run(mode="jupyter")
 
 def load(argv):
     options = ["0"]
