@@ -29,6 +29,7 @@ def run(mode="dash", host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     if mode == "jupyter":
         from jupyter_dash import JupyterDash
         app = JupyterDash(__name__)
+        backend_url = host
     else:
         from dash import Dash
         app = Dash(__name__)

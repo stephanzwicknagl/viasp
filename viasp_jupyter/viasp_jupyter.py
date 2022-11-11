@@ -19,10 +19,8 @@ from viasp.server import startup
 # by the frontend
 if 'BINDER_SERVICE_HOST' in os.environ:
     try:
-        print("Trying to get proxy information from Jupyter")
         JupyterDash.infer_jupyter_proxy_config()
     except EnvironmentError:
-        print("Could not get proxy information from Jupyter")
         pass
 if ('server_url' in _jupyter_config and 'base_subpath' in _jupyter_config):
     _default_server_url = _jupyter_config['server_url']
@@ -37,7 +35,7 @@ else:
 
 print(f"Starting backend at {_viasp_backend_url}")
 
-app = startup.run(mode="jupyter")
+app = startup.run(mode="jupyter", host=_viasp_backend_url)
 
 def load(argv):
     options = ["0"]
