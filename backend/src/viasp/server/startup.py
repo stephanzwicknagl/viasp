@@ -20,7 +20,7 @@ from viasp.shared.defaults import (
                                   DEFAULT_BACKEND_PORT,
                                   DEFAULT_BACKEND_PROTOCOL)
 
-def run(mode="dash", host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
+def run(mode="dash", host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT, proxy_url=None):
     """ create the dash app, set layout and start the backend on host:port """
 
     backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
@@ -29,7 +29,7 @@ def run(mode="dash", host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     if mode == "jupyter":
         from jupyter_dash import JupyterDash
         app = JupyterDash(__name__)
-        backend_url = host
+        backend_url = proxy_url
     else:
         from dash import Dash
         app = Dash(__name__)
