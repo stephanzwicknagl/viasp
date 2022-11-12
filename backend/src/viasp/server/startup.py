@@ -29,16 +29,17 @@ def run(mode="dash", host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT, proxy
     if mode == "jupyter":
         from jupyter_dash import JupyterDash
         app = JupyterDash(__name__)
-        print("lol")
-        backend_url = proxy_url
-        print("aha")
+        app.layout = viasp_dash.ViaspDash(
+            id="myID",
+            backendURL=proxy_url
+        )
     else:
         from dash import Dash
         app = Dash(__name__)
-    app.layout = viasp_dash.ViaspDash(
-        id="myID",
-        backendURL=backend_url
-    )
+        app.layout = viasp_dash.ViaspDash(
+            id="myID",
+            backendURL=backend_url
+        )
     print("done")
     log = open('viasp.log', 'a', encoding="utf-8")
     viasp_backend = Popen(command, stdout=log, stderr=log)
