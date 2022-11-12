@@ -10,17 +10,16 @@
     The backend is started on the localhost on port 5050.
 """
 
-from subprocess import Popen
 import atexit
-import viasp_dash
-from viasp import clingoApiClient
+from subprocess import Popen
 from time import time
-from viasp.shared.defaults import (
-                                  DEFAULT_BACKEND_HOST,
-                                  DEFAULT_BACKEND_PORT,
-                                  DEFAULT_BACKEND_PROTOCOL)
 
-def run(mode="dash", host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT, proxy_url=None):
+from viasp import clingoApiClient
+from viasp.shared.defaults import (DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT,
+                                   DEFAULT_BACKEND_PROTOCOL)
+
+
+def run(mode="dash", host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     """ create the dash app, set layout and start the backend on host:port """
 
     backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
@@ -29,27 +28,19 @@ def run(mode="dash", host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT, proxy
     if mode == "jupyter":
         from jupyter_dash import JupyterDash
         app = JupyterDash(__name__)
-        app.layout = viasp_dash.ViaspDash(
-            id="myID",
-            backendURL=proxy_url
-        )
     else:
         from dash import Dash
         app = Dash(__name__)
-        app.layout = viasp_dash.ViaspDash(
-            id="myID",
-            backendURL=backend_url
-        )
-    print("done")
+
     log = open('viasp.log', 'a', encoding="utf-8")
     viasp_backend = Popen(command, stdout=log, stderr=log)
 
     # make sure the backend is up, before continuing with other modules
-    t = time()
+    t_start = time()
     while True:
         if clingoApiClient.backend_is_running(backend_url):
             break
-        if time() - t > 30:
+        if time() - t_start > 30:
             raise Exception("Backend did not start in time.")
 
     def terminate_process(process):
