@@ -8,7 +8,6 @@ import {useHighlightedNode} from "../contexts/HighlightedNode";
 import {useSettings} from "../contexts/Settings";
 import {NODE, SYMBOL} from "../types/propTypes";
 import {useFilters} from "../contexts/Filters";
-import { Box } from "./Box.react";
 
 
 function any(iterable) {
@@ -24,7 +23,18 @@ function Symbol(props) {
     const {symbol} = props;
     let atomString = make_atoms_string(symbol)
     atomString = atomString.length === 0 ? "" : atomString;
-    return <div className={"symbol"}>{atomString}</div>
+    const [marked, setMarked] = React.useState(false);
+
+    React.useEffect(() => {
+        // TODO: does the symbol have to be marked?
+        const d = (atomString === "p(1)");
+        setMarked(d);
+    }, []);
+
+    console.log(atomString);
+    console.log(marked);
+    const classNames = `symbol ${marked ? "mark" : ""}`;
+    return <div className={classNames}>{atomString}</div>
 }
 
 Symbol.propTypes = {
@@ -86,7 +96,7 @@ function useHighlightedNodeToCreateClassName(node) {
 }
 
 export function Node(props) {
-    const {node, notifyClick, showMini, isLast, usingClingraph} = props;
+    const {node, notifyClick, showMini} = props;
     const [isOverflowV, setIsOverflowV] = React.useState(false);
     const colorPalette = useColorPalette();
     const [, dispatch] = useShownNodes()
@@ -136,9 +146,5 @@ Node.propTypes = {
      * If true, shows the minified node without displaying its symbols
      */
     showMini: PropTypes.bool,
-    /**
-     * If true, shows the box with clingrpah visualization underneath
-     */
-    isLast: PropTypes.bool
 }
 

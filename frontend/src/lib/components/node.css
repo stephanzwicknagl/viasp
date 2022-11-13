@@ -49,6 +49,17 @@
     padding-right: 0.25em;
 }
 
+.mark {
+    min-width: 0;
+    min-height: 0;
+    width: fit-content;;
+    width: -moz-fit-content;
+    display: flex;
+    padding-left: 0.25em;
+    padding-right: 0.25em;
+    background-color: #FF9800;
+    border-radius: 5em;
+}
 
 .set_value {
     font-family: monospace;

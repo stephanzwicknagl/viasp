@@ -49,18 +49,10 @@ function GraphContainer(props) {
                                 notifyDash(clickedOn)
                                 setDetail(clickedOn.uuid)
                             }}
-                            isLast={i === lastIndex}
-                            usingClingraph={usingClingraph}
                         />
                         <Boxrow
                             key={transformation.id}
                             transformation={transformation}
-                            notifyClick={(clickedOn) => {
-                                notifyDash(clickedOn)
-                                setDetail(clickedOn.uuid)
-                            }}
-                            isLast={i === lastIndex}
-                            usingClingraph={usingClingraph}
                         /></div>
             }
             else {
@@ -71,8 +63,6 @@ function GraphContainer(props) {
                         notifyDash(clickedOn)
                         setDetail(clickedOn.uuid)
                     }}
-                    isLast={i === lastIndex}
-                    usingClingraph={usingClingraph}
                     />
             }
         })}

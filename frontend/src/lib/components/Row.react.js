@@ -18,7 +18,7 @@ function loadClingraphChildren(id, backendURL) {
 }
 
 export function Row(props) {
-    const {transformation, notifyClick, isLast, usingClingraph} = props;
+    const {transformation, notifyClick} = props;
 
     const [nodes, setNodes] = React.useState(null);
     const [isOverflowH, setIsOverflowH] = React.useState(false);
@@ -85,9 +85,7 @@ export function Row(props) {
         {!showNodes ? null :
             <div ref={ref} className="row_row">{nodes.map((child) => <Node key={child.uuid} node={child}
                                                                            showMini={isOverflowH}
-                                                                           notifyClick={notifyClick}
-                                                                           isLast={isLast} 
-                                                                           usingClingraph={usingClingraph}/>)}</div>
+                                                                           notifyClick={notifyClick}/>)}</div>
         }</div>
 }
 
@@ -106,7 +104,7 @@ Row.propTypes = {
 
 
 export function Boxrow(props) {
-    const { transformation, notifyClick, isLast, usingClingraph } = props;
+    const { transformation } = props;
 
     const [nodes, setNodes] = React.useState(null);
     const [isOverflowH, setIsOverflowH] = React.useState(false);
@@ -170,9 +168,8 @@ export function Boxrow(props) {
     }) => transformation.id === t.id && shown) !== undefined
     return <div className="boxrow_container">
         {/* TODO: make boxrow_header to toggle showing of visualization */}
-            <div ref={ref} className="boxrow_row"
-                // style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}
-                  >  {nodes.map((child) => <Box  node={child}/>)}</div>
+            <div ref={ref} className="boxrow_row">  
+                {nodes.map((child) => <Box  node={child}/>)}</div>
         </div>
 }
 
