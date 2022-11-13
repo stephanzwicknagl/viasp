@@ -50,16 +50,19 @@ def get_facts(original_program) -> Collection[Symbol]:
 
 
 def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_indices, pad: bool) -> List[Node]:
-    tmp: Dict[int, List[Symbol]] = defaultdict(list)
+    tmp_symbol: Dict[int, List[Symbol]] = defaultdict(list)
+    tmp_reason: Dict[int, List[Symbol]] = defaultdict(list)
     for sym in h_symbols:
-        rule_nr, symbol, _ = sym.arguments
-        tmp[rule_nr.number].append(symbol)
+        rule_nr, symbol, reasons = sym.arguments
+        tmp_symbol[rule_nr.number].append(symbol)
+        for r in reasons.arguments:
+            tmp_reason[rule_nr.number].append(r)
     if pad:
         h_symbols = [
-            Node(frozenset(tmp[rule_nr]), rule_nr) if rule_nr in tmp else Node(frozenset(), rule_nr) for
+            Node(frozenset(tmp_symbol[rule_nr]), rule_nr, reason=frozenset(tmp_reason[rule_nr])) if rule_nr in tmp_symbol else Node(frozenset(), rule_nr) for
             rule_nr in relevant_indices]
     else:
-        h_symbols = [Node(frozenset(tmp[rule_nr]), rule_nr) for rule_nr in tmp.keys()]
+        h_symbols = [Node(frozenset(tmp_symbol[rule_nr]), rule_nr, reason=frozenset(tmp_reason[rule_nr])) for rule_nr in tmp_symbol.keys()]
 
     return h_symbols
 

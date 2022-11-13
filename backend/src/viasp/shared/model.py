@@ -14,16 +14,17 @@ class Node:
     diff: FrozenSet[Symbol] = field(hash=True)
     rule_nr: int = field(hash=True)
     atoms: FrozenSet[Symbol] = field(default_factory=frozenset, hash=True)
+    reason: FrozenSet[Symbol] = field(default_factory=frozenset, hash=False)
     uuid: UUID = field(default_factory=uuid4, hash=False)
 
     def __hash__(self):
         return hash((self.atoms, self.rule_nr, self.diff))
 
     def __eq__(self, o):
-        return isinstance(o, type(self)) and (self.atoms, self.rule_nr, self.diff) == (o.atoms, o.rule_nr, o.diff)
+        return isinstance(o, type(self)) and (self.atoms, self.rule_nr, self.diff, self.reason) == (o.atoms, o.rule_nr, o.diff, o.reason)
 
     def __repr__(self):
-        return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{'. '.join(map(str, self.atoms))}}}, uuid={self.uuid})"
+        return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{'. '.join(map(str, self.atoms))}}}, reasons={{{'. '.join(map(str, self.reason))}}}, uuid={self.uuid})"
 
 
 @dataclass(frozen=True)
