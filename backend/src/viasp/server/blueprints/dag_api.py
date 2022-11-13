@@ -132,11 +132,6 @@ def get_src_tgt_mapping_from_clingraph(ids=None):
     from .api import using_clingraph, last_nodes_in_graph
     last = last_nodes_in_graph(get_graph())
     imgs = using_clingraph
-    with open("transform.log", "a") as f:
-        f.write("in get_src_tgt_mapping_from_clingraph\n")
-        f.write(f"last: {last}\n")
-        f.write(f"imgs: {imgs}\n")
-        f.write(f"zip: {list(zip(last,imgs))}\n")
     return [{"src": src, "tgt": tgt} for src, tgt in list(zip(last, imgs))]
 
 

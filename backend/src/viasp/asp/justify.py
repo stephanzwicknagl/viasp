@@ -32,7 +32,7 @@ def get_h_symbols_from_model(wrapped_stable_model: Iterable[Symbol],
     ctl.add("base", [], stringified)
     ctl.add("base", [], "".join(map(str, wrapped_stable_model)))
     ctl.ground([("base", [])])
-    for x in ctl.symbolic_atoms.by_signature(h, 2):
+    for x in ctl.symbolic_atoms.by_signature(h, 3):
         rules_that_are_reasons_why.append(x.symbol)
     return rules_that_are_reasons_why
 
@@ -52,7 +52,7 @@ def get_facts(original_program) -> Collection[Symbol]:
 def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_indices, pad: bool) -> List[Node]:
     tmp: Dict[int, List[Symbol]] = defaultdict(list)
     for sym in h_symbols:
-        rule_nr, symbol = sym.arguments
+        rule_nr, symbol, _ = sym.arguments
         tmp[rule_nr.number].append(symbol)
     if pad:
         h_symbols = [

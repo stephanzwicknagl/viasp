@@ -226,22 +226,33 @@ class ProgramReifier(DependencyCollector):
         self.h = h
         self.model = model
 
-    def _nest_rule_head_in_h(self, loc: ast.Location, dependant: ast.Literal):
+    def _nest_rule_head_in_h_with_explanation_tuple(self, loc: ast.Location, dependant: ast.Literal, \
+             body: List[ast.Function]):
+        """
+        In: H :- B.
+        Out: h(0, H, positive(B))
+        """
         loc_fun = ast.Function(loc, str(self.rule_nr), [], False)
         loc_atm = ast.SymbolicAtom(loc_fun)
         loc_lit = ast.Literal(loc, ast.Sign.NoSign, loc_atm)
+        reasons = []
+        for literal in body:
+            if literal.sign == ast.Sign.NoSign:
+                reasons.append(literal.atom)
+        reason_fun = ast.Function(loc, '', reasons, 0)
+        reason_lit = ast.Literal(loc, ast.Sign.NoSign, reason_fun)
 
-        return [ast.Function(loc, self.h, [loc_lit, dependant], 0)]
+        return [ast.Function(loc, self.h, [loc_lit, dependant, reason_lit], 0)]
 
     def _make_head_switch(self, head: clingo.ast.AST, location):
         """In: H :- B.
-        Out: H:- h(_, H)."""
+        Out: H:- h(_, H, _)."""
         # head = rule.head
 
         wild_card_fun = ast.Function(location, "_", [], False)
         wild_card_atm = ast.SymbolicAtom(wild_card_fun)
         wild_card_lit = ast.Literal(head.location, ast.Sign.NoSign, wild_card_atm)
-        fun = ast.Function(head.location, self.h, [wild_card_lit, head], 0)
+        fun = ast.Function(head.location, self.h, [wild_card_lit, head, wild_card_lit], 0)
         return ast.Rule(location, head, [fun])
 
     def _nest_rule_head_in_model(self, head):
@@ -266,7 +277,7 @@ class ProgramReifier(DependencyCollector):
             deps[rule.head] = []
         new_rules = []
         for dependant, conditions in deps.items():
-            new_head_s = self._nest_rule_head_in_h(rule.location, dependant)
+            new_head_s = self._nest_rule_head_in_h_with_explanation_tuple(rule.location, dependant, rule.body)
             # Add reified head to body
             new_body = [self._nest_rule_head_in_model(dependant)]
             new_body.extend(rule.body)

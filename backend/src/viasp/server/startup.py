@@ -13,6 +13,7 @@
 import atexit
 from subprocess import Popen
 from time import time
+import viasp_dash
 
 from viasp import clingoApiClient
 from viasp.shared.defaults import (DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT,
@@ -31,6 +32,10 @@ def run(mode="dash", host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     else:
         from dash import Dash
         app = Dash(__name__)
+        app.layout = viasp_dash.ViaspDash(
+            id="myID",
+            backendURL=backend_url
+            )
 
     log = open('viasp.log', 'a', encoding="utf-8")
     viasp_backend = Popen(command, stdout=log, stderr=log)
