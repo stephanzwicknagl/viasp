@@ -20,21 +20,10 @@ function any(iterable) {
 }
 
 function Symbol(props) {
-    const {symbol} = props;
+    const { symbol } = props;
     let atomString = make_atoms_string(symbol)
     atomString = atomString.length === 0 ? "" : atomString;
-    const [marked, setMarked] = React.useState(false);
-
-    React.useEffect(() => {
-        // TODO: does the symbol have to be marked?
-        const d = (atomString === "p(1)");
-        setMarked(d);
-    }, []);
-
-    console.log(atomString);
-    console.log(marked);
-    const classNames = `symbol ${marked ? "mark" : ""}`;
-    return <div className={classNames}>{atomString}</div>
+    return <div className={"symbol"}>{atomString}</div>
 }
 
 Symbol.propTypes = {
@@ -66,7 +55,13 @@ function NodeContent(props) {
     const containerNames = `set_container`
 
     const renderedSymbols = contentToShow.filter(symbol => symbolShouldBeShown(symbol)).map(s => {
-        return <Symbol key={JSON.stringify(s)} symbol={s}/>
+        let atomString = make_atoms_string(s)
+
+        // TODO: does the symbol have to be marked?
+        console.log(atomString);
+        console.log((atomString === "p(1)"));
+        const classNames1 = `${(atomString === "p(1)") ? "mark" : ""}`;
+        return <div className={classNames1}><Symbol key={JSON.stringify(s)} symbol={s} /></div>
     })
     return <div className={containerNames} style={{"color": colorPalette.thirty.bright}}>
         <span className={classNames2}>{renderedSymbols.length > 0 ? renderedSymbols : ""}</span>

@@ -30,7 +30,6 @@ function GraphContainer(props) {
     const {setDetail, notifyDash, usingClingraph} = props;
     const {state: {transformations}} = useTransformations()
     const lastIndex = transformations.length - 1;
-    const { backendURL } = useSettings();
 
 
     return <div className="graph_container">
