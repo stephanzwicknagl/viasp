@@ -264,6 +264,15 @@ def model(uuid):
     path = get_atoms_in_path_by_signature(uuid)
     return jsonify((kind, path))
 
+@bp.route("/detail/explain/<uuid>")
+@cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
+def explain(uuid):
+    if uuid is None:
+        abort(Response("Parameter 'key' required.", 400))
+    node = find_node_by_uuid(uuid)
+    explain = node.reason
+    return jsonify(explain)
+
 
 def get_all_signatures(graph: nx.Graph):
     signatures = set()

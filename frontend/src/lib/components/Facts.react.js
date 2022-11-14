@@ -12,7 +12,7 @@ function loadFacts(backendURL) {
 }
 
 export function Facts(props) {
-    const {notifyClick} = props;
+    const {notifyClick, markedSymbols} = props;
     const {state, backendURL} = useSettings();
     const [fact, setFact] = React.useState(null);
     React.useEffect(() => {
@@ -34,7 +34,8 @@ export function Facts(props) {
     return fact === null ? null :
         <div className="row_row"><Node key={fact.uuid} node={fact}
                                        showMini={false}
-                                       notifyClick={notifyClick}/></div>
+                                       notifyClick={notifyClick}
+                                       markedSymbols={markedSymbols}/></div>
 
 }
 

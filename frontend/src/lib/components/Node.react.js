@@ -36,9 +36,11 @@ Symbol.propTypes = {
 function NodeContent(props) {
 
     const {state} = useSettings();
-    const {node} = props;
+    const {node, notifyClick, markedSymbols} = props;
+    // no notify click in sub-node scope, because whole node is clickable atm
     const colorPalette = useColorPalette();
     const [{activeFilters},] = useFilters();
+    const [markSymbol, setMarkSymbol] = React.useState(false);
     let contentToShow;
     if (state.show_all) {
         contentToShow = node.atoms;
@@ -53,17 +55,31 @@ function NodeContent(props) {
 
     const classNames2 = `set_value`
     const containerNames = `set_container`
-
-    const renderedSymbols = contentToShow.filter(symbol => symbolShouldBeShown(symbol)).map(s => {
-        let atomString = make_atoms_string(s)
-
-        // TODO: does the symbol have to be marked?
-        console.log(atomString);
-        console.log((atomString === "p(1)"));
-        const classNames1 = `${(atomString === "p(1)") ? "mark" : ""}`;
-        const colorNames = (atomString === "p(1)") ?  {"background-color": colorPalette.warn.ten} : null;
-        return <div className={classNames1} style={colorNames}><Symbol key={JSON.stringify(s)} symbol={s} /></div>
-    })
+    
+    const [marked, setMarked] = React.useState(null);
+    React.useEffect(() => {
+            // console.log("markedSymbols: ", markedSymbols)
+            if (markedSymbols) {
+                console.log("als string", markedSymbols.map(s => make_atoms_string(s)))
+                setMarked(markedSymbols.map(s => make_atoms_string(s)))
+            };
+    }, [markedSymbols, node, state.show_all])
+    const [renderedSymbols, setRenderedSymbols] = React.useState([])
+    React.useEffect( () => {
+        setRenderedSymbols(contentToShow.filter(symbol => 
+                symbolShouldBeShown(symbol)).map(s => {
+                    let atomString = make_atoms_string(s)
+                    // console.log(atomString);
+                    // console.log((atomString === "p(1)"));
+                    // console.log("in check if marked of", marked)
+                    if (marked) {
+                        setMarkSymbol(marked.includes(atomString));
+                    }
+                    const classNames1 = `${(markSymbol) ? "mark mouse_over_shadow" : "mouse_over_shadow"}`;
+                    const colorNames = (markSymbol) ?  {"background-color": colorPalette.warn.ten} : null;
+                    return <div className={classNames1} style={colorNames}><Symbol key={JSON.stringify(s)} symbol={s} /></div>
+        }))
+    }, [marked, markSymbol, contentToShow, activeFilters, colorPalette, markedSymbols])
     return <div className={containerNames} style={{"color": colorPalette.thirty.bright}}>
         <span className={classNames2}>{renderedSymbols.length > 0 ? renderedSymbols : ""}</span>
     </div>
@@ -92,7 +108,7 @@ function useHighlightedNodeToCreateClassName(node) {
 }
 
 export function Node(props) {
-    const {node, notifyClick, showMini} = props;
+    const {node, notifyClick, showMini, markedSymbols} = props;
     const [isOverflowV, setIsOverflowV] = React.useState(false);
     const colorPalette = useColorPalette();
     const [, dispatch] = useShownNodes()
@@ -122,7 +138,7 @@ export function Node(props) {
                 id={node.uuid} onClick={() => notifyClick(node)}>
         {showMini ? <div style={{"backgroundColor": colorPalette.ten.dark, "color": colorPalette.ten.dark}}
                          className={"mini"}/> :
-            <div className={"set_too_high"} ref={ref}><NodeContent node={node}/></div>}
+            <div className={"set_too_high"} ref={ref}><NodeContent node={node} notifyClick={notifyClick} markedSymbols={markedSymbols}/></div>}
         {!showMini && isOverflowV ?
             <div style={{"backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark}}
                  className={"noselect bauchbinde"}>...</div> : null}
