@@ -61,7 +61,8 @@ function NodeContent(props) {
         console.log(atomString);
         console.log((atomString === "p(1)"));
         const classNames1 = `${(atomString === "p(1)") ? "mark" : ""}`;
-        return <div className={classNames1}><Symbol key={JSON.stringify(s)} symbol={s} /></div>
+        const colorNames = (atomString === "p(1)") ?  {"background-color": colorPalette.warn.ten} : null;
+        return <div className={classNames1} style={colorNames}><Symbol key={JSON.stringify(s)} symbol={s} /></div>
     })
     return <div className={containerNames} style={{"color": colorPalette.thirty.bright}}>
         <span className={classNames2}>{renderedSymbols.length > 0 ? renderedSymbols : ""}</span>
