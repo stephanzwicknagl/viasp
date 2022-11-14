@@ -75,8 +75,6 @@ def dataclass_to_dict(o):
 class DataclassJSONEncoder(JSONEncoder):
     def default(self, o):
         encoded = encode_object(o)
-        with open("transform.log", "a") as f:
-            f.write(f"object: {o} of type {type(o)}\n")
         if encoded is not None:
             return encoded
         return super().default(o)
