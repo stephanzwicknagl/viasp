@@ -1,7 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import {Row, Boxrow} from "../components/Row.react";
-import {Box} from "../components/Box.react";
 import "../components/main.css";
 import {Detail} from "../components/Detail.react";
 import {Search} from "../components/Search.react";

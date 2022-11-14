@@ -55,10 +55,10 @@
     width: fit-content;;
     width: -moz-fit-content;
     display: flex;
-    padding-left: 0.25em;
-    padding-right: 0.25em;
+    padding-left: 0.15em;
+    padding-right: 0.15em;
     background-color: #FF9800;
-    border-radius: 5em;
+    border-radius: 10px;
 }
 
 .set_value {
