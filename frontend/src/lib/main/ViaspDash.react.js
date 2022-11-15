@@ -46,8 +46,9 @@ function GraphContainer(props) {
             console.log("clickedOn: ", clickedOn)
             notifyDash(clickedOn)
             setDetail(clickedOn.uuid)
-            markedSymbols = { markedSymbols }
-        }}/><Settings/>
+            }}
+            markedSymbols={markedSymbols}
+        /><Settings/>
         {transformations.map(({transformation}, i) => {
             if (i === lastNodeInGraph && usingClingraph) {
                 return <div>
