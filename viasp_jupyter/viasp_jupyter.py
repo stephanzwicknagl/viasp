@@ -13,6 +13,7 @@ from jupyter_dash.comms import _jupyter_config
 import viasp_dash
 from viasp import Control2
 from viasp.server import startup
+from IPython.display import HTML, display
 
 
 # if running in binder, get proxy information
@@ -58,3 +59,25 @@ def load(argv):
             ctl.viasp.mark(m)
         print(handle.get())
     ctl.viasp.show()
+
+def initialize():
+    display(HTML(
+        '''
+            <script>
+                function restart_run_all(outp){
+                    var output_area = outp.offsetParent.offsetParent;
+                    console.log(output_area)
+                    // find my cell element
+                    var cell_element = output_area;
+                    // which cell is it?
+                    var cell_idx = Jupyter.notebook.get_cell_elements().index(cell_element);
+                    console.log(cell_idx)
+                    IPython.notebook.kernel.restart();
+                    setTimeout(function(){
+                        IPython.notebook.execute_cells([cell_idx]);
+                    }, 10000)
+                }
+            </script>
+            <button onclick="restart_run_all(this.parentNode.parentNode)">Click to Restart and Run all Cells</button>
+        '''
+    ))
