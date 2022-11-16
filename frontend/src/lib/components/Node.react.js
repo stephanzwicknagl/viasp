@@ -77,6 +77,8 @@ function NodeContent(props) {
                     }
                     const classNames1 = `${(markSymbol) ? "mark mouse_over_shadow" : "mouse_over_shadow"}`;
                     const colorNames = (markSymbol) ?  {"background-color": colorPalette.warn.ten} : null;
+                    // add onclick in this outer div like onClick={() => notifyClick(node)}
+                    // but with node and symobl as arguments
                     return <div className={classNames1} style={colorNames}><Symbol key={JSON.stringify(s)} symbol={s} /></div>
         }))
     }, [marked, markSymbol, contentToShow, activeFilters, colorPalette, markedSymbols])

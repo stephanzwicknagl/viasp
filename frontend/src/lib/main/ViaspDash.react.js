@@ -46,6 +46,7 @@ function GraphContainer(props) {
             console.log("clickedOn: ", clickedOn)
             notifyDash(clickedOn)
             setDetail(clickedOn.uuid)
+            // set marked clickedOn.reason
             }}
             markedSymbols={markedSymbols}
         /><Settings/>
