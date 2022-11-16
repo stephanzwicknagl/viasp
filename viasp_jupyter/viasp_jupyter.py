@@ -78,6 +78,6 @@ def initialize():
                     }, 10000)
                 }
             </script>
-            <button onclick="restart_run_all(this.parentNode.parentNode)">Click to Restart and Run all Cells</button>
+            <button onclick="restart_run_all(this.parentNode.parentNode)">Click to Restart and Run</button>
         '''
     ))
