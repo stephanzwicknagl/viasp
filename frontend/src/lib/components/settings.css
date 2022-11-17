@@ -39,17 +39,23 @@
 
 .toggle_part {
     font-family: monospace;
+    border-radius: 3px 3px 3px 3px;
+    cursor: pointer;
 }
 
 .toggle_part.selected {
     transition: .1s;
     border: 1px solid #2196F3;
     opacity: .8;
+    padding-right: 47px;
+    padding-left: 47px;
 }
 
 .toggle_part.unselected {
     transition: .1s;
     border: 1px solid #444;
+    padding-right: 40px;
+    padding-left: 40px;
 }
 
 .toggle_part.unselected:hover {
@@ -68,14 +74,4 @@
 
 }
 
-.toggle_part.left {
-    border-radius: 3px 0 0 3px;
-    padding-right: 2px;
-    padding-left: 2px;
-}
 
-.toggle_part.right {
-    border-radius: 0 3px 3px 0;
-    padding-left: 2px;
-    padding-right: 2px;
-}

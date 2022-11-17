@@ -8,37 +8,48 @@ import PropTypes from "prop-types";
 
 const FORM_ID = 'settings_form'
 
+function ClearMarked() {
+    const { state, dispatch } = useSettings()
+    const colorPalette = useColorPalette();
+    return <tr>
+        <td align="right">Reasoning:</td>
+        <td align="center">
+            <span style={{ backgroundColor: colorPalette.sixty.bright }}
+                className="display_all_toggle_span noselect"
+                onClick={() => null}> 
+                {/* TODO //use dispatch(setMarked([])) here */}
+                <span className="toggle_part unselected" style={{"padding-right": "16px","padding-left":"16px"}}>clear marked symbols</span>
+            </span>
+        </td>
+    </tr>
+}
+
 function useToggleState(toggle_state) {
-    let classNameAll = `toggle_part left ${toggle_state.show_all ? "selected" : "unselected"}`;
-    let classNameNew = `toggle_part right ${toggle_state.show_all ? "unselected" : "selected"}`;
+    let classNameNew = `toggle_part ${toggle_state.show_all ? "unselected" : "selected"}`;
+    let label = toggle_state.show_all ? "Added symbols" : "All symbols";
     React.useEffect(() => {
-        classNameAll = `toggle_part left ${toggle_state.show_all ? "selected" : "unselected"}`;
-        classNameNew = `toggle_part right ${toggle_state.show_all ? "unselected" : "selected"}`;
+        classNameNew = `toggle_part ${toggle_state.show_all ? "unselected" : "selected"}`;
 
     }, [toggle_state.show_all])
-    return [classNameAll, classNameNew]
+    return [classNameNew, label]
 
 }
 
 function ShowAllToggle() {
     const {state, dispatch} = useSettings()
-    const [classNameAll, classNameNew] = useToggleState(state);
+    const [classNameNew, label] = useToggleState(state);
     const colorPalette = useColorPalette();
     return <tr>
         <td align="right">Nodes show:</td>
-        <td align="right">
+        <td align="center">
         <span style={{backgroundColor: colorPalette.sixty.bright}}
               className="display_all_toggle_span noselect"
               onClick={() => dispatch(toggleShowAll())}>
-        <span className={classNameAll} style={state.show_all ? {
-            backgroundColor: colorPalette.ten.bright,
-            "color": colorPalette.sixty.bright
-        } : null}>All symbols</span>
-        <span className={classNameNew} style={state.show_all ? null : {
-            backgroundColor: colorPalette.ten.bright,
-            "color": colorPalette.sixty.bright
-        }}>Added symbols</span>
-    </span>
+                <span className={classNameNew} style={state.show_all ? null : {
+                backgroundColor: colorPalette.ten.bright,
+                "color": colorPalette.sixty.bright
+            }}>{label}</span>
+        </span>
         </td>
     </tr>
 }
@@ -112,6 +123,7 @@ function SettingsTable() {
             <tbody>
             <Header text="Display"/>
             <ShowAllToggle/>
+            <ClearMarked/>
             <Header text="Backend"/>
             <BackendURLSetting input={state.backend_url}/>
             <BackendHealthCheck/>

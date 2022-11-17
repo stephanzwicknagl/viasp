@@ -52,7 +52,7 @@ export const useSettings = () => {
     return {state, dispatch, backendURL}
 }
 export const SettingsProvider = ({children, backendURL}) => {
-    const [state, dispatch] = React.useReducer(reducer, {show_all: true, backend_url: backendURL}, initSettings);
+    const [state, dispatch] = React.useReducer(reducer, {show_all: false, backend_url: backendURL}, initSettings);
     window.sessionStorage.setItem("backend_url", state.backend_url);
 
     return (
