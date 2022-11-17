@@ -57,9 +57,6 @@ function NodeContent(props) {
     const renderedSymbols = contentToShow.filter(symbol => symbolShouldBeShown(symbol)).map(s => {
         let atomString = make_atoms_string(s)
 
-        // TODO: does the symbol have to be marked?
-        console.log(atomString);
-        console.log((atomString === "p(1)"));
         const classNames1 = `${(atomString === "p(1)") ? "mark" : ""}`;
         const colorNames = (atomString === "p(1)") ?  {"background-color": colorPalette.warn.ten} : null;
         return <div className={classNames1} style={colorNames}><Symbol key={JSON.stringify(s)} symbol={s} /></div>
