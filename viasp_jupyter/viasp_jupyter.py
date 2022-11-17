@@ -13,8 +13,7 @@ from jupyter_dash.comms import _jupyter_config
 import viasp_dash
 from viasp import Control2
 from viasp.server import startup
-from IPython.display import HTML, display
-
+from .html import display_refresh_button
 
 # if running in binder, get proxy information
 # and set the backend URL, which will be used
@@ -24,6 +23,7 @@ if 'BINDER_SERVICE_HOST' in os.environ:
         JupyterDash.infer_jupyter_proxy_config()
     except EnvironmentError:
         pass
+    display_refresh_button()
 if ('server_url' in _jupyter_config and 'base_subpath' in _jupyter_config):
     _default_server_url = _jupyter_config['server_url']
 
@@ -36,45 +36,6 @@ else:
     _VIASP_BACKEND_URL = "http://localhost:5050"
 
 print(f"Starting backend at {_VIASP_BACKEND_URL}")
-
-display(HTML(
-    '''
-        <script>
-            function restart_run_all(outp){
-                var output_area = outp.offsetParent.offsetParent;
-                console.log(output_area)
-                // find my cell element
-                var cell_element = output_area;
-                // which cell is it?
-                var cell_idx = Jupyter.notebook.get_cell_elements().index(cell_element);
-                console.log(cell_idx)
-                IPython.notebook.kernel.restart();
-                setTimeout(function(){
-                    IPython.notebook.execute_cells([cell_idx]);
-                }, 10000)
-            }
-        </script>
-        <style>
-        .button{
-            border: 1px solid #333333;
-            color: #FFFFFF ;
-            border-radius: 3px;
-            background-color: #2196F3;
-            font-family: monospace;
-            opacity: .8;
-        }
-        .button:hover {
-            opacity: 1;
-            border: 1px solid #2196F3;
-            color: #FFFFFF;
-            transition: opacity .1s ease-in-out;
-            -moz-transition: opacity .1s ease-in-out;
-            -webkit-transition: opacity .1s ease-in-out;
-        }
-        </style>
-        <button class="button" onclick="restart_run_all(this.parentNode.parentNode)">Click to Refresh</button>
-    '''
-))
 
 
 app = startup.run(mode="jupyter")
