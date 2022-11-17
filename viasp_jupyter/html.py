@@ -9,11 +9,10 @@ def display_refresh_button():
                     var cell_element = outp.offsetParent.offsetParent;
                     // which number cell is it?
                     var cell_idx = Jupyter.notebook.get_cell_elements().index(cell_element);
-                    console.log(cell_idx)
                     IPython.notebook.kernel.restart();
                     setTimeout(function(){
                         IPython.notebook.execute_cells([cell_idx]);
-                    }, 4000)
+                    }, 3000)
                 }
             </script>
             <style>
