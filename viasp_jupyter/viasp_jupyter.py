@@ -19,10 +19,7 @@ from .html import display_refresh_button
 # and set the backend URL, which will be used
 # by the frontend
 if 'BINDER_SERVICE_HOST' in os.environ:
-    try:
-        JupyterDash.infer_jupyter_proxy_config()
-    except EnvironmentError:
-        pass
+    JupyterDash.infer_jupyter_proxy_config()
     display_refresh_button()
 if ('server_url' in _jupyter_config and 'base_subpath' in _jupyter_config):
     _default_server_url = _jupyter_config['server_url']

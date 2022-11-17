@@ -32,6 +32,7 @@ def display_refresh_button():
                 transition: opacity .1s ease-in-out;
                 -moz-transition: opacity .1s ease-in-out;
                 -webkit-transition: opacity .1s ease-in-out;
+                box-shadow: 0 2px 2px -2px rgba(0, 0, 0, .2);
             }
             </style>
             <button class="button" onclick="restart_run_all(this.parentNode.parentNode)">Click to Refresh</button>
