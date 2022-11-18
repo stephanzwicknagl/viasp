@@ -1,6 +1,7 @@
 import React from "react";
 import {useColorPalette} from "../contexts/ColorPalette";
 import {setBackendURL, toggleShowAll, useSettings} from "../contexts/Settings";
+import {useHighlightedSymbol} from "../contexts/HighlightedSymbol";
 import {GoCheck, GoStop, IoCloseSharp, IoInformationCircleOutline, IoOptionsSharp} from "react-icons/all";
 import {IconContext} from "react-icons";
 import './settings.css'
@@ -9,15 +10,14 @@ import PropTypes from "prop-types";
 const FORM_ID = 'settings_form'
 
 function ClearMarked() {
-    const { state, dispatch } = useSettings()
+    const [, setHighlightedSymbol] = useHighlightedSymbol()
     const colorPalette = useColorPalette();
     return <tr>
         <td align="right">Reasoning:</td>
         <td align="center">
             <span style={{ backgroundColor: colorPalette.sixty.bright }}
                 className="display_all_toggle_span noselect"
-                onClick={() => null}> 
-                {/* TODO //use dispatch(setMarked([])) here */}
+                onClick={() => setHighlightedSymbol(null)}> 
                 <span className="toggle_part unselected" style={{"padding-right": "16px","padding-left":"16px"}}>clear marked symbols</span>
             </span>
         </td>

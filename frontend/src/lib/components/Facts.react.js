@@ -34,8 +34,7 @@ export function Facts(props) {
     return fact === null ? null :
         <div className="row_row"><Node key={fact.uuid} node={fact}
                                        showMini={false}
-                                       notifyClick={notifyClick}
-                                       markedSymbols={markedSymbols}/></div>
+                                       notifyClick={notifyClick}/></div>
 
 }
 

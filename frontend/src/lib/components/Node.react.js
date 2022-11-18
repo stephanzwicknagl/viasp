@@ -5,6 +5,7 @@ import PropTypes from "prop-types";
 import {hideNode, showNode, useShownNodes} from "../contexts/ShownNodes";
 import {useColorPalette} from "../contexts/ColorPalette";
 import {useHighlightedNode} from "../contexts/HighlightedNode";
+import {useHighlightedSymbol} from "../contexts/HighlightedSymbol";
 import {useSettings} from "../contexts/Settings";
 import {NODE, SYMBOL} from "../types/propTypes";
 import {useFilters} from "../contexts/Filters";
@@ -33,14 +34,21 @@ Symbol.propTypes = {
     symbol: SYMBOL
 }
 
+function useHighlightedSymbolToCreateClassName(compareHighlightedSymbol,symbol) {
+    let classNames = `mouse_over_symbol`;
+
+    classNames = `mouse_over_symbol ${(compareHighlightedSymbol.includes(symbol)) ? "mark_symbol" : null}`;
+    return classNames
+}
+
 function NodeContent(props) {
 
     const {state} = useSettings();
-    const {node, notifyClick, markedSymbols} = props;
-    // no notify click in sub-node scope, because whole node is clickable atm
+    const {node} = props;
     const colorPalette = useColorPalette();
     const [{activeFilters},] = useFilters();
-    const [markSymbol, setMarkSymbol] = React.useState(false);
+    const [highlightedSymbol, setHighlightedSymbol] = useHighlightedSymbol();
+
     let contentToShow;
     if (state.show_all) {
         contentToShow = node.atoms;
@@ -53,34 +61,17 @@ function NodeContent(props) {
             .map(filter => filter.name === symbol.name && filter.args === symbol.arguments.length));
     }
 
+    function handleClick(e,atomString) {
+        e.stopPropagation();
+        setHighlightedSymbol(node.reason[atomString]);
+    }
+
     const classNames2 = `set_value`
     const containerNames = `set_container`
-    const [marked, setMarked] = React.useState(null);
-    React.useEffect(() => {
-            // console.log("markedSymbols: ", markedSymbols)
-            if (markedSymbols) {
-                console.log("als string", markedSymbols.map(s => make_atoms_string(s)))
-                setMarked(markedSymbols.map(s => make_atoms_string(s)))
-            };
-    }, [markedSymbols, node, state.show_all])
-    const [renderedSymbols, setRenderedSymbols] = React.useState([])
-    React.useEffect( () => {
-        setRenderedSymbols(contentToShow.filter(symbol => 
+    let renderedSymbols = contentToShow.filter(symbol => 
                 symbolShouldBeShown(symbol)).map(s => {
-                    let atomString = make_atoms_string(s)
-                    // console.log(atomString);
-                    // console.log((atomString === "p(1)"));
-                    // console.log("in check if marked of", marked)
-                    if (marked) {
-                        setMarkSymbol(marked.includes(atomString));
-                    }
-                    const classNames1 = `${(markSymbol) ? "mark mouse_over_shadow" : "mouse_over_shadow"}`;
-                    const colorNames = (markSymbol) ?  {"background-color": colorPalette.warn.ten} : null;
-                    // add onclick in this outer div like onClick={() => notifyClick(node)}
-                    // but with node and symobl as arguments
-                    return <div className={classNames1} style={colorNames}><Symbol key={JSON.stringify(s)} symbol={s} /></div>
-        }))
-    }, [marked, markSymbol, contentToShow, activeFilters, colorPalette, markedSymbols])
+                    const classNames1 = useHighlightedSymbolToCreateClassName(JSON.stringify(highlightedSymbol), JSON.stringify(s));
+                    return <div className={classNames1} onClick={(e) => handleClick(e,make_atoms_string(s))}><Symbol key={JSON.stringify(s)} symbol={s} /></div>})
 
     return <div className={containerNames} style={{"color": colorPalette.thirty.bright}}>
         <span className={classNames2}>{renderedSymbols.length > 0 ? renderedSymbols : ""}</span>
@@ -110,7 +101,7 @@ function useHighlightedNodeToCreateClassName(node) {
 }
 
 export function Node(props) {
-    const {node, notifyClick, showMini, markedSymbols} = props;
+    const {node, notifyClick, showMini} = props;
     const [isOverflowV, setIsOverflowV] = React.useState(false);
     const colorPalette = useColorPalette();
     const [, dispatch] = useShownNodes()
@@ -140,7 +131,7 @@ export function Node(props) {
                 id={node.uuid} onClick={() => notifyClick(node)}>
         {showMini ? <div style={{"backgroundColor": colorPalette.ten.dark, "color": colorPalette.ten.dark}}
                          className={"mini"}/> :
-            <div className={"set_too_high"} ref={ref}><NodeContent node={node} notifyClick={notifyClick} markedSymbols={markedSymbols}/></div>}
+            <div className={"set_too_high"} ref={ref}><NodeContent node={node}/></div>}
         {!showMini && isOverflowV ?
             <div style={{"backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark}}
                  className={"noselect bauchbinde"}>...</div> : null}

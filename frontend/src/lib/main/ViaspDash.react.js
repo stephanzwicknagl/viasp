@@ -15,6 +15,7 @@ import {Settings} from "../components/settings";
 import {UserMessages} from "../components/messages";
 import {DEFAULT_BACKEND_URL, SettingsProvider, useSettings} from "../contexts/Settings";
 import {FilterProvider} from "../contexts/Filters";
+import { HighlightedSymbolProvider } from '../contexts/HighlightedSymbol';
 
 
 function loadClingraphUsed(backendURL) {
@@ -26,29 +27,18 @@ function loadClingraphUsed(backendURL) {
     });
 }
 
-function loadMarkedSymbols(uuid, backendURL) {
-    return fetch(`${backendURL("detail/explain")}/${uuid}`).then(r => {
-        if (r.ok) {
-            return r.json()
-        }
-        throw new Error(r.statusText);
-    });
-}
-
 function GraphContainer(props) {
-    const {setDetail, notifyDash, usingClingraph, markedSymbols} = props;
+    const {setDetail, notifyDash, usingClingraph} = props;
     const {state: {transformations}} = useTransformations()
     const lastNodeInGraph = transformations.length - 1;
 
 
     return <div className="graph_container">
         <Facts notifyClick={(clickedOn) => {
-            console.log("clickedOn: ", clickedOn)
             notifyDash(clickedOn)
             setDetail(clickedOn.uuid)
             // set marked clickedOn.reason
             }}
-            markedSymbols={markedSymbols}
         /><Settings/>
         {transformations.map(({transformation}, i) => {
             if (i === lastNodeInGraph && usingClingraph) {
@@ -57,11 +47,9 @@ function GraphContainer(props) {
                             key={transformation.id}
                             transformation={transformation}
                             notifyClick={(clickedOn) => {
-                                console.log("clickedOn: ", clickedOn)
                                 notifyDash(clickedOn)
                                 setDetail(clickedOn.uuid)
                             }}
-                            markedSymbols={markedSymbols}
                         />
                         <Boxrow
                             key={transformation.id}
@@ -73,11 +61,9 @@ function GraphContainer(props) {
                     key={transformation.id}
                     transformation={transformation}
                     notifyClick={(clickedOn) => {
-                        console.log("clickedOn: ", clickedOn)
                         notifyDash(clickedOn)
                         setDetail(clickedOn.uuid)
                     }}
-                    markedSymbols={markedSymbols}
                     />
             }
         })}
@@ -105,7 +91,6 @@ function MainWindow(props) {
     const {backendURL} = useSettings();
     const {state: {transformations}} = useTransformations()
     const [usingClingraph, setUsingClingraph] = React.useState("false")
-    const [marked, setMarked] = React.useState(null)
 
     React.useEffect(() => {
         let mounted = true;
@@ -118,20 +103,6 @@ function MainWindow(props) {
         return () => mounted = false;
     }, []);
 
-    React.useEffect(() => {
-        let mounted = true;
-        console.log("detail changed:", detail)
-        if (detail) {
-            loadMarkedSymbols(detail, backendURL)
-                .then(data => {
-                    if (mounted) {
-                        setMarked(data)
-                        console.log("habe marked gesettet:", data)
-                    }
-                });
-            }
-    }, [detail]);
-
     const [, dispatch] = useMessages()
     React.useEffect(() => {
         fetch(backendURL("graph/transformations")).catch(() => {
@@ -143,7 +114,7 @@ function MainWindow(props) {
         <div className="content">
             <ShownNodesProvider initialState={initialState} reducer={nodeReducer}>
                 <Search setDetail={setDetail}/>
-                <GraphContainer setDetail={setDetail} notifyDash={notifyDash} usingClingraph={usingClingraph} markedSymbols={marked}/>
+                <GraphContainer setDetail={setDetail} notifyDash={notifyDash} usingClingraph={usingClingraph}/>
                 {
                     transformations.length === 0 ? null : <Edges usingClingraph={usingClingraph}/>
                 }
@@ -172,18 +143,20 @@ export default function ViaspDash(props) {
     return <div id={id}>
         <ColorPaletteProvider colorPalette={colors}>
             <HighlightedNodeProvider>
-                <FilterProvider>
-                    <SettingsProvider backendURL={backendURL}>
-                        <UserMessagesProvider>
-                            <TransformationProvider>
-                                <div>
-                                    <UserMessages/>
-                                    <MainWindow notifyDash={notifyDash}/>
-                                </div>
-                            </TransformationProvider>
-                        </UserMessagesProvider>
-                    </SettingsProvider>
-                </FilterProvider>
+                <HighlightedSymbolProvider>
+                    <FilterProvider>
+                        <SettingsProvider backendURL={backendURL}>
+                            <UserMessagesProvider>
+                                <TransformationProvider>
+                                    <div>
+                                        <UserMessages/>
+                                        <MainWindow notifyDash={notifyDash}/>
+                                    </div>
+                                </TransformationProvider>
+                            </UserMessagesProvider>
+                        </SettingsProvider>
+                    </FilterProvider>
+                </HighlightedSymbolProvider>
             </HighlightedNodeProvider>
         </ColorPaletteProvider>
     </div>
