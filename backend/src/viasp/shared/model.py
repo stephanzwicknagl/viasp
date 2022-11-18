@@ -2,7 +2,8 @@ from copy import copy
 from dataclasses import dataclass, field
 from enum import Enum
 from inspect import Signature as inspect_Signature
-from typing import Any, Sequence, Dict, Union, FrozenSet, Collection
+from typing import Any, Sequence, Dict, Union, FrozenSet, Collection, List
+from collections import defaultdict
 from uuid import UUID, uuid4
 
 from clingo import Symbol, ModelType
@@ -14,7 +15,7 @@ class Node:
     diff: FrozenSet[Symbol] = field(hash=True)
     rule_nr: int = field(hash=True)
     atoms: FrozenSet[Symbol] = field(default_factory=frozenset, hash=True)
-    reason: FrozenSet[Symbol] = field(default_factory=frozenset, hash=False)
+    reason: Dict[Symbol, List[Symbol]] = field(default_factory=defaultdict, hash=False)
     uuid: UUID = field(default_factory=uuid4, hash=False)
 
     def __hash__(self):
@@ -24,7 +25,10 @@ class Node:
         return isinstance(o, type(self)) and (self.atoms, self.rule_nr, self.diff, self.reason) == (o.atoms, o.rule_nr, o.diff, o.reason)
 
     def __repr__(self):
-        return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{'. '.join(map(str, self.atoms))}}}, reasons={{{'. '.join(map(str, self.reason))}}}, uuid={self.uuid})"
+        repr_reasons = []
+        for key, val in self.reason.items():
+            repr_reasons.append(f"{key}: {val}")
+        return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{'. '.join(map(str, self.atoms))}}}, reasons={{{'. '.join(repr_reasons)}}}, uuid={self.uuid})"
 
 
 @dataclass(frozen=True)
