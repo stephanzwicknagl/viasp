@@ -13,16 +13,14 @@ from jupyter_dash.comms import _jupyter_config
 import viasp_dash
 from viasp import Control2
 from viasp.server import startup
-
+from .html import display_refresh_button
 
 # if running in binder, get proxy information
 # and set the backend URL, which will be used
 # by the frontend
 if 'BINDER_SERVICE_HOST' in os.environ:
-    try:
-        JupyterDash.infer_jupyter_proxy_config()
-    except EnvironmentError:
-        pass
+    JupyterDash.infer_jupyter_proxy_config()
+    display_refresh_button()
 if ('server_url' in _jupyter_config and 'base_subpath' in _jupyter_config):
     _default_server_url = _jupyter_config['server_url']
 
@@ -35,6 +33,7 @@ else:
     _VIASP_BACKEND_URL = "http://localhost:5050"
 
 print(f"Starting backend at {_VIASP_BACKEND_URL}")
+
 
 app = startup.run(mode="jupyter")
 app.layout = viasp_dash.ViaspDash(

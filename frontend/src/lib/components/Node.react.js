@@ -55,7 +55,6 @@ function NodeContent(props) {
 
     const classNames2 = `set_value`
     const containerNames = `set_container`
-    
     const [marked, setMarked] = React.useState(null);
     React.useEffect(() => {
             // console.log("markedSymbols: ", markedSymbols)
@@ -82,6 +81,7 @@ function NodeContent(props) {
                     return <div className={classNames1} style={colorNames}><Symbol key={JSON.stringify(s)} symbol={s} /></div>
         }))
     }, [marked, markSymbol, contentToShow, activeFilters, colorPalette, markedSymbols])
+
     return <div className={containerNames} style={{"color": colorPalette.thirty.bright}}>
         <span className={classNames2}>{renderedSymbols.length > 0 ? renderedSymbols : ""}</span>
     </div>

@@ -45,13 +45,6 @@ export function Box(props) {
             });
         return () => mounted = false;
     }, []);
-    if (imageToShow) {
-        console.log("Have loaded the image");
-    }	
-    else {
-        console.log("Image could not be loaded");
-    }
-
 
     return <div className={classNames}
                 style={{"backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark}}
