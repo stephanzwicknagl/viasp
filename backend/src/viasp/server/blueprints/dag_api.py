@@ -227,9 +227,9 @@ def set_graph(data: DiGraph):
 def get_atoms_in_path_by_signature(uuid: str):
     signature_to_atom_mapping = defaultdict(set)
     node = find_node_by_uuid(uuid)
-    for symbol in node.atoms:
-        signature = Signature(symbol.name, len(symbol.arguments))
-        signature_to_atom_mapping[signature].add(symbol)
+    for s in node.atoms:
+        signature = Signature(s.symbol.name, len(s.symbol.arguments))
+        signature_to_atom_mapping[signature].add(s.symbol)
     return [(s, signature_to_atom_mapping[s])
             for s in signature_to_atom_mapping.keys()]
 
