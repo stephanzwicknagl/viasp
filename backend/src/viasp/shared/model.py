@@ -34,7 +34,7 @@ class Node:
     diff: FrozenSet[SymbolIdentifier] = field(hash=True)
     rule_nr: int = field(hash=True)
     atoms: FrozenSet[SymbolIdentifier] = field(default_factory=frozenset, hash=True)
-    reason = field(default_factory=DefaultMappingProxyType, hash=True) # type: MappingProxyType[str, List[SymbolIdentifier]]
+    reason: MappingProxyType = field(default_factory=DefaultMappingProxyType, hash=True) # type: MappingProxyType[str, List[SymbolIdentifier]]
     uuid: UUID = field(default_factory=uuid4, hash=False)
 
     def __hash__(self):
