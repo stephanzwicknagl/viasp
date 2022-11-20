@@ -5,7 +5,7 @@ import "../components/main.css";
 import {Detail} from "../components/Detail.react";
 import {Search} from "../components/Search.react";
 import {Facts} from "../components/Facts.react";
-import {Edges} from "../components/Edges.react";
+import {Arrows, Edges} from "../components/Edges.react";
 import {initialState, nodeReducer, ShownNodesProvider} from "../contexts/ShownNodes";
 import {TransformationProvider, useTransformations} from "../contexts/transformations";
 import {ColorPaletteProvider} from "../contexts/ColorPalette";
@@ -16,6 +16,7 @@ import {UserMessages} from "../components/messages";
 import {DEFAULT_BACKEND_URL, SettingsProvider, useSettings} from "../contexts/Settings";
 import {FilterProvider} from "../contexts/Filters";
 import { HighlightedSymbolProvider } from '../contexts/HighlightedSymbol';
+import { useHighlightedSymbol } from '../contexts/HighlightedSymbol';
 
 
 function loadClingraphUsed(backendURL) {
@@ -91,6 +92,7 @@ function MainWindow(props) {
     const {backendURL} = useSettings();
     const {state: {transformations}} = useTransformations()
     const [usingClingraph, setUsingClingraph] = React.useState("false")
+    const [highlightedSymbol,,] = useHighlightedSymbol();
 
     React.useEffect(() => {
         let mounted = true;
@@ -117,6 +119,9 @@ function MainWindow(props) {
                 <GraphContainer setDetail={setDetail} notifyDash={notifyDash} usingClingraph={usingClingraph}/>
                 {
                     transformations.length === 0 ? null : <Edges usingClingraph={usingClingraph}/>
+                }
+                {
+                    highlightedSymbol.length === 0 ? null : <Arrows />
                 }
             </ShownNodesProvider>
         </div>

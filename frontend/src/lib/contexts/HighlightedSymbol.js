@@ -1,7 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 
-const defaultHighlightedSymbol = null;
+const defaultHighlightedSymbol = [];
 
 const HighlightedSymbolContext = React.createContext(defaultHighlightedSymbol);
 
@@ -9,9 +9,17 @@ export const useHighlightedSymbol = () => React.useContext(HighlightedSymbolCont
 export const HighlightedSymbolProvider = ({ children }) => {
     const [highlightedSymbol, setHighlightedSymbol] = React.useState(defaultHighlightedSymbol);
 
+    function addHighlightedSymbol(arrows) {
+        if (arrows) {
+            // remove duplicates from concatenation using stringify to compare the arrays
+            const newHighlightedSymbol = Array.from(new Set([...highlightedSymbol, arrows].map(JSON.stringify)), JSON.parse)
+            setHighlightedSymbol(newHighlightedSymbol);
+        }
+    };
+
 
     return <HighlightedSymbolContext.Provider
-        value={[highlightedSymbol, setHighlightedSymbol]}>{children}</HighlightedSymbolContext.Provider>
+        value={[highlightedSymbol, addHighlightedSymbol, setHighlightedSymbol]}>{children}</HighlightedSymbolContext.Provider>
 }
 
 HighlightedSymbolProvider.propTypes = {

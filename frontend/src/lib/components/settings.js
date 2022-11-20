@@ -10,14 +10,14 @@ import PropTypes from "prop-types";
 const FORM_ID = 'settings_form'
 
 function ClearMarked() {
-    const [, setHighlightedSymbol] = useHighlightedSymbol()
+    const [,, setHighlightedSymbol] = useHighlightedSymbol()
     const colorPalette = useColorPalette();
     return <tr>
         <td align="right">Reasoning:</td>
         <td align="center">
             <span style={{ backgroundColor: colorPalette.sixty.bright }}
                 className="display_all_toggle_span noselect"
-                onClick={() => setHighlightedSymbol(null)}> 
+                onClick={() => setHighlightedSymbol([])}> 
                 <span className="toggle_part unselected" style={{"padding-right": "16px","padding-left":"16px"}}>clear marked symbols</span>
             </span>
         </td>
@@ -39,12 +39,14 @@ function ShowAllToggle() {
     const {state, dispatch} = useSettings()
     const [classNameNew, label] = useToggleState(state);
     const colorPalette = useColorPalette();
+    const [, , setHighlightedSymbol] = useHighlightedSymbol()
+
     return <tr>
         <td align="right">Nodes show:</td>
         <td align="center">
         <span style={{backgroundColor: colorPalette.sixty.bright}}
               className="display_all_toggle_span noselect"
-              onClick={() => dispatch(toggleShowAll())}>
+                onClick={() => {dispatch(toggleShowAll()); setHighlightedSymbol([])}}>
                 <span className={classNameNew} style={state.show_all ? null : {
                 backgroundColor: colorPalette.ten.bright,
                 "color": colorPalette.sixty.bright

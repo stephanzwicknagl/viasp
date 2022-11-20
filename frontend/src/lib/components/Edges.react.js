@@ -5,6 +5,9 @@ import useResizeObserver from "@react-hook/resize-observer";
 import {useShownNodes} from "../contexts/ShownNodes";
 import {useSettings} from "../contexts/Settings";
 import {useFilters} from "../contexts/Filters";
+import {useHighlightedSymbol} from "../contexts/HighlightedSymbol";
+import Xarrow from "react-xarrows";
+import {useColorPalette} from "../contexts/ColorPalette";
 
 function loadEdges(shownNodes, backendURL) {
     return fetch(`${backendURL("graph/edges")}`, {
@@ -101,4 +104,25 @@ Edges.propTypes = {
      * The using Clingraph boolean
      * */
     usingClingraph: PropTypes.bool
+}
+
+export function Arrows(){
+    const [highlightedSymbol,,] = useHighlightedSymbol();
+    const colorPalette = useColorPalette();
+    
+    return <div className="arrows_container">
+        {highlightedSymbol.map(arrow => {
+            return arrow.map(a => {
+                return <Xarrow
+                    key={a[0] + "-" + a[1]} start={a[0]} end={a[1]} startAnchor={"top"} endAnchor={"bottom"} color={colorPalette.warn.ten} strokeWidth={2} headSize={5}/>
+            })
+        })}
+    </div> 
+}
+
+Arrows.propTypes = {
+    /**
+     * The ID used to identify this component in Dash callbacks.
+     */
+    id: PropTypes.string,
 }

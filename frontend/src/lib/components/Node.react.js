@@ -7,7 +7,7 @@ import {useColorPalette} from "../contexts/ColorPalette";
 import {useHighlightedNode} from "../contexts/HighlightedNode";
 import {useHighlightedSymbol} from "../contexts/HighlightedSymbol";
 import {useSettings} from "../contexts/Settings";
-import {NODE, SYMBOL} from "../types/propTypes";
+import {NODE, SYMBOLIDENTIFIER} from "../types/propTypes";
 import {useFilters} from "../contexts/Filters";
 
 
@@ -20,24 +20,36 @@ function any(iterable) {
     return false;
 }
 
+function checkSymbolInHighlighted(arr, symbol) { //maybe rewrite using every() or some()
+    for (let i = 0; i < arr.length; i++) {
+        for (let j = 0; j < arr[i].length; j++) {
+            if (arr[i][j][1] === symbol) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 function Symbol(props) {
-    const { symbol } = props;
-    let atomString = make_atoms_string(symbol)
+    const { symbolId } = props;
+    let atomString = make_atoms_string(symbolId.symbol)
     atomString = atomString.length === 0 ? "" : atomString;
-    return <div className={"symbol"}>{atomString}</div>
+    return <div className={"symbol"} id={symbolId.uuid}>{atomString}</div>
 }
 
 Symbol.propTypes = {
     /**
-     * The symbol to display
+     * The symbolidentifier of the symbol to display
      */
-    symbol: SYMBOL
+    symbolId: SYMBOLIDENTIFIER
 }
 
 function useHighlightedSymbolToCreateClassName(compareHighlightedSymbol,symbol) {
     let classNames = `mouse_over_symbol`;
-
-    classNames = `mouse_over_symbol ${(compareHighlightedSymbol.includes(symbol)) ? "mark_symbol" : null}`;
+    if (!compareHighlightedSymbol.length == 0) { 
+        classNames = `mouse_over_symbol ${checkSymbolInHighlighted(compareHighlightedSymbol, symbol) ? "mark_symbol" : null}`;
+    }
     return classNames
 }
 
@@ -47,7 +59,7 @@ function NodeContent(props) {
     const {node} = props;
     const colorPalette = useColorPalette();
     const [{activeFilters},] = useFilters();
-    const [highlightedSymbol, setHighlightedSymbol] = useHighlightedSymbol();
+    const [highlightedSymbol, addHighlightedSymbol,] = useHighlightedSymbol();
 
     let contentToShow;
     if (state.show_all) {
@@ -56,22 +68,28 @@ function NodeContent(props) {
         contentToShow = node.diff;
     }
 
-    function symbolShouldBeShown(symbol) {
+    function symbolShouldBeShown(symbolId) {
         return activeFilters.length === 0 || any(activeFilters.filter(filter => filter._type === "Signature")
-            .map(filter => filter.name === symbol.name && filter.args === symbol.arguments.length));
+            .map(filter => filter.name === symbolId.symbol.name && filter.args === symbolId.symbol.arguments.length));
     }
 
-    function handleClick(e,atomString) {
+    function handleClick(e,src) {
         e.stopPropagation();
-        setHighlightedSymbol(node.reason[atomString]);
+        const reasons = node.reason[make_atoms_string(src.symbol)];
+        if (reasons){
+            addHighlightedSymbol(reasons.map(tgt => {if (tgt.uuid) return [src.uuid,tgt.uuid]; else return null}));
+        }
+        else {
+            addHighlightedSymbol(null);
+        }
     }
 
     const classNames2 = `set_value`
     const containerNames = `set_container`
     let renderedSymbols = contentToShow.filter(symbol => 
                 symbolShouldBeShown(symbol)).map(s => {
-                    const classNames1 = useHighlightedSymbolToCreateClassName(JSON.stringify(highlightedSymbol), JSON.stringify(s));
-                    return <div className={classNames1} onClick={(e) => handleClick(e,make_atoms_string(s))}><Symbol key={JSON.stringify(s)} symbol={s} /></div>})
+                    const classNames1 = useHighlightedSymbolToCreateClassName(highlightedSymbol, s.uuid);
+                    return <div className={classNames1} onClick={(e) => handleClick(e,s)}><Symbol key={JSON.stringify(s)} symbolId={s} /></div>})
 
     return <div className={containerNames} style={{"color": colorPalette.thirty.bright}}>
         <span className={classNames2}>{renderedSymbols.length > 0 ? renderedSymbols : ""}</span>

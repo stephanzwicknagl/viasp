@@ -7,6 +7,12 @@ export const SYMBOL = PropTypes.exact({
     positive: PropTypes.bool
 })
 
+export const SYMBOLIDENTIFIER = PropTypes.exact({
+    _type: PropTypes.oneOf(['SymbolIdentifier']),
+    symbol: SYMBOL,
+    uuid: PropTypes.string
+})
+
 export const SIGNATURE = PropTypes.exact({
     _type: PropTypes.oneOf(['Signature']),
     name: PropTypes.string,
@@ -22,6 +28,7 @@ export const NODE = PropTypes.exact({
     atoms: PropTypes.array,
     diff: PropTypes.array,
     rule_nr: PropTypes.number,
+    reason: PropTypes.array, 
     uuid: PropTypes.string
 })
 export const BOX = PropTypes.exact({
