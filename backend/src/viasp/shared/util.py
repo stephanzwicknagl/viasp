@@ -1,5 +1,7 @@
 from itertools import tee
 from typing import Any, TypeVar, Iterable, Tuple
+from collections import defaultdict
+from types import MappingProxyType
 
 import networkx as nx
 
@@ -19,6 +21,8 @@ def get_leafs_from_graph(graph: nx.DiGraph) -> Iterable[Any]:
         if out_degree == 0:
             yield candidate
 
+def get_root_node_from_graph(graph: nx.DiGraph) -> Any:
+    return next(nx.topological_sort(graph))
 
 def get_sorted_path_from_path_graph(graph: nx.DiGraph) -> Any:
     start = get_start_node_from_graph(graph)
@@ -34,3 +38,6 @@ def pairwise(iterable: Iterable[T]) -> Iterable[Tuple[T, T]]:
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
+
+def DefaultMappingProxyType():
+    return MappingProxyType(defaultdict(list))

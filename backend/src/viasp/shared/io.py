@@ -14,7 +14,7 @@ from clingo import Model as clingo_Model, ModelType, Symbol, Application
 from clingo.ast import AST
 
 from .interfaces import ViaspClient
-from .model import Node, Transformation, Signature, StableModel, ClingoMethodCall, TransformationError, FailedReason
+from .model import Node, Transformation, Signature, StableModel, ClingoMethodCall, TransformationError, FailedReason, SymbolIdentifier
 
 
 def model_to_json(model: Union[clingo_Model, Collection[clingo_Model]], *args, **kwargs) -> str:
@@ -44,6 +44,8 @@ def object_hook(obj):
         return StableModel(**obj)
     elif t == "ClingoMethodCall":
         return ClingoMethodCall(**obj)
+    elif t == "SymbolIdentifier":
+        return SymbolIdentifier(**obj)
     return obj
 
 
@@ -95,6 +97,8 @@ def encode_object(o):
     elif isinstance(o, Symbol):
         x = symbol_to_dict(o)
         return x
+    elif isinstance(o, SymbolIdentifier):
+        return {"_type": "SymbolIdentifier", "symbol": o.symbol, "uuid": o.uuid}
     elif isinstance(o, FailedReason):
         return {"_type": "FailedReason", "value": o.value}
     elif is_dataclass(o):
@@ -112,6 +116,7 @@ def encode_object(o):
         return str(o)
     elif isinstance(o, Iterable):
         return list(o)
+
 
 
 def model_to_dict(model: clingo_Model) -> dict:
