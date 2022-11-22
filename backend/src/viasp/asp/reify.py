@@ -227,17 +227,18 @@ class ProgramReifier(DependencyCollector):
         self.model = model
 
     def _nest_rule_head_in_h_with_explanation_tuple(self, loc: ast.Location, dependant: ast.Literal, \
-             body: List[ast.Function]):
+             body: List[ast.Literal]):
         """
         In: H :- B.
-        Out: h(0, H, positive(B))
+        Out: h(0, H, pos_atoms(B)),
+        where pos_atoms(B) is a tuple of all positive Symbolic Atoms in B.
         """
         loc_fun = ast.Function(loc, str(self.rule_nr), [], False)
         loc_atm = ast.SymbolicAtom(loc_fun)
         loc_lit = ast.Literal(loc, ast.Sign.NoSign, loc_atm)
         reasons = []
         for literal in body:
-            if literal.sign == ast.Sign.NoSign:
+            if literal.sign == ast.Sign.NoSign and literal.atom.ast_type == ast.ASTType.SymbolicAtom:
                 reasons.append(literal.atom)
         reason_fun = ast.Function(loc, '', reasons, 0)
         reason_lit = ast.Literal(loc, ast.Sign.NoSign, reason_fun)
