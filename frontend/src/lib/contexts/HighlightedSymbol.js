@@ -9,17 +9,25 @@ export const useHighlightedSymbol = () => React.useContext(HighlightedSymbolCont
 export const HighlightedSymbolProvider = ({ children }) => {
     const [highlightedSymbol, setHighlightedSymbol] = React.useState(defaultHighlightedSymbol);
 
-    function addHighlightedSymbol(arrows) {
+    function toggleHighlightedSymbol(arrows) {
         if (arrows) {
-            // remove duplicates from concatenation using stringify to compare the arrays
-            const newHighlightedSymbol = Array.from(new Set([...highlightedSymbol, arrows].map(JSON.stringify)), JSON.parse)
-            setHighlightedSymbol(newHighlightedSymbol);
+            // stringify to compare the arrays
+            var array = highlightedSymbol.map((item) => JSON.stringify(item));
+            var value = JSON.stringify(arrows);
+            var index = array.indexOf(value);
+
+            if (index === -1) {
+                array.push(value);
+            } else {
+                array.splice(index, 1);
+            }
+            setHighlightedSymbol(Array.from(array, JSON.parse));
         }
     };
 
 
     return <HighlightedSymbolContext.Provider
-        value={[highlightedSymbol, addHighlightedSymbol, setHighlightedSymbol]}>{children}</HighlightedSymbolContext.Provider>
+        value={[highlightedSymbol, toggleHighlightedSymbol, setHighlightedSymbol]}>{children}</HighlightedSymbolContext.Provider>
 }
 
 HighlightedSymbolProvider.propTypes = {

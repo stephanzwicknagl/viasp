@@ -59,7 +59,7 @@ function NodeContent(props) {
     const {node} = props;
     const colorPalette = useColorPalette();
     const [{activeFilters},] = useFilters();
-    const [highlightedSymbol, addHighlightedSymbol,] = useHighlightedSymbol();
+    const [highlightedSymbol, toggleHighlightedSymbol,] = useHighlightedSymbol();
 
     let contentToShow;
     if (state.show_all) {
@@ -77,10 +77,10 @@ function NodeContent(props) {
         e.stopPropagation();
         const reasons = node.reason[make_atoms_string(src.symbol)];
         if (reasons){
-            addHighlightedSymbol(reasons.map(tgt => {if (tgt.uuid) return [src.uuid,tgt.uuid]; else return null}));
+            toggleHighlightedSymbol(reasons.map(tgt => {if (tgt.uuid) return [src.uuid,tgt.uuid]; else return null}));
         }
         else {
-            addHighlightedSymbol(null);
+            toggleHighlightedSymbol(null);
         }
     }
 
