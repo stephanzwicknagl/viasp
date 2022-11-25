@@ -108,14 +108,11 @@ Edges.propTypes = {
 
 export function Arrows(){
     const [highlightedSymbol,,] = useHighlightedSymbol();
-    const colorPalette = useColorPalette();
     
     return <div className="arrows_container">
         {highlightedSymbol.map(arrow => {
-            return arrow.map(a => {
-                return <Xarrow
-                    key={a[0] + "-" + a[1]} start={a[0]} end={a[1]} startAnchor={"top"} endAnchor={"bottom"} color={colorPalette.warn.ten} strokeWidth={2} headSize={5}/>
-            })
+            return <Xarrow
+                key={arrow.src + "-" + arrow.tgt} start={arrow.src} end={arrow.tgt} startAnchor={"top"} endAnchor={"bottom"} color={arrow.color} strokeWidth={2} headSize={5}/>
         })}
     </div> 
 }

@@ -20,17 +20,6 @@ function any(iterable) {
     return false;
 }
 
-function checkSymbolInHighlighted(arr, symbol) { //maybe rewrite using every() or some()
-    for (let i = 0; i < arr.length; i++) {
-        for (let j = 0; j < arr[i].length; j++) {
-            if (arr[i][j][1] === symbol) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 function Symbol(props) {
     const { symbolId } = props;
     let atomString = make_atoms_string(symbolId.symbol)
@@ -45,12 +34,20 @@ Symbol.propTypes = {
     symbolId: SYMBOLIDENTIFIER
 }
 
-function useHighlightedSymbolToCreateClassName(compareHighlightedSymbol,symbol) {
+function useHighlightedSymbolToCreateClassName(compareHighlightedSymbol, symbol) {
     let classNames = `mouse_over_symbol`;
-    if (!compareHighlightedSymbol.length == 0) { 
-        classNames = `mouse_over_symbol ${checkSymbolInHighlighted(compareHighlightedSymbol, symbol) ? "mark_symbol" : null}`;
+    let style = null;
+
+    const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol);
+    const j = compareHighlightedSymbol.map(item => item.src).indexOf(symbol);
+    if (i !== -1) {
+        classNames = `mouse_over_symbol mark_symbol`;
+        style = {"backgroundColor": compareHighlightedSymbol[i].color};
     }
-    return classNames
+    else if (j !== -1) {
+        classNames = `mouse_over_symbol mark_symbol`;
+    }
+    return [classNames, style]
 }
 
 function NodeContent(props) {
@@ -73,14 +70,12 @@ function NodeContent(props) {
             .map(filter => filter.name === symbolId.symbol.name && filter.args === symbolId.symbol.arguments.length));
     }
 
-    function handleClick(e,src) {
+    function handleClick(e, src) {
         e.stopPropagation();
+
         const reasons = node.reason[make_atoms_string(src.symbol)];
         if (reasons){
-            toggleHighlightedSymbol(reasons.map(tgt => {if (tgt.uuid) return [src.uuid,tgt.uuid]; else return null}));
-        }
-        else {
-            toggleHighlightedSymbol(null);
+            toggleHighlightedSymbol(reasons.map(tgt => { if (tgt.uuid) return { "src": src.uuid, "tgt": tgt.uuid }; else return null }), highlightedSymbol);
         }
     }
 
@@ -88,8 +83,10 @@ function NodeContent(props) {
     const containerNames = `set_container`
     let renderedSymbols = contentToShow.filter(symbol => 
                 symbolShouldBeShown(symbol)).map(s => {
-                    const classNames1 = useHighlightedSymbolToCreateClassName(highlightedSymbol, s.uuid);
-                    return <div className={classNames1} onClick={(e) => handleClick(e,s)}><Symbol key={JSON.stringify(s)} symbolId={s} /></div>})
+                    const [classNames1, style1] = useHighlightedSymbolToCreateClassName(highlightedSymbol, s.uuid);
+                    return <div className={classNames1} style={style1} onClick={(e) => handleClick(e,s)}>
+                        <Symbol key={JSON.stringify(s)} symbolId={s} />
+                        </div>})
 
     return <div className={containerNames} style={{"color": colorPalette.thirty.bright}}>
         <span className={classNames2}>{renderedSymbols.length > 0 ? renderedSymbols : ""}</span>

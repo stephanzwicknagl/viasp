@@ -65,7 +65,7 @@
     width: -moz-fit-content;
     display: flex;
     border-radius: 10px;
-    background-color: #FF9800;
+    font-style: italic;
 }
 
 .set_value {

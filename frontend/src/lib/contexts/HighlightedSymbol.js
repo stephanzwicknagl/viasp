@@ -8,21 +8,46 @@ const HighlightedSymbolContext = React.createContext(defaultHighlightedSymbol);
 export const useHighlightedSymbol = () => React.useContext(HighlightedSymbolContext);
 export const HighlightedSymbolProvider = ({ children }) => {
     const [highlightedSymbol, setHighlightedSymbol] = React.useState(defaultHighlightedSymbol);
+    const colorArray = ["orange", "green", "blue", "brown"]
+
+    function getNextColor(l, arrowsColors){
+        var c = JSON.stringify(colorArray[l % colorArray.length])
+        if (arrowsColors.indexOf(c) === -1 || l >= colorArray.length){
+            return c
+        }
+        else{
+            return getNextColor(l+1, arrowsColors)
+        }
+    }
 
     function toggleHighlightedSymbol(arrows) {
-        if (arrows) {
-            // stringify to compare the arrays
-            var array = highlightedSymbol.map((item) => JSON.stringify(item));
-            var value = JSON.stringify(arrows);
-            var index = array.indexOf(value);
+        var arrowsSrcTgt = [];
+        var arrowsColors = [];
+        highlightedSymbol.forEach(item => {
+            arrowsSrcTgt.push(JSON.stringify({"src":item.src, "tgt":item.tgt}));
+            arrowsColors.push(JSON.stringify(item.color));
+        })
+        const c = getNextColor(highlightedSymbol.length, arrowsColors);
+
+        arrows.forEach(a => {
+            var value = JSON.stringify(a);
+            var index = arrowsSrcTgt.indexOf(value);
 
             if (index === -1) {
-                array.push(value);
+                arrowsSrcTgt.push(JSON.stringify(a));
+                arrowsColors.push(c);
             } else {
-                array.splice(index, 1);
+                arrowsSrcTgt.splice(index, 1);
+                arrowsColors.splice(index, 1);
             }
-            setHighlightedSymbol(Array.from(array, JSON.parse));
-        }
+        })
+        setHighlightedSymbol(
+            arrowsSrcTgt.map((item, i) => {
+                var obj = JSON.parse(item);
+                obj.color = JSON.parse(arrowsColors[i]);
+                return obj;
+        }));
+        console.log("Hightlihgted symbol", highlightedSymbol)
     };
 
 
