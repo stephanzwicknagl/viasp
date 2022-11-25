@@ -47,7 +47,6 @@ export const HighlightedSymbolProvider = ({ children }) => {
                 obj.color = JSON.parse(arrowsColors[i]);
                 return obj;
         }));
-        console.log("Hightlihgted symbol", highlightedSymbol)
     };
 
 
