@@ -70,7 +70,7 @@ class ClingoReconstructor:
         path = call.kwargs["path"]
         prg = ""
         with open(path, encoding="utf-8") as f:
-            prg = "\n".join(f.readlines())
+            prg = "".join(f.readlines())
         db = ProgramDatabase()
         db.add_to_program(prg)
         ctl.load(path)
