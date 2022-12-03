@@ -117,7 +117,7 @@ def wrap_marked_models(marked_models: Iterable[StableModel]):
     for model in marked_models:
         wrapped = []
         for part in model.atoms:
-            wrapped.append(f"model({part}).")
+            wrapped.append(f"{part}.")
         result.append(wrapped)
     return result
 
@@ -168,9 +168,10 @@ def show_selected_models():
     analyzer.add_program(db.get_program())
     _set_warnings(analyzer.get_filtered())
     if analyzer.will_work():
+        recursion_rules = analyzer.check_positive_recursion()
         reified = reify_list(analyzer.get_sorted_program(), h=analyzer.get_conflict_free_h(),
                              model=analyzer.get_conflict_free_model())
-        g = build_graph(marked_models, reified, analyzer)
+        g = build_graph(marked_models, reified, analyzer, recursion_rules)
 
         set_graph(g)
     return "ok", 200

@@ -25,16 +25,23 @@ def get_h_symbols_from_model(wrapped_stable_model: Iterable[Symbol],
                              constants: List[Symbol],
                              h="h") -> List[Symbol]:
     rules_that_are_reasons_why = []
+    new_rules_that_are_reasons_why = []
     ctl = Control()
     stringified = "".join(map(str, transformed_prg))
+    get_new_atoms_rule = f"{h}_new(I, H, G) :- {h}(I, H, G), not {h}(II,H,_) : II<I, {h}(II,_,_)."
     ctl.add("base", [], "".join(map(str, constants)))
     ctl.add("base", [], "".join(map(stringify_fact, facts)))
     ctl.add("base", [], stringified)
     ctl.add("base", [], "".join(map(str, wrapped_stable_model)))
+    ctl.add("base", [], get_new_atoms_rule)
     ctl.ground([("base", [])])
     for x in ctl.symbolic_atoms.by_signature(h, 3):
         rules_that_are_reasons_why.append(x.symbol)
-    return rules_that_are_reasons_why
+    for x in ctl.symbolic_atoms.by_signature(h+"_new", 3):
+        if x.symbol.arguments[1] in facts:
+            continue
+        new_rules_that_are_reasons_why.append(x.symbol)
+    return rules_that_are_reasons_why, new_rules_that_are_reasons_why
 
 
 def get_facts(original_program) -> Collection[Symbol]:
@@ -82,7 +89,7 @@ def insert_atoms_into_nodes(path: List[Node]) -> None:
 
 
 def make_reason_path_from_facts_to_stable_model(wrapped_stable_model, rule_mapping: Dict[int, Union[AST, str]],
-                                                fact_node: Node, h_syms, pad=True) -> nx.DiGraph:
+                                                fact_node: Node, h_syms, recursive_transformations:frozenset, pad=True) -> nx.DiGraph:
     h_syms = collect_h_symbols_and_create_nodes(h_syms, rule_mapping.keys(), pad)
     h_syms.sort(key=lambda node: node.rule_nr)
     h_syms.insert(0, fact_node)
@@ -92,11 +99,15 @@ def make_reason_path_from_facts_to_stable_model(wrapped_stable_model, rule_mappi
     if len(h_syms) == 1:
         # If there is a stable model that is exactly the same as the facts.
         warn(f"Adding a model without reasons {wrapped_stable_model}")
+        if rule_mapping[min(rule_mapping.keys())].rules in recursive_transformations:
+            fact_node.recursive = True
         g.add_edge(fact_node, Node(frozenset(), min(rule_mapping.keys()), frozenset(fact_node.diff)),
                    transformation=rule_mapping[min(rule_mapping.keys())])
         return g
 
     for a, b in pairwise(h_syms):
+        if rule_mapping[b.rule_nr].rules in recursive_transformations:
+            b.recursive = True
         g.add_edge(a, b, transformation=rule_mapping[b.rule_nr])
 
     return g
@@ -170,7 +181,7 @@ def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol) -> SymbolIdentifi
         :param v: The node that contains the symbol r
         :param r: The symbol that is the reason"""
     if g.in_degree(v) == 0: # stop criterion: v is the root node
-        warn(f"Explanation could not be made")
+        warn(f"An explanation could not be made")
         return None
     for u in g.predecessors(v):
         if r in u.diff:
@@ -179,7 +190,7 @@ def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol) -> SymbolIdentifi
             return get_identifiable_reason(g, u, r)
 
 def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collection[AST],
-                analyzer: ProgramAnalyzer) -> nx.DiGraph:
+                analyzer: ProgramAnalyzer, recursion_transformations: frozenset) -> nx.DiGraph:
     paths: List[nx.DiGraph] = []
     facts = analyzer.get_facts()
     identifiable_facts = map(SymbolIdentifier,facts)
@@ -192,9 +203,9 @@ def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collect
         single_node_graph.add_node(fact_node)
         return single_node_graph
     for model in wrapped_stable_models:
-        h_symbols = get_h_symbols_from_model(model, transformed_prg, facts, analyzer.get_constants(),
+        h_symbols, new_h_symbols = get_h_symbols_from_model(model, transformed_prg, facts, analyzer.get_constants(),
                                              analyzer.get_conflict_free_h())
-        new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, h_symbols)
+        new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, new_h_symbols, recursion_transformations)
         paths.append(new_path)
 
     result_graph = identify_reasons(join_paths_with_facts(paths))

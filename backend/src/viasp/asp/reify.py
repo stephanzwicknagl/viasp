@@ -6,7 +6,7 @@ import networkx as nx
 from clingo import ast, Symbol
 from clingo.ast import Transformer, parse_string, Rule, ASTType, AST, Literal, Minimize, Disjunction
 
-from .utils import is_constraint, merge_constraints
+from .utils import is_constraint, merge_constraints, topological_sort
 from ..asp.utils import merge_cycles, remove_loops
 from viasp.asp.ast_types import SUPPORTED_TYPES, ARITH_TYPES, UNSUPPORTED_TYPES, UNKNOWN_TYPES
 from ..shared.model import Transformation, TransformationError, FailedReason
@@ -94,11 +94,13 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         self.dependencies = nx.DiGraph()
         self.dependants: Dict[Tuple[str, int], Set[Rule]] = defaultdict(set)
         self.conditions: Dict[Tuple[str, int], Set[Rule]] = defaultdict(set)
+        self.positive_conditions: Dict[Tuple[str, int], Set[Rule]] = defaultdict(set)
         self.rule2signatures = defaultdict(set)
         self.facts: Set[Symbol] = set()
         self.constants: Set[Symbol] = set()
         self.constraints: Set[Rule] = set()
         self.pass_through: Set[AST] = set()
+        self.rules: List[Rule] = []
 
     def _get_conflict_free_version_of_name(self, name: str) -> Collection[str]:
         candidates = [name for name, _ in self.dependants.keys()]
@@ -140,6 +142,12 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             for u in uu:
                 u_sig = make_signature(u)
                 self.conditions[u_sig].add(rule)
+                for l in rule.body:
+                    if l.atom.ast_type == ASTType.SymbolicAtom:
+                        if (l.atom.symbol.name == u.atom.symbol.name and \
+                            l.sign == ast.Sign.NoSign):
+                            self.positive_conditions[u_sig].add(rule)
+                    
 
         for v in filter(lambda symbol: symbol.atom.ast_type != ASTType.BooleanConstant, deps.keys()):
             v_sig = make_signature(v)
@@ -159,6 +167,8 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             cond.extend(filter(filter_body_arithmetic, rule.body))
         self.register_symbolic_dependencies(deps)
         self.register_rule_dependencies(rule, deps)
+        self.rules.append(rule)
+
 
     def visit_Minimize(self, minimize: Minimize):
         deps = defaultdict(list)
@@ -194,7 +204,18 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         """
         g = nx.DiGraph()
         # Add dependents
-
+        # for x,y in head_dependencies.items():
+        #     with open("t.log", "a") as f:
+        #         f.write(f"Dependants: {list(map(str,x))}\n")
+        #         f.write(f"on {list(map(str,y))}\n\n")
+        # for x,y in body_dependencies.items():
+        #     with open("t.log", "a") as f:
+        #         f.write(f"Condition: {list(map(str,x))}\n")
+        #         f.write(f"on {list(map(str,y))}\n\n")
+        # for x,y in self.positive_conditions.items():
+        #     with open("t.log", "a") as f:
+        #         f.write(f"Positive Condition: {list(map(str,x))}\n")
+        #         f.write(f"on {list(map(str,y))}\n\n")
         for deps in head_dependencies.values():
             for dep in deps:
                 g.add_node(frozenset([dep]))
@@ -213,10 +234,18 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     def sort_program_by_dependencies(self):
         deps = self.make_dependency_graph(self.dependants, self.conditions)
         deps = merge_constraints(deps)
-        deps = merge_cycles(deps)
-        deps = remove_loops(deps)
-        program = list(nx.topological_sort(deps))
+        deps, _ = merge_cycles(deps)
+        deps, _ = remove_loops(deps)
+        program = topological_sort(deps, self.rules)
         return program
+
+    def check_positive_recursion(self):
+        deps1 = self.make_dependency_graph(self.dependants, self.positive_conditions)
+        deps1 = merge_constraints(deps1)
+        deps2, where1 = merge_cycles(deps1)
+        _, where2 = remove_loops(deps2)
+        return where1.union(where2)
+
 
 
 class ProgramReifier(DependencyCollector):
@@ -244,27 +273,7 @@ class ProgramReifier(DependencyCollector):
         reason_lit = ast.Literal(loc, ast.Sign.NoSign, reason_fun)
 
         return [ast.Function(loc, self.h, [loc_lit, dependant, reason_lit], 0)]
-
-    def _make_head_switch(self, head: clingo.ast.AST, location):
-        """In: H :- B.
-        Out: H:- h(_, H, _)."""
-        # head = rule.head
-
-        wild_card_fun = ast.Function(location, "_", [], False)
-        wild_card_atm = ast.SymbolicAtom(wild_card_fun)
-        wild_card_lit = ast.Literal(head.location, ast.Sign.NoSign, wild_card_atm)
-        fun = ast.Function(head.location, self.h, [wild_card_lit, head, wild_card_lit], 0)
-        return ast.Rule(location, head, [fun])
-
-    def _nest_rule_head_in_model(self, head):
-        """
-        In: H :- B.
-        Out: model(H).
-        """
-        loc = head.location
-        new_head = ast.Function(loc, self.model, [head], 0)
-        return new_head
-
+    
     def visit_Rule(self, rule: clingo.ast.Rule):
         # Embed the head
         deps = defaultdict(list)
@@ -280,13 +289,11 @@ class ProgramReifier(DependencyCollector):
         for dependant, conditions in deps.items():
             new_head_s = self._nest_rule_head_in_h_with_explanation_tuple(rule.location, dependant, rule.body)
             # Add reified head to body
-            new_body = [self._nest_rule_head_in_model(dependant)]
+            new_body = [dependant]
             new_body.extend(rule.body)
             new_body.extend(conditions)
             new_rules.extend([Rule(rule.location, new_head, new_body) for new_head in new_head_s])
 
-            # Add switch statement for the head
-            new_rules.append(self._make_head_switch(dependant, loc))
         return new_rules
 
 

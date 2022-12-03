@@ -2,7 +2,7 @@ import json
 from enum import IntEnum
 from json import JSONEncoder, JSONDecoder
 from dataclasses import is_dataclass
-from typing import Any, Union, Collection, Iterable, Dict
+from typing import Any, Union, Collection, Iterable, Dict, Sequence
 from pathlib import PosixPath
 from uuid import UUID
 
@@ -15,6 +15,7 @@ from clingo.ast import AST
 
 from .interfaces import ViaspClient
 from .model import Node, Transformation, Signature, StableModel, ClingoMethodCall, TransformationError, FailedReason, SymbolIdentifier
+from ..server.database import ProgramDatabase
 
 
 def model_to_json(model: Union[clingo_Model, Collection[clingo_Model]], *args, **kwargs) -> str:
@@ -56,14 +57,16 @@ class DataclassJSONDecoder(JSONDecoder):
 
 def dataclass_to_dict(o):
     if isinstance(o, Node):
-        return {"_type": "Node", "atoms": o.atoms, "diff": o.diff, "reason": o.reason, "uuid": o.uuid,
+        return {"_type": "Node", "atoms": o.atoms, "diff": o.diff, "reason": o.reason, "recursive": o.recursive, "uuid": o.uuid,
                 "rule_nr": o.rule_nr}
     elif isinstance(o, TransformationError):
         return {"_type": "TransformationError", "ast": o.ast, "reason": o.reason}
+    elif isinstance(o, SymbolIdentifier):
+        return {"_type": "SymbolIdentifier", "symbol": o.symbol, "uuid": o.uuid}
     elif isinstance(o, Signature):
         return {"_type": "Signature", "name": o.name, "args": o.args}
     elif isinstance(o, Transformation):
-        return {"_type": "Transformation", "id": o.id, "rules": o.rules}
+        return {"_type": "Transformation", "id": o.id, "rules": get_rules_from_input_program(o.rules)}
     elif isinstance(o, StableModel):
         return {"_type": "StableModel", "cost": o.cost, "optimality_proven": o.optimality_proven, "type": o.type,
                 "atoms": o.atoms, "terms": o.terms, "shown": o.shown, "theory": o.theory}
@@ -97,8 +100,6 @@ def encode_object(o):
     elif isinstance(o, Symbol):
         x = symbol_to_dict(o)
         return x
-    elif isinstance(o, SymbolIdentifier):
-        return {"_type": "SymbolIdentifier", "symbol": o.symbol, "uuid": o.uuid}
     elif isinstance(o, FailedReason):
         return {"_type": "FailedReason", "value": o.value}
     elif is_dataclass(o):
@@ -190,3 +191,28 @@ class ClingoModelEncoder(JSONEncoder):
 
 def deserialize(data: str, *args, **kwargs):
     return json.loads(data, *args, cls=DataclassJSONDecoder, **kwargs)
+
+
+def get_rules_from_input_program(rules) -> Sequence[str]:
+    rules_from_input_program: Sequence[str] = []
+    db = ProgramDatabase()
+    program = db.get_program().split("\n")
+    for rule in rules:
+        if isinstance(rule, str):
+            rules_from_input_program.append(rule)
+            continue
+        begin_line = rule.location.begin.line
+        begin_colu = rule.location.begin.column
+        end_line = rule.location.end.line
+        end_colu = rule.location.end.column
+        r = ""
+        if begin_line != end_line:
+            r += program[begin_line - 1][begin_colu-1:]
+            for i in range(begin_line, end_line - 1):
+                r += program[i]
+            r += program[end_line - 1][:end_colu]
+            r = ' '.join(r.splitlines())
+        else:
+            r += program[begin_line - 1][begin_colu - 1:end_colu]
+        rules_from_input_program.append(r)
+    return rules_from_input_program

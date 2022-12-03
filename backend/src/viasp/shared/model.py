@@ -35,6 +35,7 @@ class Node:
     rule_nr: int = field(hash=True)
     atoms: FrozenSet[SymbolIdentifier] = field(default_factory=frozenset, hash=True)
     reason: MappingProxyType = field(default_factory=DefaultMappingProxyType, hash=True) # type: MappingProxyType[str, List[SymbolIdentifier]]
+    recursive: bool = field(default=False, hash=False)
     uuid: UUID = field(default_factory=uuid4, hash=False)
 
     def __hash__(self):
@@ -47,7 +48,7 @@ class Node:
         repr_reasons = []
         for key, val in self.reason.items():
             repr_reasons.append(f"{key}: [{', '.join(map(str,val))}]")
-        return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{', '.join(map(str,self.atoms))}}}, reasons={{{', '.join(repr_reasons)}}}, uuid={self.uuid}"
+        return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{', '.join(map(str,self.atoms))}}}, reasons={{{', '.join(repr_reasons)}}}, recursive={self.recursive}, uuid={self.uuid}"
 
 
 @dataclass(frozen=True)
