@@ -12,6 +12,7 @@ from .clingoApiClient import ClingoClient
 from .shared.defaults import STDIN_TMP_STORAGE_PATH, SHARED_PATH
 from .shared.io import clingo_model_to_stable_model
 from .shared.model import StableModel
+from .server.database import ProgramDatabase
 
 
 def is_non_cython_function_call(attr: classmethod):
@@ -27,6 +28,13 @@ class ShowConnector:
         else:
             self._database = ClingoClient(**kwargs)
         self._connection = None
+
+    def load_program(self, path: str):
+        program = ProgramDatabase()
+        prg = ""
+        with open(path, encoding="utf-8") as f:
+            prg = "\n".join(f.readlines())
+        program.add_to_program(prg)
 
     def show(self):
         self._database.set_target_stable_model(self._marked)
