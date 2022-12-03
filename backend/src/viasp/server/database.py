@@ -15,7 +15,7 @@ class ProgramDatabase:
         prg = ""
         try:
             with open(self.path, "r", encoding="utf-8") as f:
-                prg = "\n".join(f.readlines())
+                prg = "".join(f.readlines())
         except FileNotFoundError:
             self.save_program("")
         return prg
@@ -27,7 +27,7 @@ class ProgramDatabase:
 
     def save_program(self, program: str):
         with open(self.path, "w", encoding="utf-8") as f:
-            f.writelines(program)#.split("\n"))
+            f.write(program)#.split("\n"))
 
     def clear_program(self):
         with open(self.path, "w", encoding="utf-8") as f:
