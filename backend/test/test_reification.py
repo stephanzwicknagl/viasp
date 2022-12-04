@@ -34,19 +34,19 @@ def test_fact_with_variable_is_transform_correctly():
 
 def test_normal_rule_without_negation_is_transformed_correctly():
     rule = "b(X) :- c(X)."
-    expected = "h(1, b(X)) :- model(b(X)); c(X). b(X) :- h(_,b(X))."
+    expected = "h(1, b(X), (c(X),)) :- b(X), c(X)."
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
 def test_multiple_nested_variable_gets_transformed_correctly():
     program = "x(1). y(1). l(x(X),y(Y)) :- x(X), y(Y)."
-    expected = "x(1). y(1). h(1, l(x(X),y(Y))) :- model(l(x(X),y(Y))), x(X), y(Y). l(x(X),y(Y)) :- h(_, l(x(X),y(Y)))."
+    expected = "x(1). y(1). h(1, l(x(X),y(Y)), (x(X),y(Y))) :- l(x(X),y(Y)), x(X), y(Y)."
     assertProgramEqual(transform(program), parse_program_to_ast(expected))
 
 
 def test_conflict_variables_are_resolved():
     program = "h(42, 11). model(X) :- y(X). h_(1,2)."
-    expected = "h(42, 11). h_(1,2). h__(1, model(X)) :- model_(model(X)), y(X). model(X) :- h__(_, model(X))."
+    expected = "h(42, 11). h_(1,2). h__(1,model(X),(y(X),)) :- model(X), y(X)."
     analyzer = ProgramAnalyzer()
     analyzer.add_program(program)
     assertProgramEqual(transform(program, h=analyzer.get_conflict_free_h(), model=analyzer.get_conflict_free_model()),
@@ -55,13 +55,13 @@ def test_conflict_variables_are_resolved():
 
 def test_normal_rule_with_negation_is_transformed_correctly():
     rule = "b(X) :- c(X), not a(X)."
-    expected = "h(1, b(X)) :- model(b(X)); c(X); not a(X).b(X) :- h(_,b(X))."
+    expected = "h(1, b(X), (c(X),)) :- b(X), c(X); not a(X)."
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
 def test_multiple_rules_with_same_head_do_not_lead_to_duplicate_h_with_wildcard():
     rule = "b(X) :- c(X), not a(X). b(X) :- a(X), not c(X)."
-    expected = "h(1, b(X)) :- model(b(X)), c(X), not a(X).h(1, b(X)) :- model(b(X)), a(X), not c(X).b(X) :- h(_,b(X))."
+    expected = "h(1, b(X),(c(X),)) :- b(X), c(X), not a(X).h(1, b(X), (a(X),)) :- b(X), a(X), not c(X)."
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
@@ -79,7 +79,7 @@ def extract_rule_nrs_from_parsed_program(prg):
 
 def test_programs_with_facts_result_in_matching_program_mappings():
     program = "b(X) :- c(X), not a(X). b(X) :- a(X), not c(X)."
-    expected = "h(1, b(X)) :- model(b(X)), c(X), not a(X).h(1, b(X)) :- model(b(X)), a(X), not c(X).b(X) :- h(_,b(X))."
+    expected = "h(1, b(X), (c(X),)) :- b(X), c(X), not a(X).h(1, b(X),(a(X),)) :- b(X), a(X), not c(X)."
     parsed = parse_program_to_ast(expected)
     transformed = transform(program)
     assertProgramEqual(transformed, parsed)
@@ -87,36 +87,34 @@ def test_programs_with_facts_result_in_matching_program_mappings():
 
 def test_choice_rule_is_transformed_correctly():
     rule = "{b(X)}."
-    expected = "h(1, b(X)) :- model(b(X)). b(X) :- h(_,b(X))."
+    expected = "h(1, b(X),()) :- b(X)."
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
 def test_normal_rule_with_choice_in_head_is_transformed_correctly():
     rule = "{b(X)} :- c(X)."
-    expected = "#program base.h(1, b(X)) :- model(b(X)), c(X).b(X) :- h(_,b(X))."
+    expected = "#program base.h(1, b(X), (c(X),)) :- b(X), c(X)."
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
 def test_head_aggregate_is_transformed_correctly():
     rule = "{a(X) : b(X)}."
-    expected = "#program base.h(1, a(X)) :- model(a(X)), b(X). a(X) :- h(_,a(X))."
+    expected = "#program base.h(1, a(X), ()) :- a(X), b(X)."
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
 def test_multiple_conditional_groups_in_head():
     rule = "1 #sum { X,Y : a(X,Y) : b(Y), c(X) ; X,Z : b(X,Z) : e(Z) }  :- c(X)."
     expected = """#program base.
-    h(1, a(X,Y)) :- model(a(X,Y)), c(X), b(Y), c(X). 
-    a(X,Y) :- h(_, a(X,Y)).
-    h(1, b(X,Z)) :- model(b(X,Z)), c(X), e(Z). 
-    b(X,Z) :- h(_, b(X,Z)). 
+    h(1, a(X,Y), (c(X),)) :- a(X,Y), c(X), b(Y), c(X). 
+    h(1, b(X,Z), (c(X),)) :- b(X,Z), c(X), e(Z). 
 """
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
 def test_multiple_aggregates_in_body():
     rule = "s(Y) :- r(Y), 2 #sum{X : p(X,Y), q(X) } 7."
-    expected = "#program base. h(1, s(Y)) :- model(s(Y)), r(Y),  2 #sum{X : p(X,Y), q(X) } 7. s(Y) :- h(_, s(Y))."
+    expected = "#program base. h(1, s(Y), (r(Y),)) :- s(Y), r(Y),  2 #sum{X : p(X,Y), q(X) } 7."
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
@@ -132,10 +130,8 @@ def test_disjunctions_in_head():
     # models:
     # a, p(1) | a, q(1)
     expected = """#program base. 
-    h(1, p(X)) :- model(p(X)), r(X). 
-    p(X) :- h(_,p(X)).
-    h(1, q(X)) :- model(q(X)), r(X). 
-    q(X) :- h(_,q(X))."""
+    h(1, p(X), (r(X),)) :- p(X), r(X). 
+    h(1, q(X), (r(X),)) :- q(X), r(X). """
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 

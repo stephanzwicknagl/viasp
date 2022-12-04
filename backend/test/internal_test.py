@@ -24,7 +24,7 @@ def test_writing_to_server():
     saved_models = get_stable_models_for_program(program)
     reified = reify_list(sorted_program)
 
-    g = build_graph(saved_models, reified, analyzer)
+    g = build_graph(saved_models, reified, analyzer, set())
 
     backend_url = "http://127.0.0.1:5000/"
 

@@ -217,5 +217,5 @@ def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collect
 def save_model(model: Model) -> Collection[str]:
     wrapped = []
     for part in model.symbols(atoms=True):
-        wrapped.append(f"model({part}).")
+        wrapped.append(f"{part}.")
     return wrapped

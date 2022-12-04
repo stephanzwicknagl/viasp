@@ -20,7 +20,7 @@ def test_networkx_graph_with_dataclasses_is_isomorphic_after_dumping_and_loading
     saved_models = get_stable_models_for_program(orig_program)
     reified = reify_list(sorted_program)
 
-    graph = build_graph(saved_models, reified, analyzer)
+    graph = build_graph(saved_models, reified, analyzer, set())
     assert len(graph.nodes()) > 0, "The graph to check serialization should contain nodes."
     assert len(graph.edges()) > 0, "The graph to check serialization should contain edges."
     serializable_graph = node_link_data(graph)

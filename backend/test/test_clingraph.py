@@ -1,6 +1,4 @@
-# TODO
 import io
-import pathlib
 import sys
 import json
 from inspect import Signature
@@ -11,7 +9,7 @@ from flask.testing import FlaskClient
 from viasp import wrapper
 from viasp.shared.model import ClingoMethodCall, StableModel
 from viasp.shared.interfaces import ViaspClient
-from viasp.shared.io import DataclassJSONEncoder, clingo_model_to_stable_model
+from viasp.shared.io import DataclassJSONEncoder
 
 
 

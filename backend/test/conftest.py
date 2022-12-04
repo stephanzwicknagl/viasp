@@ -4,7 +4,8 @@ from uuid import uuid4
 
 import networkx as nx
 import pytest
-from clingo import Control, Function, Number
+from clingo import Control, Number
+from clingo.ast import Function, Location, Position
 from flask import Flask
 from flask.testing import FlaskClient
 from networkx import node_link_data
@@ -16,7 +17,8 @@ from viasp.server.blueprints.api import bp as api_bp
 from viasp.server.blueprints.app import bp as app_bp
 from viasp.server.blueprints.dag_api import bp as dag_bp
 from viasp.shared.io import DataclassJSONEncoder, DataclassJSONDecoder, clingo_model_to_stable_model
-from viasp.shared.model import ClingoMethodCall, Node, StableModel
+from viasp.shared.model import ClingoMethodCall, Node, StableModel, SymbolIdentifier
+from viasp.server.database import ProgramDatabase
 
 
 def create_app_with_registered_blueprints(*bps) -> Flask:
@@ -34,25 +36,29 @@ def create_app_with_registered_blueprints(*bps) -> Flask:
 def single_node_graph(a_1):
     g = nx.DiGraph()
     uuid = uuid4()
-    g.add_node(Node(frozenset(), 1, frozenset([a_1]), uuid=uuid))
+    g.add_node(Node(frozenset([SymbolIdentifier(a_1)]), 1, frozenset([SymbolIdentifier(a_1)]), uuid=uuid))
     return g
 
 
 @pytest.fixture
 def a_1() -> Function:
-    return Function("A", [Number(1)])
+    loc = Location(Position("str",1,1), Position("str",1,1))
+    return Function(loc, "A", [Number(1)], 0)
 
 
 @pytest.fixture
 def serializable_graph() -> Dict:
     program = "a(1..2). {b(X)} :- a(X). c(X) :- b(X)."
+    db = ProgramDatabase()
+    db.clear_program()
+    db.add_to_program(program)
     analyzer = ProgramAnalyzer()
     analyzer.add_program(program)
     sorted_program = analyzer.get_sorted_program()
     saved_models = get_stable_models_for_program(program)
     reified = reify_list(sorted_program)
 
-    g = build_graph(saved_models, reified, analyzer)
+    g = build_graph(saved_models, reified, analyzer, set())
 
     serializable_graph = node_link_data(g)
     return serializable_graph

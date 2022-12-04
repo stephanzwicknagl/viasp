@@ -24,7 +24,7 @@ def test_query_for_symbol(client_with_a_graph):
     q = "a(1)"
     res = client_with_a_graph.get(f"query?q={q}")
     assert res.status_code == 200
-    assert any(any(str(atom) == q for atom in result.atoms) for result in res.json if isinstance(result, Node))
+    assert any(any(str(atom.symbol) == q for atom in result.atoms) for result in res.json if isinstance(result, Node))
 
 
 def test_query_for_signature(client_with_a_graph):

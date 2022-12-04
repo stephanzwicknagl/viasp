@@ -46,8 +46,11 @@ class Node:
 
     def __repr__(self):
         repr_reasons = []
-        for key, val in self.reason.items():
-            repr_reasons.append(f"{key}: [{', '.join(map(str,val))}]")
+        if isinstance(self.reason, list):
+            repr_reasons = [str(reason) for reason in self.reason]
+        else:
+            for key, val in self.reason.items():
+                repr_reasons.append(f"{key}: [{', '.join(map(str,val))}]")
         return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{', '.join(map(str,self.atoms))}}}, reasons={{{', '.join(repr_reasons)}}}, recursive={self.recursive}, uuid={self.uuid}"
 
 

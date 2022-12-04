@@ -278,7 +278,7 @@ def get_all_signatures(graph: nx.Graph):
     signatures = set()
     for n in graph.nodes():
         for a in n.diff:
-            signatures.add(Signature(a.name, len(a.arguments)))
+            signatures.add(Signature(a.symbol.name, len(a.symbol.arguments)))
     return signatures
 
 
@@ -292,7 +292,7 @@ def search():
         signatures = get_all_signatures(graph)
         result.extend(signatures)
         for node in graph.nodes():
-            if any(query in str(atm) for atm in node.atoms) and node not in result:
+            if any(query in str(atm.symbol) for atm in node.atoms) and node not in result:
                 result.append(node)
         for _, _, edge in graph.edges(data=True):
             transformation = edge["transformation"]
