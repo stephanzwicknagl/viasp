@@ -75,6 +75,27 @@ function NodeContent(props) {
 
         const reasons = node.reason[make_atoms_string(src.symbol)];
         if (reasons){
+            reasons.map(tgt => {
+                const childDiv = document.getElementById(tgt.uuid);
+                const childRect= childDiv.getBoundingClientRect();
+                const parentDiv = childDiv.parentElement.parentElement.parentElement.parentElement;
+                const parentDiv1 = childDiv.parentElement.parentElement;
+
+                const parentRect = parentDiv.getBoundingClientRect();
+                if (childRect.bottom > parentRect.bottom) {
+                    console.log(`Symbol: ${tgt.uuid} is NOT visible`);
+                    // console.log("The parent Div is:", parentDiv1);
+                    // console.log("The target is ", tgt);
+                    const tgthtml = `<div class="mouse_over_symbol"><div class="symbol" id="${tgt.uuid}">${make_atoms_string(tgt.symbol)}</div></div>`;
+                    let newInnerHtml = parentDiv1.innerHTML
+                            .replace(tgthtml, "");
+                    newInnerHtml = `<div class="mouse_over_symbol mark_symbol"><div class="symbol" id="${tgt.uuid}">${make_atoms_string(tgt.symbol)}</div></div>`.concat(newInnerHtml);
+                    parentDiv1.innerHTML = newInnerHtml;
+                } else {
+                    // setIsBelowParentBorder(false);
+                    console.log(`Symbol: ${tgt.uuid} is visible`)
+                }
+            })
             toggleHighlightedSymbol(reasons.map(tgt => { if (tgt.uuid) return { "src": src.uuid, "tgt": tgt.uuid }; else return null }), highlightedSymbol);
         }
     }
@@ -104,6 +125,21 @@ NodeContent.propTypes = {
     overflowV: PropTypes.bool
 }
 
+function RecursionButton(props) {
+    const {node} = props;
+
+    function handleClick(e) {
+        e.stopPropagation();
+        console.log("Clicked on recursion button")
+    }
+
+    return <div className={"recursion_button"} onClick={handleClick}>
+        {!node.recursive ? null:
+            <div className={"recursion_button_text"}>R</div>
+        }
+    </div>
+}
+
 function useHighlightedNodeToCreateClassName(node) {
     const [highlightedNode,] = useHighlightedNode()
     let classNames = `node_border mouse_over_shadow ${node.uuid} ${highlightedNode === node.uuid ? "highlighted_node" : null}`
@@ -119,9 +155,19 @@ export function Node(props) {
     const {node, notifyClick, showMini} = props;
     const [isOverflowV, setIsOverflowV] = React.useState(false);
     const colorPalette = useColorPalette();
-    const [, dispatch] = useShownNodes()
+    const [, dispatch] = useShownNodes();
     const {state} = useSettings();
-    const classNames = useHighlightedNodeToCreateClassName(node)
+    const classNames = useHighlightedNodeToCreateClassName(node);
+    const parentRef = React.useRef(null);
+    const [parentRect, setParentRect] = React.useState(null);
+
+    React.useEffect(() => {
+        // Get the bounding rectangle for the previous element
+        let rect = parentRef.current.getBoundingClientRect();
+        setParentRect(rect);
+
+        // Use the bounding rectangle to do something...
+    }, [parentRef]);
 
 
     const ref = React.useCallback(x => {
@@ -139,14 +185,13 @@ export function Node(props) {
 
     })
 
-    // const imageToShow = node.clingraph ? node.clingraph : "https://www.w3schools.com/html/img_girl.jpg";
 
     return <div className={classNames}
                 style={{"backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark}}
-                id={node.uuid} onClick={() => notifyClick(node)}>
+                id={node.uuid} onClick={() => notifyClick(node)} ref={parentRef}>
         {showMini ? <div style={{"backgroundColor": colorPalette.ten.dark, "color": colorPalette.ten.dark}}
                          className={"mini"}/> :
-            <div className={"set_too_high"} ref={ref}><NodeContent node={node}/></div>}
+            <div className={"set_too_high"} ref={ref}><NodeContent node={node} parentRect={parentRect} /><RecursionButton node={node} /></div>}
         {!showMini && isOverflowV ?
             <div style={{"backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark}}
                  className={"noselect bauchbinde"}>...</div> : null}

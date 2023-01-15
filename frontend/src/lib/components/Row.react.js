@@ -18,7 +18,7 @@ function loadClingraphChildren(id, backendURL) {
 }
 
 export function Row(props) {
-    const {transformation, notifyClick} = props;
+    const {transformation, notifyClick, color} = props;
 
     const [nodes, setNodes] = React.useState(null);
     const [isOverflowH, setIsOverflowH] = React.useState(false);
@@ -79,6 +79,7 @@ export function Row(props) {
                                                 transformation: t,
                                                 shown
                                             }) => transformation.id === t.id && shown) !== undefined
+    const style1 = { "backgroundColor": color};
     return <div className="row_container">
         <RowHeader onToggle={() => dispatch(toggleTransformation(transformation))} transformation={transformation.rules}
                    contentIsShown={showNodes}/>
@@ -99,7 +100,12 @@ Row.propTypes = {
     /**
      * A callback function when the user clicks on the RuleHeader
      */
-    notifyClick: PropTypes.func
+    notifyClick: PropTypes.func,
+
+    /**
+     * The backgroundcolor of the row
+     */
+    color: PropTypes.string
 };
 
 

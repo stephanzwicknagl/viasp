@@ -8,7 +8,7 @@ import {Facts} from "../components/Facts.react";
 import {Arrows, Edges} from "../components/Edges.react";
 import {initialState, nodeReducer, ShownNodesProvider} from "../contexts/ShownNodes";
 import {TransformationProvider, useTransformations} from "../contexts/transformations";
-import {ColorPaletteProvider} from "../contexts/ColorPalette";
+import {ColorPaletteProvider, useColorPalette} from "../contexts/ColorPalette";
 import {HighlightedNodeProvider} from "../contexts/HighlightedNode";
 import {showError, useMessages, UserMessagesProvider} from "../contexts/UserMessages";
 import {Settings} from "../components/settings";
@@ -32,6 +32,7 @@ function GraphContainer(props) {
     const {setDetail, notifyDash, usingClingraph} = props;
     const {state: {transformations}} = useTransformations()
     const lastNodeInGraph = transformations.length - 1;
+    const colorPalette = ["#ffffff", "#a9a9a9"];
 
 
     return <div className="graph_container">
@@ -51,6 +52,7 @@ function GraphContainer(props) {
                                 notifyDash(clickedOn)
                                 setDetail(clickedOn.uuid)
                             }}
+                            color={colorPalette[i%2]}
                         />
                         <Boxrow
                             key={transformation.id}
@@ -65,6 +67,7 @@ function GraphContainer(props) {
                         notifyDash(clickedOn)
                         setDetail(clickedOn.uuid)
                     }}
+                    color={colorPalette[i%2]}
                     />
             }
         })}
