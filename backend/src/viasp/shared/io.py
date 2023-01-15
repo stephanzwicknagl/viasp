@@ -207,11 +207,10 @@ def get_rules_from_input_program(rules) -> Sequence[str]:
         end_colu = rule.location.end.column
         r = ""
         if begin_line != end_line:
-            r += program[begin_line - 1][begin_colu-1:]
+            r += program[begin_line - 1][begin_colu-1:] + "\n"
             for i in range(begin_line, end_line - 1):
-                r += program[i]
+                r += program[i] + "\n"
             r += program[end_line - 1][:end_colu]
-            r = ' '.join(r.splitlines())
         else:
             r += program[begin_line - 1][begin_colu - 1:end_colu]
         rules_from_input_program.append(r)
