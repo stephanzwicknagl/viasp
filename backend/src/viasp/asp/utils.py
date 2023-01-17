@@ -131,6 +131,16 @@ def identify_reasons(g: nx.DiGraph) -> nx.DiGraph:
                 for r in rr:
                     tmp_reason.append(get_identifiable_reason(g, v, r))
                 v.reason[str(new)] = tmp_reason
+            if v.recursive:
+                for node in v.recursive.nodes:
+                    with open("t.log", "a") as f:
+                        f.write(f"Getting reason for node\n{node.diff}\n")
+                        f.write(f"The reason is\n{node.reason}\n")
+                    for new, rr in node.reason.items():
+                        tmp_reason = []
+                        for r in rr:
+                            tmp_reason.append(get_identifiable_reason(v.recursive, node, r, super_graph=g, super_node=v))
+                        node.reason[str(new)] = tmp_reason
             searched_nodes.add(v)
             for w in g.successors(v): 
                 children_next.add(w)
@@ -140,7 +150,8 @@ def identify_reasons(g: nx.DiGraph) -> nx.DiGraph:
     return g
 
 
-def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol) -> SymbolIdentifier:
+def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol,
+                    super_graph=None, super_node=None) -> SymbolIdentifier:
     """
     Returns the SymbolIdentifier that is the reason for the given Symbol r.
     If the reason is not in the node, it returns recursively calls itself with the predecessor.
@@ -150,11 +161,16 @@ def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol) -> SymbolIdentifi
     :param v: The node that contains the symbol r
     :param r: The symbol that is the reason
     """
-    if g.in_degree(v) == 0: # stop criterion: v is the root node
-        warn(f"An explanation could not be made")
-        return None
-    for u in g.predecessors(v):
-        if r in u.diff:
-            return next(s for s in u.atoms if s == r)
-        else:
-            return get_identifiable_reason(g, u, r)
+    if (g.in_degree(v) != 0): 
+        for u in g.predecessors(v):
+            if r in u.diff:
+                return next(s for s in u.atoms if s == r)
+            else:
+                return get_identifiable_reason(g, u, r, super_graph=super_graph, super_node=super_node)
+    if (super_graph != None and super_node != None):
+        return get_identifiable_reason(super_graph, super_node, r)
+    
+    # stop criterion: v is the root node and there is no super_graph
+    warn(f"An explanation could not be made")
+    return None
+    
