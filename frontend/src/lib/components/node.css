@@ -107,7 +107,7 @@
 
 .recursion_button:hover {
     transition: drop-shadow .1s;
-    filter: drop-shadow(0 0 1px #333);
+    filter: drop-shadow(0 0 6px rgba(255, 153, 0, 0.5))
 }
 
 .recursion_button_text{
@@ -115,9 +115,9 @@
     font-size: 6pt;
     font-weight: bold;
     color: rgb(254, 254, 254);
-    background-color: #2196F3;
-    border-radius: 8px;
-    padding: 4px 4px;
+    background-color: rgb(63, 167, 209);
+    border-radius: 0px 8px 0px 4px;
+    padding: 2px 2px;
     vertical-align: middle;
     text-align: center;
     width: fit-content;
