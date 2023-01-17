@@ -6,6 +6,7 @@ from typing import Any, Sequence, Dict, Union, FrozenSet, Collection, List
 from types import MappingProxyType
 from collections import defaultdict
 from uuid import UUID, uuid4
+import networkx as nx
 
 from clingo import Symbol, ModelType
 from clingo.ast import AST
@@ -35,7 +36,7 @@ class Node:
     rule_nr: int = field(hash=True)
     atoms: FrozenSet[SymbolIdentifier] = field(default_factory=frozenset, hash=True)
     reason: MappingProxyType = field(default_factory=DefaultMappingProxyType, hash=True) # type: MappingProxyType[str, List[SymbolIdentifier]]
-    recursive: bool = field(default=False, hash=False)
+    recursive: Union[bool, nx.DiGraph] = field(default=False, hash=False)
     uuid: UUID = field(default_factory=uuid4, hash=False)
 
     def __hash__(self):

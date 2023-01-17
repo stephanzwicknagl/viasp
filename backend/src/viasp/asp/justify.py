@@ -10,6 +10,8 @@ from clingo.ast import AST, Function
 from networkx import DiGraph
 
 from .reify import ProgramAnalyzer
+from .recursion import get_recursion_subgraph
+from .utils import insert_atoms_into_nodes, identify_reasons
 from ..shared.model import Node, Transformation, SymbolIdentifier
 from ..shared.simple_logging import info, warn
 from ..shared.util import pairwise, get_leafs_from_graph, get_root_node_from_graph
@@ -76,20 +78,11 @@ def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_i
     return h_symbols
 
 
-def insert_atoms_into_nodes(path: List[Node]) -> None:
-    facts = path[0]
-    state = set(facts.diff)
-    facts.atoms = frozenset(state)
-    state = set(map(SymbolIdentifier, (s.symbol for s in state)))
-    for u, v in pairwise(path):
-        state.update(v.diff)
-        state.update(u.diff)
-        v.atoms = frozenset(state)
-        state = set(map(SymbolIdentifier, (s.symbol for s in state)))
-
-
-def make_reason_path_from_facts_to_stable_model(wrapped_stable_model, rule_mapping: Dict[int, Union[AST, str]],
-                                                fact_node: Node, h_syms, recursive_transformations:frozenset, pad=True) -> nx.DiGraph:
+def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
+                                            rule_mapping: Dict[int, Union[AST, str]],
+                                            fact_node: Node, h_syms,
+                                            recursive_transformations:frozenset, h="h", pad=True) \
+                                            -> nx.DiGraph:
     h_syms = collect_h_symbols_and_create_nodes(h_syms, rule_mapping.keys(), pad)
     h_syms.sort(key=lambda node: node.rule_nr)
     h_syms.insert(0, fact_node)
@@ -107,7 +100,7 @@ def make_reason_path_from_facts_to_stable_model(wrapped_stable_model, rule_mappi
 
     for a, b in pairwise(h_syms):
         if rule_mapping[b.rule_nr].rules in recursive_transformations:
-            b.recursive = True
+            b.recursive = get_recursion_subgraph(a.atoms, rule_mapping[b.rule_nr], h)
         g.add_edge(a, b, transformation=rule_mapping[b.rule_nr])
 
     return g
@@ -139,60 +132,12 @@ def append_noops(result_graph: DiGraph, analyzer: ProgramAnalyzer):
                               transformation=Transformation(next_transformation_id,
                                                             [str(pt) for pt in analyzer.pass_through]))
 
-def identify_reasons(g: nx.DiGraph) -> nx.DiGraph:
-    """
-    Identify the reasons for each symbol in the graph. 
-    Takes the Symbol from node.reason and overwrites the values of the Dict node.reason with the SymbolIdentifier of the
-    corresponding symbol.
-
-    :param g: The graph to identify the reasons for.
-    :return: The graph with the reasons identified.
-    """
-    # get fact node:
-    root_node = get_root_node_from_graph(g)
-
-    # go through entire graph, starting at root_node and traveling down the graph via successors
-    children_next = set()
-    searched_nodes = set()
-    children_current = [root_node]
-    while len(children_current) != 0:
-        for v in children_current:
-            for new, rr in v.reason.items():
-                tmp_reason = []
-                for r in rr:
-                    tmp_reason.append(get_identifiable_reason(g, v, r))
-                v.reason[str(new)] = tmp_reason
-            searched_nodes.add(v)
-            for w in g.successors(v): 
-                children_next.add(w)
-            children_next = children_next.difference(searched_nodes)
-        children_current = list(children_next)
-
-    return g
-
-    
-def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol) -> SymbolIdentifier:
-    """
-        Returns the SymbolIdentifier that is the reason for the given Symbol r.
-        If the reason is not in the node, it returns recursively calls itself with the predecessor.
-        
-        
-        :param g: The graph that contains the nodes
-        :param v: The node that contains the symbol r
-        :param r: The symbol that is the reason"""
-    if g.in_degree(v) == 0: # stop criterion: v is the root node
-        warn(f"An explanation could not be made")
-        return None
-    for u in g.predecessors(v):
-        if r in u.diff:
-            return next(s for s in u.atoms if s == r)
-        else:
-            return get_identifiable_reason(g, u, r)
 
 def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collection[AST],
                 analyzer: ProgramAnalyzer, recursion_transformations: frozenset) -> nx.DiGraph:
     paths: List[nx.DiGraph] = []
     facts = analyzer.get_facts()
+    conflict_free_h = analyzer.get_conflict_free_h()
     identifiable_facts = map(SymbolIdentifier,facts)
     sorted_program = analyzer.get_sorted_program()
     mapping = make_transformation_mapping(sorted_program)
@@ -204,8 +149,8 @@ def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collect
         return single_node_graph
     for model in wrapped_stable_models:
         h_symbols, new_h_symbols = get_h_symbols_from_model(model, transformed_prg, facts, analyzer.get_constants(),
-                                             analyzer.get_conflict_free_h())
-        new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, new_h_symbols, recursion_transformations)
+                                            conflict_free_h)
+        new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, new_h_symbols, recursion_transformations, conflict_free_h)
         paths.append(new_path)
 
     result_graph = identify_reasons(join_paths_with_facts(paths))
