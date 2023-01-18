@@ -171,7 +171,7 @@ def get_all_transformations():
 def get_edges():
     to_be_returned = []
     if request.method == "POST":
-        to_be_returned = get_src_tgt_mapping_from_graph(request.json["shownNodes"], request.json["shownRecursion"])
+        to_be_returned = get_src_tgt_mapping_from_graph(request.json["shownNodes"], request.json["shownRecursion"] if "shownRecursion" in request.json else [])
     elif request.method == "GET":
         to_be_returned = get_src_tgt_mapping_from_graph()
 
