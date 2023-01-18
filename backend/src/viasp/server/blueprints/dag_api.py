@@ -13,7 +13,7 @@ from networkx import DiGraph
 from ...shared.defaults import GRAPH_PATH, STATIC_PATH
 from ...shared.io import DataclassJSONDecoder, DataclassJSONEncoder
 from ...shared.model import Transformation, Node, Signature
-from ...shared.util import get_start_node_from_graph
+from ...shared.util import get_start_node_from_graph, get_end_node_from_path
 
 bp = Blueprint("dag_api", __name__, template_folder='../templates', static_folder='../static/',
                static_url_path='/static')
@@ -116,11 +116,28 @@ def get_children(transformation_id):
     raise NotImplementedError
 
 
-def get_src_tgt_mapping_from_graph(ids=None):
-    ids = set(ids) if ids is not None else None
+def get_src_tgt_mapping_from_graph(shown_nodes_ids=None, shown_recursive_ids=[]):
+    shown_nodes_ids = set(shown_nodes_ids) if shown_nodes_ids is not None else None
+
     graph = get_database().load(as_json=False)
     nodes = set(graph.nodes)
-    to_be_deleted = set(existing for existing in nodes if ids is not None and existing.uuid not in ids)
+    to_be_deleted = set(existing for existing in nodes if shown_nodes_ids is not None and existing.uuid not in shown_nodes_ids)
+
+    for node in nodes:
+        if node.uuid in shown_recursive_ids:
+            tmp_shown_nodes = set([get_start_node_from_graph(node.recursive)])
+            # from previous super-node to first recursive node
+            for source, _, _ in graph.in_edges(node, data=True):
+                graph.add_edge(source, next(iter(tmp_shown_nodes)))
+            # from one recursive node to another
+            for source, target in node.recursive.edges:
+                graph.add_edge(source, target)
+                tmp_shown_nodes.add(target)
+            # from last recursive node to next super-node
+            for _, target, _ in graph.out_edges(node, data=True):
+                graph.add_edge(get_end_node_from_path(node.recursive), target)
+            graph.remove_node(node)
+
     for node in to_be_deleted:
         for source, _, _ in graph.in_edges(node, data=True):
             for _, target, _ in graph.out_edges(node, data=True):
@@ -154,7 +171,7 @@ def get_all_transformations():
 def get_edges():
     to_be_returned = []
     if request.method == "POST":
-        to_be_returned = get_src_tgt_mapping_from_graph(request.json)
+        to_be_returned = get_src_tgt_mapping_from_graph(request.json["shownNodes"], request.json["shownRecursion"])
     elif request.method == "GET":
         to_be_returned = get_src_tgt_mapping_from_graph()
 

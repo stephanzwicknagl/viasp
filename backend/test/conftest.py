@@ -4,8 +4,8 @@ from uuid import uuid4
 
 import networkx as nx
 import pytest
-from clingo import Control, Number
-from clingo.ast import Function, Location, Position
+from clingo import Control
+from clingo.symbol import Function, Number
 from flask import Flask
 from flask.testing import FlaskClient
 from networkx import node_link_data
@@ -42,8 +42,8 @@ def single_node_graph(a_1):
 
 @pytest.fixture
 def a_1() -> Function:
-    loc = Location(Position("str",1,1), Position("str",1,1))
-    return Function(loc, "A", [Number(1)], 0)
+    # loc = Location(Position("str",1,1), Position("str",1,1))
+    return Function("A", [Number(1)])
 
 
 @pytest.fixture
@@ -103,3 +103,30 @@ def clingo_stable_models() -> List[StableModel]:
         for m in h:
             models.append(clingo_model_to_stable_model(m))
     return models
+
+
+@pytest.fixture
+def serializable_recursive_graph() -> Dict:
+    program = "j(X, X+1) :- X=0..5.j(X,  Y) :- j(X,Z), j(Z,Y)."
+    db = ProgramDatabase()
+    db.clear_program()
+    db.add_to_program(program)
+    analyzer = ProgramAnalyzer()
+    analyzer.add_program(program)
+    recursion_rules = analyzer.check_positive_recursion()
+    saved_models = get_stable_models_for_program(program)
+    reified = reify_list(analyzer.get_sorted_program(), h=analyzer.get_conflict_free_h(),
+                             model=analyzer.get_conflict_free_model())
+    g = build_graph(saved_models, reified, analyzer, recursion_rules)
+
+    serializable_recursive_graph = node_link_data(g)
+    return serializable_recursive_graph
+
+
+@pytest.fixture
+def client_with_a_recursive_graph(serializable_recursive_graph) -> FlaskClient:
+    app = create_app_with_registered_blueprints(app_bp, api_bp, dag_bp)
+
+    with app.test_client() as client:
+        client.post("graph", json=serializable_recursive_graph)
+        yield client
