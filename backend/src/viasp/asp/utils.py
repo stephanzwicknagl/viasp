@@ -133,9 +133,6 @@ def identify_reasons(g: nx.DiGraph) -> nx.DiGraph:
                 v.reason[str(new)] = tmp_reason
             if v.recursive:
                 for node in v.recursive.nodes:
-                    with open("t.log", "a") as f:
-                        f.write(f"Getting reason for node\n{node.diff}\n")
-                        f.write(f"The reason is\n{node.reason}\n")
                     for new, rr in node.reason.items():
                         tmp_reason = []
                         for r in rr:

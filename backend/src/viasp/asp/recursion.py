@@ -2,16 +2,15 @@ from typing import List, Collection, Dict
 from collections import defaultdict
 
 import networkx as nx
-from clingo.application import clingo_main, Application
 from clingo.script import enable_python
-from clingo import Symbol, Number
+from clingo import Symbol, Number, Control
 
-from .utils import insert_atoms_into_nodes, identify_reasons
+from .utils import insert_atoms_into_nodes
 from ..shared.model import Node, SymbolIdentifier
 from ..shared.util import pairwise
 
 
-class RecursionReasonsingApp(Application):
+class RecursionReasoner:
 
     def __init__(self, **kwargs):
         self.atoms = []
@@ -22,7 +21,8 @@ class RecursionReasonsingApp(Application):
     def new(self):
         return self.atoms
 
-    def main(self, control, files):
+    def main(self):
+        control = Control()
         control.add("iter", ["n"], self.program)
         self.atoms = self.init
 
@@ -59,19 +59,22 @@ def get_recursion_subgraph(facts, transformation, conflict_free_h):
     justification_program += "model(@new())."
 
     h_syms = set()
-    if clingo_main( \
-        RecursionReasonsingApp(init = init, program = justification_program, \
-        callback = h_syms.add), []) == 0:
 
-        h_syms = collect_h_symbols_and_create_nodes(h_syms)
-        h_syms.sort(key=lambda node: node.rule_nr)
-        insert_atoms_into_nodes(h_syms)
-        
-        reasoning_subgraph = nx.DiGraph()
-        for a, b in pairwise(h_syms):
-            reasoning_subgraph.add_edge(a, b)
-        return reasoning_subgraph
-    return False
+    try:
+        RecursionReasoner(init = init, \
+                            program = justification_program, \
+                            callback = h_syms.add).main()
+    except RuntimeError:
+        return False
+
+    h_syms = collect_h_symbols_and_create_nodes(h_syms)
+    h_syms.sort(key=lambda node: node.rule_nr)
+    insert_atoms_into_nodes(h_syms)
+    
+    reasoning_subgraph = nx.DiGraph()
+    for a, b in pairwise(h_syms):
+        reasoning_subgraph.add_edge(a, b)
+    return reasoning_subgraph
 
 
 def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol]) -> List[Node]:
