@@ -46,7 +46,6 @@ def get_recursion_subgraph(facts, transformation, conflict_free_h):
     """
     enable_python()
     init = [fact.symbol for fact in facts]
-
     justification_program = ""
     for i,rule in enumerate(transformation.rules):
         tupleified = ",".join(list(map(str,rule.body)))
@@ -68,11 +67,12 @@ def get_recursion_subgraph(facts, transformation, conflict_free_h):
         return False
 
     h_syms = collect_h_symbols_and_create_nodes(h_syms)
-    h_syms.sort(key=lambda node: node.rule_nr)
+    h_syms.sort(key=lambda node: node.rule_nr) # here: rule_nr is iteration number
+    h_syms.insert(0, Node(frozenset(facts), -1))
     insert_atoms_into_nodes(h_syms)
-    
+
     reasoning_subgraph = nx.DiGraph()
-    for a, b in pairwise(h_syms):
+    for a, b in pairwise(h_syms[1:]):
         reasoning_subgraph.add_edge(a, b)
     return reasoning_subgraph
 
