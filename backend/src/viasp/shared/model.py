@@ -52,7 +52,7 @@ class Node:
         else:
             for key, val in self.reason.items():
                 repr_reasons.append(f"{key}: [{', '.join(map(str,val))}]")
-        return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{', '.join(map(str,self.atoms))}}}, reasons={{{', '.join(repr_reasons)}}}, recursive={self.recursive}, uuid={self.uuid}"
+        return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{', '.join(map(str,self.atoms))}}}, reasons={{{', '.join(repr_reasons)}}}, recursive={self.recursive}, uuid={self.uuid})"
 
 
 @dataclass(frozen=True)

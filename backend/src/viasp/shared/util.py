@@ -7,6 +7,8 @@ import networkx as nx
 
 
 def get_start_node_from_graph(graph: nx.DiGraph) -> Any:
+    if graph.number_of_nodes() == 0:
+        raise ValueError("Graph is empty")
     beginning = next(filter(lambda tuple: tuple[1] == 0, graph.in_degree()))
     return beginning[0]
 
@@ -41,3 +43,18 @@ def pairwise(iterable: Iterable[T]) -> Iterable[Tuple[T, T]]:
 
 def DefaultMappingProxyType():
     return MappingProxyType(defaultdict(list))
+
+def is_recursive(node, graph):
+    """
+    Checks if the node is recursive.
+    :param node: The node to check.
+    :param graph: The graph that contains the node.
+    :return: True if the node is recursive, False otherwise.
+    """
+    nn = set(graph.nodes)
+    if node in nn:
+        return False
+    else:
+        for n in nn:
+            if n.recursive != False and node in set(n.recursive.nodes):
+                return True
