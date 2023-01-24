@@ -33,7 +33,8 @@ function GraphContainer(props) {
     const {setDetail, notifyDash, usingClingraph} = props;
     const {state: {transformations}} = useTransformations()
     const lastNodeInGraph = transformations.length - 1;
-    const colorPalette = ["#ffffff", "#a9a9a9"];
+    const colorPalette = useColorPalette()
+    const background = ["#a9a9a94a", "#ffffff"]
 
 
     return <div className="graph_container">
@@ -53,7 +54,7 @@ function GraphContainer(props) {
                                 notifyDash(clickedOn)
                                 setDetail(clickedOn.uuid)
                             }}
-                            color={colorPalette[i%2]}
+                            color={background[i%2]}
                         />
                         <Boxrow
                             key={transformation.id}
@@ -68,7 +69,7 @@ function GraphContainer(props) {
                         notifyDash(clickedOn)
                         setDetail(clickedOn.uuid)
                     }}
-                    color={colorPalette[i%2]}
+                    color={background[i%2]}
                     />
             }
         })}
@@ -95,7 +96,7 @@ function MainWindow(props) {
     const [detail, setDetail] = React.useState(null)
     const {backendURL} = useSettings();
     const {state: {transformations}} = useTransformations()
-    const [usingClingraph, setUsingClingraph] = React.useState("false")
+    const [usingClingraph, setUsingClingraph] = React.useState(false)
     const [highlightedSymbol,,] = useHighlightedSymbol();
 
     React.useEffect(() => {

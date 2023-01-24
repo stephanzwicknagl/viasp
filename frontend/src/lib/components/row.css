@@ -8,6 +8,8 @@
     border-right: 1px solid;
     border-radius: 0 5px 5px 0;
     width: fit-content;
+    position: relative;
+    z-index: 3;
 }
 
 .row_header_rule {
@@ -48,6 +50,7 @@
 .row_container {
     justify-content: space-around;
     background: transparent;
+    padding-top: 1em;
 }
 
 .faded {

@@ -10,6 +10,7 @@ import { useShownRecursion } from "../contexts/ShownRecursion";
 import {useSettings} from "../contexts/Settings";
 import {NODE, SYMBOLIDENTIFIER} from "../types/propTypes";
 import {useFilters} from "../contexts/Filters";
+import AnimateHeight from 'react-animate-height';
 
 
 function any(iterable) {
@@ -163,7 +164,7 @@ export function Node(props) {
     const [, dispatch] = useShownNodes();
     const {state} = useSettings();
     const classNames = useHighlightedNodeToCreateClassName(node);
-    // const [height, setHeight] = React.useState(0);
+    const [height, setHeight] = React.useState(0);
 
     const ref = React.useCallback(x => {
         if (x !== null) {

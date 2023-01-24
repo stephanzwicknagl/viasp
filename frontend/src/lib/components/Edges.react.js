@@ -116,7 +116,7 @@ export function Arrows(){
     return <div className="arrows_container">
         {highlightedSymbol.map(arrow => {
             return <Xarrow
-                key={arrow.src + "-" + arrow.tgt} start={arrow.src} end={arrow.tgt} startAnchor={"top"} endAnchor={"bottom"} color={arrow.color} strokeWidth={2} headSize={5}/>
+                key={arrow.src + "-" + arrow.tgt} start={arrow.src} end={arrow.tgt} startAnchor={"top"} endAnchor={"bottom"} color={arrow.color} strokeWidth={2} headSize={5} zIndex={10}/>
         })}
     </div> 
 }

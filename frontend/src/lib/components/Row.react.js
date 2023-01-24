@@ -82,14 +82,14 @@ export function Row(props) {
                                                 shown
                                             }) => transformation.id === t.id && shown) !== undefined
     const style1 = { "backgroundColor": color};
+    console.log("Color:", color)
 
-    return <div className="row_container" >
+    return <div className="row_container" style={style1}>
         <RowHeader onToggle={() => dispatch(toggleTransformation(transformation))} transformation={transformation.rules}
                    contentIsShown={showNodes}/>
         {!showNodes ? null :
             <div ref={ref} className="row_row" >{nodes.map((child) => { 
                 if (child.recursive && shownRecursion.indexOf(child.uuid) !== -1) {
-                    console.log("Doing a recursive node", child.uuid)
                     return <RecursiveNode key={child.uuid} node={child}
                     showMini={isOverflowH}
                     notifyClick={notifyClick}/>
