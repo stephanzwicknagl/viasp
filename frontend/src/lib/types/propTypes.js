@@ -29,9 +29,14 @@ export const NODE = PropTypes.exact({
     diff: PropTypes.array,
     rule_nr: PropTypes.number,
     reason: PropTypes.array, 
+    recursive: PropTypes.oneOf([PropTypes.bool, GRAPH]),
     uuid: PropTypes.string
 })
 export const BOX = PropTypes.exact({
     _type: PropTypes.oneOf(['Box']),
     uuid: PropTypes.string
+})
+export const GRAPH = PropTypes.exact({
+    _type: PropTypes.oneOf(['Graph']),
+    _graph: PropTypes.object
 })

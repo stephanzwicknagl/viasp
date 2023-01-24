@@ -1,13 +1,14 @@
 import React from "react";
-import {Node} from "./Node.react";
+import {Node, RecursiveNode} from "./Node.react";
 import {Box} from "./Box.react";
 import './row.css';
-import PropTypes from "prop-types";
+import PropTypes, { any } from "prop-types";
 import {RowHeader} from "./RowHeader.react";
 import {toggleTransformation, useTransformations} from "../contexts/transformations";
 import {useSettings} from "../contexts/Settings";
 import {TRANSFORMATION} from "../types/propTypes";
 import { useColorPalette } from "../contexts/ColorPalette";
+import { useShownRecursion } from "../contexts/ShownRecursion";
 
 function loadMyAsyncData(id, backendURL) {
     return fetch(`${backendURL("graph/children")}/${id}`).then(r => r.json());
@@ -26,6 +27,7 @@ export function Row(props) {
     const ref = React.useRef(null);
     const {state: {transformations}, dispatch} = useTransformations();
     const {backendURL} = useSettings();
+    const [shownRecursion, ,] = useShownRecursion();
 
     React.useEffect(() => {
         let mounted = true;
@@ -80,13 +82,22 @@ export function Row(props) {
                                                 shown
                                             }) => transformation.id === t.id && shown) !== undefined
     const style1 = { "backgroundColor": color};
-    return <div className="row_container">
+
+    return <div className="row_container" >
         <RowHeader onToggle={() => dispatch(toggleTransformation(transformation))} transformation={transformation.rules}
                    contentIsShown={showNodes}/>
         {!showNodes ? null :
-            <div ref={ref} className="row_row">{nodes.map((child) => <Node key={child.uuid} node={child}
-                                                                           showMini={isOverflowH}
-                                                                           notifyClick={notifyClick}/>)}</div>
+            <div ref={ref} className="row_row" >{nodes.map((child) => { 
+                if (child.recursive && shownRecursion.indexOf(child.uuid) !== -1) {
+                    console.log("Doing a recursive node", child.uuid)
+                    return <RecursiveNode key={child.uuid} node={child}
+                    showMini={isOverflowH}
+                    notifyClick={notifyClick}/>
+                }
+                else{
+                    return <Node key={child.uuid} node={child}
+                    showMini={isOverflowH}
+                    notifyClick={notifyClick}/>}})}</div>
         }</div>
 }
 

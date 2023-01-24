@@ -1,6 +1,6 @@
 import React from "react";
 import LineTo from "react-lineto";
-import PropTypes from "prop-types";
+import PropTypes, { node } from "prop-types";
 import useResizeObserver from "@react-hook/resize-observer";
 import {useShownNodes} from "../contexts/ShownNodes";
 import {useSettings} from "../contexts/Settings";
@@ -8,14 +8,15 @@ import {useFilters} from "../contexts/Filters";
 import {useHighlightedSymbol} from "../contexts/HighlightedSymbol";
 import Xarrow from "react-xarrows";
 import {useColorPalette} from "../contexts/ColorPalette";
+import { useShownRecursion } from "../contexts/ShownRecursion";
 
-function loadEdges(shownNodes, backendURL) {
+function loadEdges(nodeInfo, backendURL) {
     return fetch(`${backendURL("graph/edges")}`, {
         method: "POST",
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(shownNodes)
+        body: JSON.stringify(nodeInfo)
     }).then(r => r.json());
 }
 
@@ -47,23 +48,26 @@ export function Edges(props) {
     const target = React.useRef(null)
     useResize(target)
     const [{shownNodes},] = useShownNodes();
+    const [shownRecursion, ,] = useShownRecursion();
     const {state, backendURL} = useSettings();
     const [{activeFilters},] = useFilters();
-    const [lastIndex, setLastIndex] = React.useState(0);
     
     
     React.useEffect(() => {
         let mounted = true;
         
-        loadEdges(shownNodes, backendURL)
+        const nodeInfo = {
+            shownNodes: shownNodes,
+            shownRecursion: shownRecursion
+        }
+        loadEdges(nodeInfo, backendURL)
         .then(items => {
             if (mounted) {
                 setEdges(items)
-                setLastIndex(items.length - 1)
             }
         })
         return () => mounted = false;
-    }, [shownNodes, state, activeFilters]);
+    }, [shownNodes, shownRecursion, state, activeFilters]);
 
     if (usingClingraph) {
         React.useEffect(() => {
@@ -81,14 +85,14 @@ export function Edges(props) {
     };
 
     
-    return <div ref={target} className="edge_container">
+    return <div ref={target} className="edge_container" >
             {edges.map(link => <LineTo
                 key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"top center"}
-                to={link.tgt} zIndex={-1} borderColor={"black"} borderStyle={"solid"} borderWidth={1} />)}
+                to={link.tgt} zIndex={1} borderColor={"black"} borderStyle={"solid"} borderWidth={1} />)}
             {!usingClingraph ? null:
             clingraphEdges.map(link => <LineTo
                 key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"top center"}
-                to={link.tgt} zIndex={-1} borderColor={"black"} borderStyle={"dashed"} borderWidth={2} />)}
+                to={link.tgt} zIndex={1} borderColor={"black"} borderStyle={"dashed"} borderWidth={2} />)}
         </div>
 
         

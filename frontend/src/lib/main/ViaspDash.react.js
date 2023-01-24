@@ -17,6 +17,7 @@ import {DEFAULT_BACKEND_URL, SettingsProvider, useSettings} from "../contexts/Se
 import {FilterProvider} from "../contexts/Filters";
 import { HighlightedSymbolProvider } from '../contexts/HighlightedSymbol';
 import { useHighlightedSymbol } from '../contexts/HighlightedSymbol';
+import { ShownRecursionProvider } from '../contexts/ShownRecursion';
 
 
 function loadClingraphUsed(backendURL) {
@@ -152,18 +153,20 @@ export default function ViaspDash(props) {
         <ColorPaletteProvider colorPalette={colors}>
             <HighlightedNodeProvider>
                 <HighlightedSymbolProvider>
-                    <FilterProvider>
-                        <SettingsProvider backendURL={backendURL}>
-                            <UserMessagesProvider>
-                                <TransformationProvider>
-                                    <div>
-                                        <UserMessages/>
-                                        <MainWindow notifyDash={notifyDash}/>
-                                    </div>
-                                </TransformationProvider>
-                            </UserMessagesProvider>
-                        </SettingsProvider>
-                    </FilterProvider>
+                    <ShownRecursionProvider>
+                        <FilterProvider>
+                            <SettingsProvider backendURL={backendURL}>
+                                <UserMessagesProvider>
+                                    <TransformationProvider>
+                                        <div>
+                                            <UserMessages/>
+                                            <MainWindow notifyDash={notifyDash}/>
+                                        </div>
+                                    </TransformationProvider>
+                                </UserMessagesProvider>
+                            </SettingsProvider>
+                        </FilterProvider>
+                    </ShownRecursionProvider>
                 </HighlightedSymbolProvider>
             </HighlightedNodeProvider>
         </ColorPaletteProvider>

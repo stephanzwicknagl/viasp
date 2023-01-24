@@ -1,5 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
+import { useColorPalette } from "../contexts/ColorPalette";
 
 const defaultHighlightedSymbol = [];
 
@@ -8,7 +9,8 @@ const HighlightedSymbolContext = React.createContext(defaultHighlightedSymbol);
 export const useHighlightedSymbol = () => React.useContext(HighlightedSymbolContext);
 export const HighlightedSymbolProvider = ({ children }) => {
     const [highlightedSymbol, setHighlightedSymbol] = React.useState(defaultHighlightedSymbol);
-    const colorArray = ["orange", "green", "blue", "brown"]
+    const colorPalette = useColorPalette();
+    const colorArray = Object.values(colorPalette.highlight);
 
     function getNextColor(l, arrowsColors){
         var c = JSON.stringify(colorArray[l % colorArray.length])
@@ -27,7 +29,7 @@ export const HighlightedSymbolProvider = ({ children }) => {
             arrowsSrcTgt.push(JSON.stringify({"src":item.src, "tgt":item.tgt}));
             arrowsColors.push(JSON.stringify(item.color));
         })
-        const c = getNextColor(highlightedSymbol.length, arrowsColors);
+        const c = getNextColor(new Set(highlightedSymbol.map(item => item.src)).size, arrowsColors);
 
         arrows.forEach(a => {
             var value = JSON.stringify(a);
