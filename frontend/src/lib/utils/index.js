@@ -10,6 +10,8 @@ export function make_atoms_string(atoms) {
         case "Function":
             const args = atoms.arguments.map(make_atoms_string).join(",")
             return args.length > 0 ? `${atoms.name}(${args})` : `${atoms.name}`
+        case "SymbolIdentifier":
+            return make_atoms_string(atoms.symbol)
         default:
             throw new TypeError(`Unimplemented type ${atoms._type}`)
 
