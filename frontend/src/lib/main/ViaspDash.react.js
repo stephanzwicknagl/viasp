@@ -18,6 +18,7 @@ import {FilterProvider} from "../contexts/Filters";
 import { HighlightedSymbolProvider } from '../contexts/HighlightedSymbol';
 import { useHighlightedSymbol } from '../contexts/HighlightedSymbol';
 import { ShownRecursionProvider } from '../contexts/ShownRecursion';
+import { Xwrapper } from 'react-xarrows';
 
 
 function loadClingraphUsed(backendURL) {

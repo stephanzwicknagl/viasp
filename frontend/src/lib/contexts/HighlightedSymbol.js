@@ -41,6 +41,7 @@ export const HighlightedSymbolProvider = ({ children }) => {
             } else {
                 arrowsSrcTgt.splice(index, 1);
                 arrowsColors.splice(index, 1);
+                // call update height
             }
         })
         setHighlightedSymbol(

@@ -45,7 +45,6 @@
 
 .set_too_high {
     overflow-y: hidden;
-    /* max-height: 5em; */
 }
 
 .symbol {

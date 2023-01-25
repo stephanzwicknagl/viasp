@@ -1,7 +1,7 @@
 import React from "react";
 import {make_atoms_string} from "../utils/index";
 import './node.css'
-import PropTypes from "prop-types";
+import PropTypes, { symbol } from "prop-types";
 import {hideNode, showNode, useShownNodes} from "../contexts/ShownNodes";
 import {useColorPalette} from "../contexts/ColorPalette";
 import {useHighlightedNode} from "../contexts/HighlightedNode";
@@ -11,7 +11,8 @@ import {useSettings} from "../contexts/Settings";
 import {NODE, SYMBOLIDENTIFIER} from "../types/propTypes";
 import {useFilters} from "../contexts/Filters";
 import AnimateHeight from 'react-animate-height';
-
+import { v4 as uuidv4 } from 'uuid';
+import { useXarrow, Xwrapper } from 'react-xarrows';
 
 function any(iterable) {
     for (let index = 0; index < iterable.length; index++) {
@@ -55,7 +56,7 @@ function useHighlightedSymbolToCreateClassName(compareHighlightedSymbol, symbol)
 function NodeContent(props) {
 
     const {state} = useSettings();
-    const {node} = props;
+    const {node,setHeight, parentID} = props;
     const colorPalette = useColorPalette();
     const [{activeFilters},] = useFilters();
     const [highlightedSymbol, toggleHighlightedSymbol,] = useHighlightedSymbol();
@@ -77,31 +78,24 @@ function NodeContent(props) {
 
         const reasons = node.reason[make_atoms_string(src.symbol)];
         if (reasons.every(tgt => tgt !== null)){
-            // reasons.map(tgt => {
-            //     const childDiv = document.getElementById(tgt.uuid);
-            //     const childRect= childDiv.getBoundingClientRect();
-            //     const parentDiv = childDiv.parentElement.parentElement.parentElement.parentElement;
-            //     // const parentDiv1 = childDiv.parentElement.parentElement;
-
-            //     const parentRect = parentDiv.getBoundingClientRect();
-            //     if (childRect.bottom > parentRect.bottom) {
-            //         console.log(`Symbol: ${tgt.uuid} is NOT visible`);
-            //         // console.log("The parent Div is:", parentDiv1);
-            //         // console.log("The target is ", tgt);
-            //         // const tgthtml = `<div class="mouse_over_symbol"><div class="symbol" id="${tgt.uuid}">${make_atoms_string(tgt.symbol)}</div></div>`;
-            //         // let newInnerHtml = parentDiv1.innerHTML
-            //                 // .replace(tgthtml, "");
-            //         // newInnerHtml = `<div class="mouse_over_symbol mark_symbol"><div class="symbol" id="${tgt.uuid}">${make_atoms_string(tgt.symbol)}</div></div>`.concat(newInnerHtml);
-            //         // parentDiv1.innerHTML = newInnerHtml;
-            //     } else {
-            //         // setIsBelowParentBorder(false);
-            //         console.log(`Symbol: ${tgt.uuid} is visible`)
-            //     }
-            // })
-            // toggleHighlightedSymbol(reasons.map(tgt => { if (tgt) return { "src": src.uuid, "tgt": tgt.uuid }; else return null }), highlightedSymbol);
             toggleHighlightedSymbol(reasons.map(tgt => { return { "src": src.uuid, "tgt": tgt.uuid } }), highlightedSymbol);
         }
     }
+
+    const visibilityManager = (compareHighlightedSymbol, symbol) => {
+        const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol.uuid);
+        if (i !== -1) {
+            const childRect = document.getElementById(symbol.uuid).getBoundingClientRect();
+            const parentRect = document.getElementById(parentID).getBoundingClientRect();
+            return childRect.bottom - parentRect.top;
+        };
+        return 0;
+    }
+
+    React.useEffect(() => {
+        var newDiffs = contentToShow.filter(symbol => symbolShouldBeShown(symbol)).map(s => visibilityManager(highlightedSymbol, s)).filter(s => s > 0);
+        setHeight(Math.max(...newDiffs, 80));
+    }, [highlightedSymbol])
 
     const classNames2 = `set_value`
     const containerNames = `set_container`
@@ -164,7 +158,8 @@ export function Node(props) {
     const [, dispatch] = useShownNodes();
     const {state} = useSettings();
     const classNames = useHighlightedNodeToCreateClassName(node);
-    const [height, setHeight] = React.useState(0);
+    const [height, setHeight] = React.useState(80);
+    const updateXarrow = useXarrow();
 
     const ref = React.useCallback(x => {
         if (x !== null) {
@@ -181,6 +176,7 @@ export function Node(props) {
 
     })
 
+    let divID = uuidv4();
 
     return <div className={classNames}
                 style={{"backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark}}
@@ -188,8 +184,13 @@ export function Node(props) {
         {showMini ? <div style={{"backgroundColor": colorPalette.ten.dark, "color": colorPalette.ten.dark}}
                          className={"mini"}/> :
             <div className={"set_too_high"} ref={ref}>
-                <NodeContent node={node} />
-                <RecursionButton node={node} /></div>}
+                <AnimateHeight
+                    id={divID}
+                    duration={500}
+                    height={height} // onHeightAnimationStart={updateXarrow} // onHeightAnimationEnd = {updateXarrow}>
+                    >
+                    <NodeContent node={node} setHeight={setHeight} parentID={divID}/>
+                    <RecursionButton node={node} /></AnimateHeight></div>}
         {!showMini && isOverflowV ?
             <div style={{"backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark}}
                  className={"noselect bauchbinde"}>...</div> : null}
@@ -234,13 +235,13 @@ export function RecursiveNode(props) {
     React.useEffect(() => {
 
     })
-    console.log("RecursiveNode", node.recursive._graph.nodes)
-
 
     return <div className={classNames}
-        style={{ "backgroundColor": colorPalette.fourty.dark, "color": colorPalette.ten.dark }}
-        id={node.uuid} onClick={(e) => {e.stopPropagation(); notifyClick(node)}} >
+    style={{ "backgroundColor": colorPalette.fourty.dark, "color": colorPalette.ten.dark }}
+    id={node.uuid} onClick={(e) => {e.stopPropagation(); notifyClick(node)}} >
         {node.recursive._graph.nodes.map((subnode) => {
+            const [height, setHeight] = React.useState(80);
+            let divID = uuidv4();
             const classNames2 = useHighlightedNodeToCreateClassName(subnode.id);
             return <div className={classNames2}
                 style={{ "backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark }}
@@ -248,8 +249,13 @@ export function RecursiveNode(props) {
                 {showMini ? <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.ten.dark }}
                     className={"mini"} /> :
                     <div className={"set_too_high"} ref={ref} >
-                        <NodeContent node={subnode.id} />
-                        <RecursionButton node={subnode.id} /></div>}
+                        <AnimateHeight
+                            id={divID}
+                            duration={500}
+                            height={height} // onHeightAnimationStart={updateXarrow} // onHeightAnimationEnd = {updateXarrow}>
+                        >
+                        <NodeContent node={subnode.id} setHeight={setHeight} parentID={divID} />
+                        <RecursionButton node={subnode.id} /></AnimateHeight></div>}
                 {!showMini && isOverflowV ?
                     <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}
                         className={"noselect bauchbinde"}>...</div> : null}
