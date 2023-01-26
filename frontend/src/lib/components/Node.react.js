@@ -12,7 +12,8 @@ import {NODE, SYMBOLIDENTIFIER} from "../types/propTypes";
 import {useFilters} from "../contexts/Filters";
 import AnimateHeight from 'react-animate-height';
 import { v4 as uuidv4 } from 'uuid';
-import { useXarrow, Xwrapper } from 'react-xarrows';
+import Xarrow, { useXarrow, Xwrapper } from 'react-xarrows';
+
 
 function any(iterable) {
     for (let index = 0; index < iterable.length; index++) {
@@ -187,14 +188,17 @@ export function Node(props) {
                 <AnimateHeight
                     id={divID}
                     duration={500}
-                    height={height} // onHeightAnimationStart={updateXarrow} // onHeightAnimationEnd = {updateXarrow}>
+                    height={height} 
+                    onHeightAnimationStart={updateXarrow} 
+                    onHeightAnimationEnd = {updateXarrow}
                     >
                     <NodeContent node={node} setHeight={setHeight} parentID={divID}/>
-                    <RecursionButton node={node} /></AnimateHeight></div>}
+                    <RecursionButton node={node} /></AnimateHeight>
+                    </div>}
         {!showMini && isOverflowV ?
             <div style={{"backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark}}
                  className={"noselect bauchbinde"}>...</div> : null}
-    </div>
+        </div>
 }
 
 Node.propTypes = {
@@ -220,6 +224,7 @@ export function RecursiveNode(props) {
     const [, dispatch] = useShownNodes();
     const { state } = useSettings();
     const classNames = useHighlightedNodeToCreateClassName(node);
+    const updateXarrow = useXarrow();
 
     const ref = React.useCallback(x => {
         if (x !== null) {
@@ -238,7 +243,7 @@ export function RecursiveNode(props) {
 
     return <div className={classNames}
     style={{ "backgroundColor": colorPalette.fourty.dark, "color": colorPalette.ten.dark }}
-    id={node.uuid} onClick={(e) => {e.stopPropagation(); notifyClick(node)}} >
+        id={node.uuid} onClick={(e) => { e.stopPropagation(); notifyClick(node) }} >
         {node.recursive._graph.nodes.map((subnode) => {
             const [height, setHeight] = React.useState(80);
             let divID = uuidv4();
@@ -252,8 +257,9 @@ export function RecursiveNode(props) {
                         <AnimateHeight
                             id={divID}
                             duration={500}
-                            height={height} // onHeightAnimationStart={updateXarrow} // onHeightAnimationEnd = {updateXarrow}>
-                        >
+                            height={height} 
+                            onHeightAnimationStart={updateXarrow}
+                            onHeightAnimationEnd = {updateXarrow}>
                         <NodeContent node={subnode.id} setHeight={setHeight} parentID={divID} />
                         <RecursionButton node={subnode.id} /></AnimateHeight></div>}
                 {!showMini && isOverflowV ?
@@ -261,7 +267,7 @@ export function RecursiveNode(props) {
                         className={"noselect bauchbinde"}>...</div> : null}
             </div>
         })}
-        <RecursionButton node={node} />
+            <RecursionButton node={node} />
     </div>
 }
 

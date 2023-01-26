@@ -114,7 +114,7 @@ export function Arrows(){
     const [highlightedSymbol,,] = useHighlightedSymbol();
     
     return <div className="arrows_container">
-        {highlightedSymbol.map(arrow => {
+        {highlightedSymbol.filter(arrow => document.getElementById(arrow.src) && document.getElementById(arrow.tgt)).map(arrow => {
             return <Xarrow
                 key={arrow.src + "-" + arrow.tgt} start={arrow.src} end={arrow.tgt} startAnchor={"top"} endAnchor={"bottom"} color={arrow.color} strokeWidth={2} headSize={5} zIndex={10}/>
         })}

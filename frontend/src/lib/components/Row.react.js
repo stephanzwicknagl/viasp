@@ -82,7 +82,6 @@ export function Row(props) {
                                                 shown
                                             }) => transformation.id === t.id && shown) !== undefined
     const style1 = { "backgroundColor": color};
-    console.log("Color:", color)
 
     return <div className="row_container" style={style1}>
         <RowHeader onToggle={() => dispatch(toggleTransformation(transformation))} transformation={transformation.rules}
