@@ -82,19 +82,24 @@ function NodeContent(props) {
         }
     }
 
-    const visibilityManager = (compareHighlightedSymbol, symbol) => {
+    function visibilityManager(compareHighlightedSymbol, symbol) {
         const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol.uuid);
-        if (i !== -1) {
-            const childRect = document.getElementById(symbol.uuid).getBoundingClientRect();
-            const parentRect = document.getElementById(parentID).getBoundingClientRect();
-            return childRect.bottom - parentRect.top;
-        };
-        return 0;
+        const childRect = document.getElementById(symbol.uuid).getBoundingClientRect();
+        const parentRect = document.getElementById(parentID).getBoundingClientRect();
+        return {"fittingHeight":childRect.bottom - parentRect.top, "isMarked":i!==-1};
     }
 
     React.useEffect(() => {
-        var newDiffs = contentToShow.filter(symbol => symbolShouldBeShown(symbol)).map(s => visibilityManager(highlightedSymbol, s)).filter(s => s > 0);
-        setHeight(Math.max(...newDiffs, 80));
+        var allHeights = contentToShow.filter(
+            symbol => symbolShouldBeShown(symbol)).map(
+                s => visibilityManager(highlightedSymbol, s));
+        var markedItems = allHeights.filter(item => item.isMarked);
+        if (markedItems.length && any(markedItems.map(item => item.fittingHeight > 80))) {
+            setHeight(Math.max(...markedItems.map(item => item.fittingHeight)));
+        }
+        else {
+            setHeight(Math.min(80, Math.max(...allHeights.map(item => item.fittingHeight))));
+        }
     }, [highlightedSymbol])
 
     const classNames2 = `set_value`
