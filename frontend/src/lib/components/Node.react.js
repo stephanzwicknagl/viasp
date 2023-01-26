@@ -161,7 +161,7 @@ export function Node(props) {
     const classNames = useHighlightedNodeToCreateClassName(node);
     const [height, setHeight] = React.useState(80);
     // state updater to force other components to update
-    const [,,forceArrowUpdate] = useArrowUpdater();
+    const [, , startArrowUpdater, stopArrowUpdater] = useArrowUpdater();
 
     const ref = React.useCallback(x => {
         if (x !== null) {
@@ -190,8 +190,8 @@ export function Node(props) {
                     id={divID}
                     duration={500}
                     height={height} 
-                    onHeightAnimationStart={forceArrowUpdate} 
-                    onHeightAnimationEnd = {forceArrowUpdate}>
+                    onHeightAnimationStart={startArrowUpdater} 
+                    onHeightAnimationEnd={stopArrowUpdater}>
                     <NodeContent node={node} setHeight={setHeight} parentID={divID}/>
                     <RecursionButton node={node} /></AnimateHeight>
                     </div>}
@@ -225,7 +225,7 @@ export function RecursiveNode(props) {
     const { state } = useSettings();
     const classNames = useHighlightedNodeToCreateClassName(node);
     // state updater to force other components to update
-    const [,,forceArrowUpdate] = useArrowUpdater();
+    const [, , startArrowUpdater, stopArrowUpdater] = useArrowUpdater();
 
     const ref = React.useCallback(x => {
         if (x !== null) {
@@ -259,8 +259,8 @@ export function RecursiveNode(props) {
                             id={divID}
                             duration={500}
                             height={height} 
-                            onHeightAnimationStart={forceArrowUpdate}
-                            onHeightAnimationEnd = {forceArrowUpdate}>
+                            onHeightAnimationStart={startArrowUpdater}
+                            onHeightAnimationEnd={stopArrowUpdater}>
                         <NodeContent node={subnode.id} setHeight={setHeight} parentID={divID} />
                         <RecursionButton node={subnode.id} /></AnimateHeight></div>}
                 {!showMini && isOverflowV ?
