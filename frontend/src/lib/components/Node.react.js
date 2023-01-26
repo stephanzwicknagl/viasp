@@ -98,7 +98,7 @@ function NodeContent(props) {
             setHeight(Math.max(...markedItems.map(item => item.fittingHeight)));
         }
         else {
-            setHeight(Math.min(80, Math.max(...allHeights.map(item => item.fittingHeight))));
+            setHeight(Math.min(80, Math.max(25,...allHeights.map(item => item.fittingHeight))));
         }
     }, [highlightedSymbol])
 
