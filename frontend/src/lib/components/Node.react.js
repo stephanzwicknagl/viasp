@@ -11,8 +11,7 @@ import {useSettings} from "../contexts/Settings";
 import {NODE, SYMBOLIDENTIFIER} from "../types/propTypes";
 import {useFilters} from "../contexts/Filters";
 import AnimateHeight from 'react-animate-height';
-import { v4 as uuidv4 } from 'uuid';
-import { useArrowUpdater } from "../contexts/ArrowUpdater";
+import { useAnimationUpdater } from "../contexts/AnimationUpdater";
 
 
 function any(iterable) {
@@ -161,7 +160,7 @@ export function Node(props) {
     const classNames = useHighlightedNodeToCreateClassName(node);
     const [height, setHeight] = React.useState(80);
     // state updater to force other components to update
-    const [, , startArrowUpdater, stopArrowUpdater] = useArrowUpdater();
+    const [, , startAnimationUpdater, stopAnimationUpdater] = useAnimationUpdater();
 
     const ref = React.useCallback(x => {
         if (x !== null) {
@@ -178,7 +177,7 @@ export function Node(props) {
 
     })
 
-    let divID = uuidv4();
+    let divID = `${node.uuid}_animate_height`;
 
     return <div className={classNames}
                 style={{"backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark}}
@@ -190,8 +189,8 @@ export function Node(props) {
                     id={divID}
                     duration={500}
                     height={height} 
-                    onHeightAnimationStart={startArrowUpdater} 
-                    onHeightAnimationEnd={stopArrowUpdater}>
+                    onHeightAnimationStart={startAnimationUpdater} 
+                    onHeightAnimationEnd={stopAnimationUpdater}>
                     <NodeContent node={node} setHeight={setHeight} parentID={divID}/>
                     <RecursionButton node={node} /></AnimateHeight>
                     </div>}
@@ -225,7 +224,7 @@ export function RecursiveNode(props) {
     const { state } = useSettings();
     const classNames = useHighlightedNodeToCreateClassName(node);
     // state updater to force other components to update
-    const [, , startArrowUpdater, stopArrowUpdater] = useArrowUpdater();
+    const [, , startAnimationUpdater, stopAnimationUpdater] = useAnimationUpdater();
 
     const ref = React.useCallback(x => {
         if (x !== null) {
@@ -247,7 +246,7 @@ export function RecursiveNode(props) {
         id={node.uuid} onClick={(e) => { e.stopPropagation(); notifyClick(node) }} >
         {node.recursive._graph.nodes.map((subnode) => {
             const [height, setHeight] = React.useState(80);
-            let divID = uuidv4();
+            let divID = `${node.uuid}_animate_height`;
             const classNames2 = useHighlightedNodeToCreateClassName(subnode.id);
             return <div className={classNames2}
                 style={{ "backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark }}
@@ -259,8 +258,8 @@ export function RecursiveNode(props) {
                             id={divID}
                             duration={500}
                             height={height} 
-                            onHeightAnimationStart={startArrowUpdater}
-                            onHeightAnimationEnd={stopArrowUpdater}>
+                            onHeightAnimationStart={startAnimationUpdater}
+                            onHeightAnimationEnd={stopAnimationUpdater}>
                         <NodeContent node={subnode.id} setHeight={setHeight} parentID={divID} />
                         <RecursionButton node={subnode.id} /></AnimateHeight></div>}
                 {!showMini && isOverflowV ?

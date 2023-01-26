@@ -8,7 +8,7 @@ import {Facts} from "../components/Facts.react";
 import {Arrows, Edges} from "../components/Edges.react";
 import {initialState, nodeReducer, ShownNodesProvider} from "../contexts/ShownNodes";
 import {TransformationProvider, useTransformations} from "../contexts/transformations";
-import {ColorPaletteProvider, useColorPalette} from "../contexts/ColorPalette";
+import { ColorPaletteProvider } from "../contexts/ColorPalette";
 import {HighlightedNodeProvider} from "../contexts/HighlightedNode";
 import {showError, useMessages, UserMessagesProvider} from "../contexts/UserMessages";
 import {Settings} from "../components/settings";
@@ -18,7 +18,7 @@ import {FilterProvider} from "../contexts/Filters";
 import { HighlightedSymbolProvider } from '../contexts/HighlightedSymbol';
 import { useHighlightedSymbol } from '../contexts/HighlightedSymbol';
 import { ShownRecursionProvider } from '../contexts/ShownRecursion';
-import { ArrowUpdaterProvider } from '../contexts/ArrowUpdater';
+import { AnimationUpdaterProvider } from '../contexts/AnimationUpdater';
 
 
 
@@ -42,7 +42,6 @@ function GraphContainer(props) {
         <Facts notifyClick={(clickedOn) => {
             notifyDash(clickedOn)
             setDetail(clickedOn.uuid)
-            // set marked clickedOn.reason
             }}
         /><Settings/>
         {transformations.map(({transformation}, i) => {
@@ -157,7 +156,7 @@ export default function ViaspDash(props) {
                 <HighlightedSymbolProvider>
                     <ShownRecursionProvider>
                         <FilterProvider>
-                            <ArrowUpdaterProvider>
+                            <AnimationUpdaterProvider>
                                 <SettingsProvider backendURL={backendURL}>
                                     <UserMessagesProvider>
                                         <TransformationProvider>
@@ -168,7 +167,7 @@ export default function ViaspDash(props) {
                                         </TransformationProvider>
                                     </UserMessagesProvider>
                                 </SettingsProvider>
-                            </ArrowUpdaterProvider>
+                            </AnimationUpdaterProvider>
                         </FilterProvider>
                     </ShownRecursionProvider>
                 </HighlightedSymbolProvider>

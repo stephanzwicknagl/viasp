@@ -12,7 +12,7 @@ function loadFacts(backendURL) {
 }
 
 export function Facts(props) {
-    const {notifyClick, markedSymbols} = props;
+    const {notifyClick} = props;
     const {state, backendURL} = useSettings();
     const [fact, setFact] = React.useState(null);
     React.useEffect(() => {
