@@ -7,8 +7,8 @@ import {useSettings} from "../contexts/Settings";
 import {useFilters} from "../contexts/Filters";
 import {useHighlightedSymbol} from "../contexts/HighlightedSymbol";
 import Xarrow from "react-xarrows";
-import {useColorPalette} from "../contexts/ColorPalette";
 import { useShownRecursion } from "../contexts/ShownRecursion";
+import { useArrowUpdater } from "../contexts/ArrowUpdater";
 
 function loadEdges(nodeInfo, backendURL) {
     return fetch(`${backendURL("graph/edges")}`, {
@@ -51,7 +51,8 @@ export function Edges(props) {
     const [shownRecursion, ,] = useShownRecursion();
     const {state, backendURL} = useSettings();
     const [{activeFilters},] = useFilters();
-    
+    // state to update Edges after height animation of node
+    const [value, ,] = useArrowUpdater();
     
     React.useEffect(() => {
         let mounted = true;
@@ -112,6 +113,8 @@ Edges.propTypes = {
 
 export function Arrows(){
     const [highlightedSymbol,,] = useHighlightedSymbol();
+    // state to update Arrows after height animation of node
+    const [value,,] = useArrowUpdater();
     
     return <div className="arrows_container">
         {highlightedSymbol.filter(arrow => document.getElementById(arrow.src) && document.getElementById(arrow.tgt)).map(arrow => {

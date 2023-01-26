@@ -12,7 +12,7 @@ import {NODE, SYMBOLIDENTIFIER} from "../types/propTypes";
 import {useFilters} from "../contexts/Filters";
 import AnimateHeight from 'react-animate-height';
 import { v4 as uuidv4 } from 'uuid';
-import Xarrow, { useXarrow, Xwrapper } from 'react-xarrows';
+import { useArrowUpdater } from "../contexts/ArrowUpdater";
 
 
 function any(iterable) {
@@ -160,7 +160,8 @@ export function Node(props) {
     const {state} = useSettings();
     const classNames = useHighlightedNodeToCreateClassName(node);
     const [height, setHeight] = React.useState(80);
-    const updateXarrow = useXarrow();
+    // state updater to force other components to update
+    const [,,forceArrowUpdate] = useArrowUpdater();
 
     const ref = React.useCallback(x => {
         if (x !== null) {
@@ -189,9 +190,8 @@ export function Node(props) {
                     id={divID}
                     duration={500}
                     height={height} 
-                    onHeightAnimationStart={updateXarrow} 
-                    onHeightAnimationEnd = {updateXarrow}
-                    >
+                    onHeightAnimationStart={forceArrowUpdate} 
+                    onHeightAnimationEnd = {forceArrowUpdate}>
                     <NodeContent node={node} setHeight={setHeight} parentID={divID}/>
                     <RecursionButton node={node} /></AnimateHeight>
                     </div>}
@@ -224,7 +224,8 @@ export function RecursiveNode(props) {
     const [, dispatch] = useShownNodes();
     const { state } = useSettings();
     const classNames = useHighlightedNodeToCreateClassName(node);
-    const updateXarrow = useXarrow();
+    // state updater to force other components to update
+    const [,,forceArrowUpdate] = useArrowUpdater();
 
     const ref = React.useCallback(x => {
         if (x !== null) {
@@ -258,8 +259,8 @@ export function RecursiveNode(props) {
                             id={divID}
                             duration={500}
                             height={height} 
-                            onHeightAnimationStart={updateXarrow}
-                            onHeightAnimationEnd = {updateXarrow}>
+                            onHeightAnimationStart={forceArrowUpdate}
+                            onHeightAnimationEnd = {forceArrowUpdate}>
                         <NodeContent node={subnode.id} setHeight={setHeight} parentID={divID} />
                         <RecursionButton node={subnode.id} /></AnimateHeight></div>}
                 {!showMini && isOverflowV ?

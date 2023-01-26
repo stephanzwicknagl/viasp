@@ -18,6 +18,7 @@ import {FilterProvider} from "../contexts/Filters";
 import { HighlightedSymbolProvider } from '../contexts/HighlightedSymbol';
 import { useHighlightedSymbol } from '../contexts/HighlightedSymbol';
 import { ShownRecursionProvider } from '../contexts/ShownRecursion';
+import { ArrowUpdaterProvider } from '../contexts/ArrowUpdater';
 
 
 
@@ -34,7 +35,6 @@ function GraphContainer(props) {
     const {setDetail, notifyDash, usingClingraph} = props;
     const {state: {transformations}} = useTransformations()
     const lastNodeInGraph = transformations.length - 1;
-    const colorPalette = useColorPalette()
     const background = ["#a9a9a94a", "#ffffff"]
 
 
@@ -157,16 +157,18 @@ export default function ViaspDash(props) {
                 <HighlightedSymbolProvider>
                     <ShownRecursionProvider>
                         <FilterProvider>
-                            <SettingsProvider backendURL={backendURL}>
-                                <UserMessagesProvider>
-                                    <TransformationProvider>
-                                        <div>
-                                            <UserMessages/>
-                                            <MainWindow notifyDash={notifyDash}/>
-                                        </div>
-                                    </TransformationProvider>
-                                </UserMessagesProvider>
-                            </SettingsProvider>
+                            <ArrowUpdaterProvider>
+                                <SettingsProvider backendURL={backendURL}>
+                                    <UserMessagesProvider>
+                                        <TransformationProvider>
+                                            <div>
+                                                <UserMessages/>
+                                                <MainWindow notifyDash={notifyDash}/>
+                                            </div>
+                                        </TransformationProvider>
+                                    </UserMessagesProvider>
+                                </SettingsProvider>
+                            </ArrowUpdaterProvider>
                         </FilterProvider>
                     </ShownRecursionProvider>
                 </HighlightedSymbolProvider>
