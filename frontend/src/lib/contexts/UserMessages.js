@@ -25,7 +25,6 @@ export const messageReducer = (state = initialState, action) => {
 
 function fetchWarnings(backendURL) {
     return fetch(`${backendURL("control/warnings")}`).then(r => {
-        console.log("CONTROL WARNINGS OK")
         if (r.ok) {
             return r.json()
         }
@@ -60,9 +59,7 @@ export const UserMessagesProvider = ({children}) => {
             showError(`Failed to get transformations: ${error}`)
         })
             .then(items => {
-                console.log(items)
                 if (mounted) {
-                    console.log(items)
                     items.map((e) => unpackMessageFromBackend(e)).map((e) => (dispatch(e)))
                 }
             })
