@@ -27,10 +27,9 @@ def get_h_symbols_from_model(wrapped_stable_model: Iterable[Symbol],
                              constants: List[Symbol],
                              h="h") -> List[Symbol]:
     rules_that_are_reasons_why = []
-    new_rules_that_are_reasons_why = []
     ctl = Control()
     stringified = "".join(map(str, transformed_prg))
-    get_new_atoms_rule = f"{h}_new(I, H, G) :- {h}(I, H, G), not {h}(II,H,_) : II<I, {h}(II,_,_)."
+    get_new_atoms_rule = f"{h}(I, H, G) :- {h}(I, H, G), not {h}(II,H,_) : II<I, {h}(II,_,_)."
     ctl.add("base", [], "".join(map(str, constants)))
     ctl.add("base", [], "".join(map(stringify_fact, facts)))
     ctl.add("base", [], stringified)
@@ -38,12 +37,10 @@ def get_h_symbols_from_model(wrapped_stable_model: Iterable[Symbol],
     ctl.add("base", [], get_new_atoms_rule)
     ctl.ground([("base", [])])
     for x in ctl.symbolic_atoms.by_signature(h, 3):
-        rules_that_are_reasons_why.append(x.symbol)
-    for x in ctl.symbolic_atoms.by_signature(h+"_new", 3):
         if x.symbol.arguments[1] in facts:
             continue
-        new_rules_that_are_reasons_why.append(x.symbol)
-    return rules_that_are_reasons_why, new_rules_that_are_reasons_why
+        rules_that_are_reasons_why.append(x.symbol)
+    return rules_that_are_reasons_why
 
 
 def get_facts(original_program) -> Collection[Symbol]:
@@ -148,9 +145,9 @@ def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collect
         single_node_graph.add_node(fact_node)
         return single_node_graph
     for model in wrapped_stable_models:
-        h_symbols, new_h_symbols = get_h_symbols_from_model(model, transformed_prg, facts, analyzer.get_constants(),
+        h_symbols = get_h_symbols_from_model(model, transformed_prg, facts, analyzer.get_constants(),
                                             conflict_free_h)
-        new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, new_h_symbols, recursion_transformations, conflict_free_h)
+        new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, h_symbols, recursion_transformations, conflict_free_h)
         paths.append(new_path)
 
     result_graph = identify_reasons(join_paths_with_facts(paths))
