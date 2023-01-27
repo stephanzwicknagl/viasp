@@ -97,7 +97,7 @@ def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
 
     for a, b in pairwise(h_syms):
         if rule_mapping[b.rule_nr].rules in recursive_transformations:
-            b.recursive = get_recursion_subgraph(a.atoms, rule_mapping[b.rule_nr], h)
+            b.recursive = get_recursion_subgraph(a.atoms, b.diff, rule_mapping[b.rule_nr], h)
         g.add_edge(a, b, transformation=rule_mapping[b.rule_nr])
 
     return g
