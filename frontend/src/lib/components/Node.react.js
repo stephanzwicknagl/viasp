@@ -98,7 +98,7 @@ function NodeContent(props) {
             setHeight(Math.max(...markedItems.map(item => item.fittingHeight)));
         }
         else {
-            setHeight(Math.min(80, Math.max(25,...allHeights.map(item => item.fittingHeight))));
+            setHeight(Math.min(80, Math.max(34,...allHeights.map(item => item.fittingHeight))));
         }
     }, [highlightedSymbol])
 
@@ -249,13 +249,13 @@ export function RecursiveNode(props) {
     return <div className={classNames}
     style={{ "backgroundColor": colorPalette.fourty.dark, "color": colorPalette.ten.dark }}
         id={node.uuid} onClick={(e) => { e.stopPropagation(); notifyClick(node) }} >
-        {node.recursive._graph.nodes.map((subnode) => {
+        {node.recursive._graph.nodes.map(e => e.id).map((subnode) => {
             const [height, setHeight] = React.useState(80);
-            let divID = `${node.uuid}_animate_height`;
-            const classNames2 = useHighlightedNodeToCreateClassName(subnode.id);
+            let divID = `${subnode.uuid}_animate_height`;
+            const classNames2 = useHighlightedNodeToCreateClassName(subnode);
             return <div className={classNames2}
                 style={{ "backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark }}
-                id={subnode.id.uuid} onClick={(e) => {e.stopPropagation(); notifyClick(subnode.id)}}>
+                id={subnode.uuid} onClick={(e) => {e.stopPropagation(); notifyClick(subnode)}}>
                 {showMini ? <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.ten.dark }}
                     className={"mini"} /> :
                     <div className={"set_too_high"} ref={ref} >
@@ -265,8 +265,8 @@ export function RecursiveNode(props) {
                             height={height} 
                             onHeightAnimationStart={startAnimationUpdater}
                             onHeightAnimationEnd={stopAnimationUpdater}>
-                        <NodeContent node={subnode.id} setHeight={setHeight} parentID={divID} />
-                        <RecursionButton node={subnode.id} /></AnimateHeight></div>}
+                        <NodeContent node={subnode} setHeight={setHeight} parentID={divID} />
+                        <RecursionButton node={subnode} /></AnimateHeight></div>}
                 {!showMini && isOverflowV ?
                     <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}
                         className={"noselect bauchbinde"}>...</div> : null}
