@@ -1,7 +1,6 @@
 # viASP
 
-![Test Status](https://github.com/stephanzwicknagl/viasp/actions/workflows/build_and_test.yml/badge.svg)
-
+[![Build and Test](https://github.com/stephanzwicknagl/viasp/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/stephanzwicknagl/viasp/actions/workflows/build_and_test.yml)
 
 Try it out in Binder! [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stephanzwicknagl/viasp/main?filepath=examples%2Fintro_viasp.ipynb)
 
