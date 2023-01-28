@@ -154,7 +154,7 @@ def test_path_creation():
     transformed = transform(program)
     single_saved_model = get_stable_models_for_program(program).pop()
     facts, constants = [], []
-    h_symbols, _ = get_h_symbols_from_model(single_saved_model, transformed, facts, constants)
+    h_symbols = get_h_symbols_from_model(single_saved_model, transformed, facts, constants)
     rule_mapping = {1: Transformation(1, parse_program_to_ast("fact(1).")), 2: Transformation(2, parse_program_to_ast("result(X) :- fact(X)."))}
     path = make_reason_path_from_facts_to_stable_model(single_saved_model,
                                                        rule_mapping, Node(frozenset(), 0),
@@ -171,7 +171,7 @@ def test_atoms_are_propagated_correctly_through_diffs():
     transformed = transform(program)
     single_saved_model = get_stable_models_for_program(program).pop()
     facts, constants = [], []
-    h_symbols,_ = get_h_symbols_from_model(single_saved_model, transformed, facts, constants)
+    h_symbols = get_h_symbols_from_model(single_saved_model, transformed, facts, constants)
     rule_mapping = {1: Transformation(1, parse_program_to_ast("b :- a.")), 2: Transformation(2, parse_program_to_ast("c :- b.")), 3: Transformation(3, parse_program_to_ast("d :- c."))}
     path = make_reason_path_from_facts_to_stable_model(single_saved_model,
                                                         rule_mapping,
