@@ -203,19 +203,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         :return:
         """
         g = nx.DiGraph()
-        # Add dependents
-        # for x,y in head_dependencies.items():
-        #     with open("t.log", "a") as f:
-        #         f.write(f"Dependants: {list(map(str,x))}\n")
-        #         f.write(f"on {list(map(str,y))}\n\n")
-        # for x,y in body_dependencies.items():
-        #     with open("t.log", "a") as f:
-        #         f.write(f"Condition: {list(map(str,x))}\n")
-        #         f.write(f"on {list(map(str,y))}\n\n")
-        # for x,y in self.positive_conditions.items():
-        #     with open("t.log", "a") as f:
-        #         f.write(f"Positive Condition: {list(map(str,x))}\n")
-        #         f.write(f"on {list(map(str,y))}\n\n")
+
         for deps in head_dependencies.values():
             for dep in deps:
                 g.add_node(frozenset([dep]))
