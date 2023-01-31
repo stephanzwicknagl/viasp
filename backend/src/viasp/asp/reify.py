@@ -69,13 +69,13 @@ class FilteredTransformer(Transformer):
 
 class DependencyCollector(Transformer):
 
-    def visit_Aggregate(self, aggregate, deps={}):
+    def visit_Aggregate(self, aggregate, deps={}, names=set()):
         conditional_literals = aggregate.elements
         for elem in conditional_literals:
             self.visit(elem, deps=deps)
         return aggregate
 
-    def visit_ConditionalLiteral(self, conditional_literal, deps={}):
+    def visit_ConditionalLiteral(self, conditional_literal, deps={}, names=set()):
         self.visit(conditional_literal.literal)
         deps[conditional_literal.literal] = []
         for condition in conditional_literal.condition:
@@ -83,7 +83,15 @@ class DependencyCollector(Transformer):
         return conditional_literal
 
 
-class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
+class NameCollector(Transformer):
+
+    def visit_Variable(self, variable, deps={}, names=set()):
+        # self.visit(variable.term, names=names)
+        names.add(variable.name)
+        return variable
+
+
+class ProgramAnalyzer(DependencyCollector, FilteredTransformer, NameCollector):
     """
     Receives a ASP program and finds it's dependencies within, can sort a program by it's dependencies.
     """
@@ -101,11 +109,13 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         self.constraints: Set[Rule] = set()
         self.pass_through: Set[AST] = set()
         self.rules: List[Rule] = []
+        self.names: Set[str] = set()
 
     def _get_conflict_free_version_of_name(self, name: str) -> Collection[str]:
         candidates = [name for name, _ in self.dependants.keys()]
         candidates.extend([name for name, _ in self.conditions.keys()])
         candidates.extend([fact.atom.symbol.name for fact in self.facts])
+        candidates.extend([name for name in self.names])
         candidates = set(candidates)
         current_best = name
         for _ in range(10):
@@ -120,6 +130,16 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
     def get_conflict_free_model(self):
         return self._get_conflict_free_version_of_name("model")
+
+    def get_conflict_free_variable(self):
+        """
+        For use in the replacement of Intervals.
+        By a new conflict free (unique) variable.
+        The new variable is added to the set of known variables.
+        """
+        new_var = self._get_conflict_free_version_of_name("X")
+        self.names = self.names.union({new_var})
+        return new_var
 
     def get_facts(self):
         return extract_symbols(self.facts, self.constants)
@@ -155,9 +175,10 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
     def visit_Rule(self, rule: Rule):
         deps = defaultdict(list)
-        _ = self.visit(rule.head, deps=deps)
+        names = set()
+        _ = self.visit(rule.head, deps=deps, names=names)
         for b in rule.body:
-            self.visit(b, deps=deps)
+            self.visit(b, deps=deps, names=names)
 
         if is_fact(rule, deps):
             self.facts.add(rule.head)
@@ -166,6 +187,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         for _, cond in deps.items():
             cond.extend(filter(filter_body_arithmetic, rule.body))
         self.register_symbolic_dependencies(deps)
+        self.names = self.names.union(names)
         self.register_rule_dependencies(rule, deps)
         self.rules.append(rule)
 
@@ -238,13 +260,15 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
 class ProgramReifier(DependencyCollector):
 
-    def __init__(self, rule_nr=1, h="h", model="model"):
+    def __init__(self, rule_nr=1, h="h", model="model", \
+                 get_conflict_free_variable=lambda s: s):
         self.rule_nr = rule_nr
         self.h = h
         self.model = model
+        self.get_conflict_free_variable = get_conflict_free_variable
 
-    def _nest_rule_head_in_h_with_explanation_tuple(self, loc: ast.Location, dependant: ast.Literal, \
-             body: List[ast.Literal]):
+    def _nest_rule_head_in_h_with_explanation_tuple(self, loc: ast.Location,
+                dependant: ast.Literal, body: List[ast.Literal]):
         """
         In: H :- B.
         Out: h(0, H, pos_atoms(B)),
@@ -255,14 +279,25 @@ class ProgramReifier(DependencyCollector):
         loc_lit = ast.Literal(loc, ast.Sign.NoSign, loc_atm)
         reasons = []
         for literal in body:
-            if literal.sign == ast.Sign.NoSign and literal.atom.ast_type == ast.ASTType.SymbolicAtom:
+            if literal.sign == ast.Sign.NoSign and \
+                literal.atom.ast_type == ast.ASTType.SymbolicAtom:
                 reasons.append(literal.atom)
         reason_fun = ast.Function(loc, '', reasons, 0)
         reason_lit = ast.Literal(loc, ast.Sign.NoSign, reason_fun)
 
         return [ast.Function(loc, self.h, [loc_lit, dependant, reason_lit], 0)]
-    
+
     def visit_Rule(self, rule: clingo.ast.Rule):
+        """
+        Reify a rule into a set of new rules.
+        Also replaces any interval in the head with a variable and adds it to the body.
+        In: H :- B.
+        Out: h(0, H, pos_atoms(B)) :- H, B.
+        where pos_atoms(B), reasons for H, is a tuple of all positive Symbolic Atoms in B.
+
+
+        :param rule: The rule to reify
+        :return: A list of new rules"""
         # Embed the head
         deps = defaultdict(list)
         loc = rule.location
@@ -275,7 +310,19 @@ class ProgramReifier(DependencyCollector):
             deps[rule.head] = []
         new_rules = []
         for dependant, conditions in deps.items():
-            new_head_s = self._nest_rule_head_in_h_with_explanation_tuple(rule.location, dependant, rule.body)
+            if has_an_interval(dependant):
+                # replace dependant with variable: e.g. (1..3) -> X
+                variables = [ast.Variable(loc, self.get_conflict_free_variable())
+                             if arg.ast_type == ast.ASTType.Interval else arg
+                             for arg in dependant.atom.symbol.arguments]
+                symbol = ast.SymbolicAtom(ast.Function(loc,
+                                                       dependant.atom.symbol.name,
+                                                       variables,
+                                                       False))
+                dependant = ast.Literal(loc, ast.Sign.NoSign, symbol)
+            new_head_s = self._nest_rule_head_in_h_with_explanation_tuple(rule.location,
+                                                                          dependant,
+                                                                          rule.body)
             # Add reified head to body
             new_body = [dependant]
             new_body.extend(rule.body)
@@ -329,3 +376,16 @@ def extract_symbols(facts, constants=None):
     for fact in ctl.symbolic_atoms:
         result.append(fact.symbol)
     return result
+
+def has_an_interval(literal):
+    """
+    Checks if a literal has an interval as one of its symbols.
+    Returns false if an attribute error occurs.
+    """
+    try:
+        for arg in literal.atom.symbol.arguments:
+            if arg.ast_type == ast.ASTType.Interval:
+                return True
+    except AttributeError:
+        return False
+    return False
