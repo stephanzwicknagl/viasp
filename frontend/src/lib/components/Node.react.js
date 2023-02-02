@@ -185,11 +185,7 @@ export function Node(props) {
 
     const divID = `${node.uuid}_animate_height`;
 
-    const [animationId, setAnimationId] = React.useState(null);
 
-    const storeAnimationId = (id) => {
-        setAnimationId(id);
-    };
 
     return <div className={classNames}
         style={{ "backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark }}
@@ -203,8 +199,8 @@ export function Node(props) {
                     id={divID}
                     duration={500}
                     height={height}
-                    onHeightAnimationStart={() => storeAnimationId(() => startAnimationUpdater())}
-                    onHeightAnimationEnd={() => stopAnimationUpdater(animationId)}>
+                    onHeightAnimationStart={startAnimationUpdater}
+                    onHeightAnimationEnd={stopAnimationUpdater}>
                     <NodeContent
                         node={node}
                         setHeight={setHeight}

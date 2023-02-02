@@ -8,14 +8,8 @@ const AnimationUpdater = React.createContext(defaultAnimationUpdater);
 export const useAnimationUpdater = () => React.useContext(AnimationUpdater);
 export const AnimationUpdaterProvider = ({children}) => {
     const [value, setValue] = React.useState(0);
-    const startAnimationUpdater = () => {
-        console.log("Starting animation updater");
-        setInterval(setValue(value => value + 1), 25);
-    };
-    const stopAnimationUpdater = (intervalID) => {
-        console.log("Stopped interval");
-        clearInterval(intervalID);
-    };
+    const startAnimationUpdater = () => setInterval(setValue(value => value + 1), 25);
+    const stopAnimationUpdater = () => clearInterval(startAnimationUpdater);
     
     return <AnimationUpdater.Provider
         value={[value, setValue, startAnimationUpdater, stopAnimationUpdater]}>{children}</AnimationUpdater.Provider>
