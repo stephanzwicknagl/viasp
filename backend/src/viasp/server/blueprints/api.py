@@ -170,7 +170,8 @@ def show_selected_models():
     if analyzer.will_work():
         recursion_rules = analyzer.check_positive_recursion()
         reified = reify_list(analyzer.get_sorted_program(), h=analyzer.get_conflict_free_h(),
-                             model=analyzer.get_conflict_free_model())
+                             model=analyzer.get_conflict_free_model(),
+                             get_conflict_free_variable=analyzer.get_conflict_free_variable)
         g = build_graph(marked_models, reified, analyzer, recursion_rules)
 
         set_graph(g)

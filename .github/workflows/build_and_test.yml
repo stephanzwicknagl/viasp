@@ -169,6 +169,9 @@ jobs:
           pip install --upgrade --upgrade-strategy eager -r requirements.txt
           pip install "viasp_backend-$(sh .github/backend-version.sh)-py3-none-any.whl"
         if: steps.cache.outputs.cache-hit != 'true'
+      
+      - name: Setup Graphviz
+        uses: ts-graphviz/setup-graphviz@v1
 
       - name: Run Tests
         working-directory: backend

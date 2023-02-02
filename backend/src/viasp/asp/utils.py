@@ -73,9 +73,6 @@ def topological_sort(g: nx.DiGraph, rules: Sequence[Rule]) -> List:
         earliest_node = None
         for node in no_incoming_edge:
             for rule in node:
-                # with open("t.log", "a") as f:
-                #     f.write(f"Node:\n     {node}\n\n")
-                #     f.write(f"Rules:\n     {rules}\n\n")
                 node_index = rules.index(rule)
                 if node_index<earliest_node_index:
                     earliest_node_index=node_index

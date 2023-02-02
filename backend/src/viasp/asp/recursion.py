@@ -51,10 +51,6 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset, \
     :param transformation: The recursive transformation. An ast object.
     :param conflict_free_h: The name of the h predicate.
     """
-    with open("t.log", "a") as f:
-        f.write(f"Type of facts: {type(facts)}\n\n")
-        f.write(f"Type of transforamtion: {type(transformation)}\n\n")
-        f.write(f"Type of conflict_free_h: {type(conflict_free_h)}\n\n")
     enable_python()
     init = [fact.symbol for fact in facts]
     justification_program = ""
