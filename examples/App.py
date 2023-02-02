@@ -22,10 +22,10 @@ class App(Application):
             print(handle.get())
             unsat=handle.get().unsatisfiable
         ctl.viasp.show()
-        ctl.viasp.clingraph(
-            viz_encoding="clingraph/example5_viz.lp", #"clingraph/queens/viz.lp",#"
-            engine="dot"
-        )
+        # ctl.viasp.clingraph(
+        #     viz_encoding="clingraph/example5_viz.lp", #"clingraph/queens/viz.lp",#"
+        #     engine="dot"
+        # )
 
 
         if unsat:
@@ -45,4 +45,4 @@ app = startup.run()
 
 if __name__ == "__main__":
     clingo_main(App(), sys.argv[1:])
-    app.run_server()
+    app.run()

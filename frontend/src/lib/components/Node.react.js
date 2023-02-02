@@ -1,15 +1,15 @@
 import React from "react";
-import {make_atoms_string} from "../utils/index";
+import { make_atoms_string } from "../utils/index";
 import './node.css'
 import PropTypes, { symbol } from "prop-types";
-import {hideNode, showNode, useShownNodes} from "../contexts/ShownNodes";
-import {useColorPalette} from "../contexts/ColorPalette";
-import {useHighlightedNode} from "../contexts/HighlightedNode";
+import { hideNode, showNode, useShownNodes } from "../contexts/ShownNodes";
+import { useColorPalette } from "../contexts/ColorPalette";
+import { useHighlightedNode } from "../contexts/HighlightedNode";
 import { useHighlightedSymbol } from "../contexts/HighlightedSymbol";
 import { useShownRecursion } from "../contexts/ShownRecursion";
-import {useSettings} from "../contexts/Settings";
-import {NODE, SYMBOLIDENTIFIER} from "../types/propTypes";
-import {useFilters} from "../contexts/Filters";
+import { useSettings } from "../contexts/Settings";
+import { NODE, SYMBOLIDENTIFIER } from "../types/propTypes";
+import { useFilters } from "../contexts/Filters";
 import AnimateHeight from 'react-animate-height';
 import { useAnimationUpdater } from "../contexts/AnimationUpdater";
 
@@ -45,7 +45,7 @@ function useHighlightedSymbolToCreateClassName(compareHighlightedSymbol, symbol)
     const j = compareHighlightedSymbol.map(item => item.src).indexOf(symbol);
     if (i !== -1) {
         classNames = `mouse_over_symbol mark_symbol`;
-        style = {"backgroundColor": compareHighlightedSymbol[i].color};
+        style = { "backgroundColor": compareHighlightedSymbol[i].color };
     }
     else if (j !== -1) {
         classNames = `mouse_over_symbol mark_symbol`;
@@ -55,10 +55,10 @@ function useHighlightedSymbolToCreateClassName(compareHighlightedSymbol, symbol)
 
 function NodeContent(props) {
 
-    const {state} = useSettings();
-    const {node,setHeight, parentID} = props;
+    const { state } = useSettings();
+    const { node, setHeight, parentID } = props;
     const colorPalette = useColorPalette();
-    const [{activeFilters},] = useFilters();
+    const [{ activeFilters },] = useFilters();
     const [highlightedSymbol, toggleHighlightedSymbol,] = useHighlightedSymbol();
 
     let contentToShow;
@@ -77,7 +77,7 @@ function NodeContent(props) {
         e.stopPropagation();
 
         const reasons = node.reason[make_atoms_string(src.symbol)];
-        if (reasons.every(tgt => tgt !== null)){
+        if (reasons.every(tgt => tgt !== null)) {
             toggleHighlightedSymbol(reasons.map(tgt => { return { "src": src.uuid, "tgt": tgt.uuid } }), highlightedSymbol);
         }
     }
@@ -86,7 +86,7 @@ function NodeContent(props) {
         const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol.uuid);
         const childRect = document.getElementById(symbol.uuid).getBoundingClientRect();
         const parentRect = document.getElementById(parentID).getBoundingClientRect();
-        return {"fittingHeight":childRect.bottom - parentRect.top, "isMarked":i!==-1};
+        return { "fittingHeight": childRect.bottom - parentRect.top, "isMarked": i !== -1 };
     }
 
     React.useEffect(() => {
@@ -95,23 +95,24 @@ function NodeContent(props) {
                 s => visibilityManager(highlightedSymbol, s));
         var markedItems = allHeights.filter(item => item.isMarked);
         if (markedItems.length && any(markedItems.map(item => item.fittingHeight > 80))) {
-            setHeight(Math.max(...markedItems.map(item => item.fittingHeight)));
+            setHeight(height => Math.max(height, Math.max(...markedItems.map(item => item.fittingHeight))));
         }
         else {
-            setHeight(Math.min(80, Math.max(34,...allHeights.map(item => item.fittingHeight))));
+            setHeight(height => Math.max(height, Math.min(80, Math.max(34, ...allHeights.map(item => item.fittingHeight)))));
         }
     }, [highlightedSymbol])
 
     const classNames2 = `set_value`
     const containerNames = `set_container`
-    let renderedSymbols = contentToShow.filter(symbol => 
-                symbolShouldBeShown(symbol)).map(s => {
-                    const [classNames1, style1] = useHighlightedSymbolToCreateClassName(highlightedSymbol, s.uuid);
-                    return <div className={classNames1} style={style1} onClick={(e) => handleClick(e,s)}>
-                        <Symbol key={JSON.stringify(s)} symbolId={s} />
-                        </div>})
+    let renderedSymbols = contentToShow.filter(symbol =>
+        symbolShouldBeShown(symbol)).map(s => {
+            const [classNames1, style1] = useHighlightedSymbolToCreateClassName(highlightedSymbol, s.uuid);
+            return <div className={classNames1} style={style1} onClick={(e) => handleClick(e, s)}>
+                <Symbol key={JSON.stringify(s)} symbolId={s} />
+            </div>
+        })
 
-    return <div className={containerNames} style={{"color": colorPalette.thirty.bright}}>
+    return <div className={containerNames} style={{ "color": colorPalette.thirty.bright }}>
         <span className={classNames2}>{renderedSymbols.length > 0 ? renderedSymbols : ""}</span>
     </div>
 }
@@ -128,7 +129,7 @@ NodeContent.propTypes = {
 }
 
 function RecursionButton(props) {
-    const {node} = props;
+    const { node } = props;
     const [, toggleShownRecursion,] = useShownRecursion();
     const [, , setHighlightedSymbol] = useHighlightedSymbol();
 
@@ -139,7 +140,7 @@ function RecursionButton(props) {
     }
 
     return <div className={"recursion_button"} onClick={handleClick}>
-        {!node.recursive ? null:
+        {!node.recursive ? null :
             <div className={"recursion_button_text"}>R</div>
         }
     </div>
@@ -150,20 +151,20 @@ function useHighlightedNodeToCreateClassName(node) {
     let classNames = `node_border mouse_over_shadow ${node.uuid} ${highlightedNode === node.uuid ? "highlighted_node" : null}`
 
     React.useEffect(() => {
-            classNames = `node_border mouse_over_shadow ${node.uuid} ${highlightedNode === node.uuid ? "highlighted_node" : null}`
-        }, [node.uuid, highlightedNode]
+        classNames = `node_border mouse_over_shadow ${node.uuid} ${highlightedNode === node.uuid ? "highlighted_node" : null}`
+    }, [node.uuid, highlightedNode]
     )
     return classNames
 }
 
 export function Node(props) {
-    const {node, notifyClick, showMini} = props;
+    const { node, notifyClick, showMini } = props;
     const [isOverflowV, setIsOverflowV] = React.useState(false);
     const colorPalette = useColorPalette();
     const [, dispatch] = useShownNodes();
-    const {state} = useSettings();
+    const { state } = useSettings();
     const classNames = useHighlightedNodeToCreateClassName(node);
-    const [height, setHeight] = React.useState(80);
+    const [height, setHeight] = React.useState(0);
     // state updater to force other components to update
     const [, , startAnimationUpdater, stopAnimationUpdater] = useAnimationUpdater();
 
@@ -182,27 +183,40 @@ export function Node(props) {
 
     })
 
-    let divID = `${node.uuid}_animate_height`;
+    const divID = `${node.uuid}_animate_height`;
+
+    const [animationId, setAnimationId] = React.useState(null);
+
+    const storeAnimationId = (id) => {
+        setAnimationId(id);
+    };
 
     return <div className={classNames}
-                style={{"backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark}}
-                id={node.uuid} onClick={() => notifyClick(node)}>
-        {showMini ? <div style={{"backgroundColor": colorPalette.ten.dark, "color": colorPalette.ten.dark}}
-                         className={"mini"}/> :
-            <div className={"set_too_high"} ref={ref}>
+        style={{ "backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark }}
+        id={node.uuid}
+        onClick={(e) => { e.stopPropagation(); notifyClick(node) }}>
+        {showMini ?
+            <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.ten.dark }}
+                className={"mini"} /> :
+            <div className={"set_too_high"} ref={ref} >
                 <AnimateHeight
                     id={divID}
                     duration={500}
-                    height={height} 
-                    onHeightAnimationStart={startAnimationUpdater} 
-                    onHeightAnimationEnd={stopAnimationUpdater}>
-                    <NodeContent node={node} setHeight={setHeight} parentID={divID}/>
-                    <RecursionButton node={node} /></AnimateHeight>
-                    </div>}
+                    height={height}
+                    onHeightAnimationStart={() => storeAnimationId(() => startAnimationUpdater())}
+                    onHeightAnimationEnd={() => stopAnimationUpdater(animationId)}>
+                    <NodeContent
+                        node={node}
+                        setHeight={setHeight}
+                        parentID={divID} />
+                    <RecursionButton node={node} />
+                </AnimateHeight>
+            </div>
+        }
         {!showMini && isOverflowV ?
-            <div style={{"backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark}}
-                 className={"noselect bauchbinde"}>...</div> : null}
-        </div>
+            <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}
+                className={"noselect bauchbinde"}>...</div> : null}
+    </div>
 }
 
 Node.propTypes = {
@@ -221,21 +235,13 @@ Node.propTypes = {
 }
 
 
-export function RecursiveNode(props) {
+export function RecursiveSuperNode(props) {
     const { node, notifyClick, showMini } = props;
-    const [isOverflowV, setIsOverflowV] = React.useState(false);
     const colorPalette = useColorPalette();
     const [, dispatch] = useShownNodes();
-    const { state } = useSettings();
     const classNames = useHighlightedNodeToCreateClassName(node);
     // state updater to force other components to update
-    const [, , startAnimationUpdater, stopAnimationUpdater] = useAnimationUpdater();
 
-    const ref = React.useCallback(x => {
-        if (x !== null) {
-            setIsOverflowV(x.scrollHeight > x.offsetHeight + 2);
-        }
-    }, [state]);
     React.useEffect(() => {
         dispatch(showNode(node.uuid))
         return () => {
@@ -247,36 +253,24 @@ export function RecursiveNode(props) {
     })
 
     return <div className={classNames}
-    style={{ "backgroundColor": colorPalette.fourty.dark, "color": colorPalette.ten.dark }}
-        id={node.uuid} onClick={(e) => { e.stopPropagation(); notifyClick(node) }} >
-        {node.recursive._graph.nodes.map(e => e.id).map((subnode) => {
-            const [height, setHeight] = React.useState(80);
-            let divID = `${subnode.uuid}_animate_height`;
-            const classNames2 = useHighlightedNodeToCreateClassName(subnode);
-            return <div className={classNames2}
-                style={{ "backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark }}
-                id={subnode.uuid} onClick={(e) => {e.stopPropagation(); notifyClick(subnode)}}>
-                {showMini ? <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.ten.dark }}
-                    className={"mini"} /> :
-                    <div className={"set_too_high"} ref={ref} >
-                        <AnimateHeight
-                            id={divID}
-                            duration={500}
-                            height={height} 
-                            onHeightAnimationStart={startAnimationUpdater}
-                            onHeightAnimationEnd={stopAnimationUpdater}>
-                        <NodeContent node={subnode} setHeight={setHeight} parentID={divID} />
-                        <RecursionButton node={subnode} /></AnimateHeight></div>}
-                {!showMini && isOverflowV ?
-                    <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}
-                        className={"noselect bauchbinde"}>...</div> : null}
-            </div>
-        })}
-            <RecursionButton node={node} />
+        style={{ "backgroundColor": colorPalette.fourty.dark, "color": colorPalette.ten.dark }}
+        id={node.uuid}
+        onClick={(e) => { e.stopPropagation(); notifyClick(node) }} >
+        <RecursionButton node={node} />
+        {
+            node.recursive._graph.nodes.
+                map(e => e.id).
+                map(subnode => {
+                    return <Node key={subnode}
+                        node={subnode}
+                        notifyClick={notifyClick}
+                        showMini={showMini} />
+                })
+        }
     </div>
 }
 
-RecursiveNode.propTypes = {
+RecursiveSuperNode.propTypes = {
     /**
      * object containing the node data to be displayed
      */
@@ -290,3 +284,4 @@ RecursiveNode.propTypes = {
      */
     showMini: PropTypes.bool,
 }
+

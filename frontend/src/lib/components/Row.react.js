@@ -1,5 +1,5 @@
 import React from "react";
-import {Node, RecursiveNode} from "./Node.react";
+import {Node, RecursiveSuperNode} from "./Node.react";
 import {Box} from "./Box.react";
 import './row.css';
 import PropTypes, { any } from "prop-types";
@@ -89,7 +89,7 @@ export function Row(props) {
         {!showNodes ? null :
             <div ref={ref} className="row_row" >{nodes.map((child) => { 
                 if (child.recursive && shownRecursion.indexOf(child.uuid) !== -1) {
-                    return <RecursiveNode key={child.uuid} node={child}
+                    return <RecursiveSuperNode key={child.uuid} node={child}
                     showMini={isOverflowH}
                     notifyClick={notifyClick}/>
                 }

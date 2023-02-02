@@ -85,7 +85,7 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset, \
     reasoning_subgraph = nx.DiGraph()
     for a, b in pairwise(h_syms[1:]):
         reasoning_subgraph.add_edge(a, b)
-    return reasoning_subgraph
+    return reasoning_subgraph if reasoning_subgraph.size() != 0 else False 
 
 
 def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], supernode_symbols: frozenset) -> List[Node]:
@@ -117,7 +117,7 @@ def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], supernode_
     h_symbols = [
         Node(frozenset(tmp_symbol[iter_nr]), iter_nr, reason=tmp_reason[iter_nr]) \
             if iter_nr in tmp_symbol else Node(frozenset(), iter_nr) 
-            for iter_nr in range(1, max(tmp_symbol.keys()) + 1)]
+            for iter_nr in range(1, max(tmp_symbol.keys(), default=-1) + 1)]
 
     return h_symbols
 
