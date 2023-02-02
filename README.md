@@ -2,14 +2,20 @@
 
 [![Build and Test](https://github.com/stephanzwicknagl/viasp/actions/workflows/build_and_test.yml/badge.svg?branch=main)](https://github.com/stephanzwicknagl/viasp/actions/workflows/build_and_test.yml)
 
-Try it out in Binder! [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stephanzwicknagl/viasp/main?filepath=examples%2Fintro_viasp.ipynb)
+**viASP visualizes an interactive explanation of your ASP program and its stable models** 
+
+Try it out in Binder!
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stephanzwicknagl/viasp/main?filepath=examples%2Fintro_viasp.ipynb)
 
 
-**viASP visualizes an interactive explanation of your ASP program and its stable models**
+
 ![Example visualization](docs/img/header.png)
 
 viASP allows you to explore the visualization in a variety of ways:
 
+* Inspect iterations of recursive rules individually
+* Explain the derivation of symbols with arrows
+* Relax the constraints of unsatisfiable programs
 * Toggle parts of the program
 * Show the added symbols or all of them
 * Inspect a single model
@@ -70,3 +76,37 @@ with ctl.solve(yield_=True) as handle:
         ctl.viasp.mark(model)
 ctl.viasp.show()
 ```
+
+# Contributing
+
+## Installation
+
+#### Requirements
+
+- [Git](https://git-scm.com)
+- [Node.JS](https://nodejs.org)
+- [Python](https://www.python.org/)
+- A suitable browser
+
+#### Starting
+
+1. Clone the repository using `git clone https://github.com/stephanzwicknagl/viasp.git --depth 1`
+2. Create and activate a conda environment
+4. Install pip `conda install pip`
+6. Install viasp in editable mode `pip install -e viasp -e viasp/backend -e viasp/frontend`
+
+## Developing the backend
+
+1. Simply edit the code in the backend folder `viasp/backend/src`
+3. Start viasp with your clingo program `python examples/App.py /your/program.lp`
+## Developing the frontend
+
+1. Move to frontend folder `cd viasp/frontend`
+2. Run `npm i` to install all needed dependencies
+3. Run `npx webpack` to pack the javascript
+5. Start viasp with your clingo program `python examples/App.py 0 /your/program.lp`
+
+Note: the JavaScript and css files are located in `/frontend/src/lib`. The frontend code needs to be packed before changes become visible to the webpage.
+
+
+Code your heart out!
