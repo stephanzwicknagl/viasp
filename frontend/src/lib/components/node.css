@@ -36,11 +36,22 @@
     position: absolute;
     right: 0;
     bottom: 0;
-    border-radius: 5px 0 5px 0;
-    backdrop-filter: blur(10px);
-    /*background: rgba(255, 255, 255, 0.50);*/
-    /*background-color: rgba(255, 28, 137, 0.50);*/
-    text-align: right;
+}
+
+.bauchbinde:hover {
+    transition: drop-shadow .1s;
+    filter: drop-shadow(0 0 6px rgba(255, 153, 0, 0.5))
+}
+
+.bauchbinde_text {
+    cursor: pointer;
+    font-size: 6pt;
+    border-radius: 8px 0px 4px 0px;
+    padding: 0px 0px 2px 2px;
+    /* vertical-align: middle;
+    text-align: center;
+    width: fit-content;
+    height: fit-content; */
 }
 
 .set_too_high {

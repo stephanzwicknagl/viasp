@@ -56,10 +56,12 @@ function useHighlightedSymbolToCreateClassName(compareHighlightedSymbol, symbol)
 function NodeContent(props) {
 
     const { state } = useSettings();
-    const { node, setHeight, parentID } = props;
+    const { node, setHeight, parentID, setIsOverflowV, expandNode } = props;
     const colorPalette = useColorPalette();
     const [{ activeFilters },] = useFilters();
     const [highlightedSymbol, toggleHighlightedSymbol,] = useHighlightedSymbol();
+    const standardNodeHeight = 80;
+    const minimumNodeHeight = 34;
 
     let contentToShow;
     if (state.show_all) {
@@ -90,17 +92,28 @@ function NodeContent(props) {
     }
 
     React.useEffect(() => {
-        var allHeights = contentToShow.filter(
-            symbol => symbolShouldBeShown(symbol)).map(
-                s => visibilityManager(highlightedSymbol, s));
+        var allHeights = contentToShow
+            .filter(symbol => symbolShouldBeShown(symbol))
+            .map(s => visibilityManager(highlightedSymbol, s));
         var markedItems = allHeights.filter(item => item.isMarked);
-        if (markedItems.length && any(markedItems.map(item => item.fittingHeight > 80))) {
-            setHeight(height => Math.max(height, Math.max(...markedItems.map(item => item.fittingHeight))));
+        var maxSymbolHeight = Math.max(minimumNodeHeight, ...allHeights.map(item => item.fittingHeight))
+
+        if (expandNode) {
+            setHeight(maxSymbolHeight);
         }
         else {
-            setHeight(height => Math.max(height, Math.min(80, Math.max(34, ...allHeights.map(item => item.fittingHeight)))));
-        }
-    }, [highlightedSymbol])
+            if (markedItems.length && any(markedItems.map(item => item.fittingHeight > standardNodeHeight))) {
+                setHeight(height => {
+                    setIsOverflowV(maxSymbolHeight > height)
+                    Math.max(height, Math.max(...markedItems.map(item => item.fittingHeight)));
+                });
+            }
+            else {
+                setHeight(height => Math.max(height, Math.min(standardNodeHeight, maxSymbolHeight)));
+                setIsOverflowV(maxSymbolHeight > standardNodeHeight)
+            }
+        };
+    }, [highlightedSymbol, state])
 
     const classNames2 = `set_value`
     const containerNames = `set_container`
@@ -146,6 +159,21 @@ function RecursionButton(props) {
     </div>
 }
 
+function OverflowButton(props) {
+    const { setExpandNode } = props;
+    const colorPalette = useColorPalette();
+
+    function handleClick(e) {
+        e.stopPropagation();
+        setExpandNode(true);
+    }
+
+    return <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}
+                className={"bauchbinde"} onClick={handleClick}>
+        <div className={"bauchbinde_text"}>...</div>
+    </div>
+}
+
 function useHighlightedNodeToCreateClassName(node) {
     const [highlightedNode,] = useHighlightedNode()
     let classNames = `node_border mouse_over_shadow ${node.uuid} ${highlightedNode === node.uuid ? "highlighted_node" : null}`
@@ -162,17 +190,12 @@ export function Node(props) {
     const [isOverflowV, setIsOverflowV] = React.useState(false);
     const colorPalette = useColorPalette();
     const [, dispatch] = useShownNodes();
-    const { state } = useSettings();
     const classNames = useHighlightedNodeToCreateClassName(node);
     const [height, setHeight] = React.useState(0);
+    const [expandNode, setExpandNode] = React.useState(false);
     // state updater to force other components to update
     const [, , startAnimationUpdater, stopAnimationUpdater] = useAnimationUpdater();
 
-    const ref = React.useCallback(x => {
-        if (x !== null) {
-            setIsOverflowV(x.scrollHeight > x.offsetHeight + 2);
-        }
-    }, [state]);
     React.useEffect(() => {
         dispatch(showNode(node.uuid))
         return () => {
@@ -185,8 +208,6 @@ export function Node(props) {
 
     const divID = `${node.uuid}_animate_height`;
 
-
-
     return <div className={classNames}
         style={{ "backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark }}
         id={node.uuid}
@@ -194,7 +215,7 @@ export function Node(props) {
         {showMini ?
             <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.ten.dark }}
                 className={"mini"} /> :
-            <div className={"set_too_high"} ref={ref} >
+            <div className={"set_too_high"}  >
                 <AnimateHeight
                     id={divID}
                     duration={500}
@@ -204,14 +225,14 @@ export function Node(props) {
                     <NodeContent
                         node={node}
                         setHeight={setHeight}
-                        parentID={divID} />
+                        parentID={divID}
+                        setIsOverflowV={setIsOverflowV}
+                        expandNode={expandNode} />
                     <RecursionButton node={node} />
                 </AnimateHeight>
             </div>
         }
-        {!showMini && isOverflowV ?
-            <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}
-                className={"noselect bauchbinde"}>...</div> : null}
+        <OverflowButton setExpandNode={setExpandNode} />
     </div>
 }
 
