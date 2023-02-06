@@ -137,6 +137,22 @@ def test_integrity_constraints_get_sorted_last_and_merged():
     assert any(str(rule) == "#false :- c." for rule in sorted_program[2].rules)
 
 
+def test_conditional_literals():
+    program = """
+    p(1..3). e(1..3). b(1..3). c(1..3).
+    a(4).
+    { a(X) : b(X),c(X) ; d(X) : e(X),X=1..3 } =1 :- p(X).
+    """
+    analyzer = ProgramAnalyzer()
+    sorted_program = analyzer.sort_program(program)
+    saved_models = get_stable_models_for_program(program)
+    reified = reify_list(sorted_program)
+
+    g = build_graph(saved_models, reified, analyzer, set())
+    assert len(g.nodes) == 9
+    assert len(g.edges) == 8
+
+
 def test_negative_recursion_gets_treated_correctly():
     orig_program = "a. b :- not c, a. c :- not b, a."
     analyzer = ProgramAnalyzer()
