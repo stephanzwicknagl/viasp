@@ -18,7 +18,7 @@ def is_fact(rule, dependencies):
 
 
 def make_signature(literal: clingo.ast.Literal) -> Tuple[str, int]:
-    if literal.atom.ast_type in [ast.ASTType.BodyAggregate, ast.ASTType.Comparison]:
+    if literal.atom.ast_type in [ast.ASTType.BodyAggregate]:
         return literal, 0
     unpacked = literal.atom.symbol
     return unpacked.name, len(unpacked.arguments) if hasattr(unpacked, "arguments") else 0
@@ -86,7 +86,6 @@ class DependencyCollector(Transformer):
 class NameCollector(Transformer):
 
     def visit_Variable(self, variable, deps={}, names=set()):
-        # self.visit(variable.term, names=names)
         names.add(variable.name)
         return variable
 
@@ -159,7 +158,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer, NameCollector):
 
     def register_rule_dependencies(self, rule: Rule, deps: Dict[Literal, List[Literal]]) -> None:
         for uu in deps.values():
-            for u in uu:
+            for u in filter(filter_body_arithmetic,uu):
                 u_sig = make_signature(u)
                 self.conditions[u_sig].add(rule)
                 for l in rule.body:
