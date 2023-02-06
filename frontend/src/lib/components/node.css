@@ -11,6 +11,7 @@
     border: 2px solid;
     margin: 15px 5px 15px 5px;
     position: relative;
+    height: max-content;
 }
 
 .mouse_over_shadow:hover {
@@ -36,6 +37,8 @@
     position: absolute;
     right: 0;
     bottom: 0;
+    border-radius: 4px 0px 4px 0px;
+    padding: 2px 2px;
 }
 
 .bauchbinde:hover {
@@ -46,12 +49,8 @@
 .bauchbinde_text {
     cursor: pointer;
     font-size: 6pt;
-    border-radius: 8px 0px 4px 0px;
-    padding: 0px 0px 2px 2px;
-    /* vertical-align: middle;
+    vertical-align: middle;
     text-align: center;
-    width: fit-content;
-    height: fit-content; */
 }
 
 .set_too_high {

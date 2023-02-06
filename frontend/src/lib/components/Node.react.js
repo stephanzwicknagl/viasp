@@ -84,36 +84,46 @@ function NodeContent(props) {
         }
     }
 
-    function visibilityManager(compareHighlightedSymbol, symbol) {
+    function symbolVisibilityManager(compareHighlightedSymbol, symbol) {
         const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol.uuid);
         const childRect = document.getElementById(symbol.uuid).getBoundingClientRect();
         const parentRect = document.getElementById(parentID).getBoundingClientRect();
         return { "fittingHeight": childRect.bottom - parentRect.top, "isMarked": i !== -1 };
     }
 
-    React.useEffect(() => {
+    function visibilityManager() {
         var allHeights = contentToShow
             .filter(symbol => symbolShouldBeShown(symbol))
-            .map(s => visibilityManager(highlightedSymbol, s));
+            .map(s => symbolVisibilityManager(highlightedSymbol, s));
         var markedItems = allHeights.filter(item => item.isMarked);
         var maxSymbolHeight = Math.max(minimumNodeHeight, ...allHeights.map(item => item.fittingHeight))
 
         if (expandNode) {
             setHeight(maxSymbolHeight);
+            setIsOverflowV(false)
         }
-        else {
+        else { // marked node is under the fold
             if (markedItems.length && any(markedItems.map(item => item.fittingHeight > standardNodeHeight))) {
                 setHeight(height => {
-                    setIsOverflowV(maxSymbolHeight > height)
                     Math.max(height, Math.max(...markedItems.map(item => item.fittingHeight)));
+                    setIsOverflowV(maxSymbolHeight > height)
                 });
             }
-            else {
+            else { // marked node is not under the fold
                 setHeight(height => Math.max(height, Math.min(standardNodeHeight, maxSymbolHeight)));
                 setIsOverflowV(maxSymbolHeight > standardNodeHeight)
             }
         };
-    }, [highlightedSymbol, state])
+    }
+
+    React.useEffect(() => {
+        visibilityManager();
+    }, [highlightedSymbol, state, expandNode])
+
+    React.useEffect(() => {
+        window.addEventListener('resize', visibilityManager);
+        return _ => window.removeEventListener('resize', visibilityManager)
+    })
 
     const classNames2 = `set_value`
     const containerNames = `set_container`
@@ -232,7 +242,8 @@ export function Node(props) {
                 </AnimateHeight>
             </div>
         }
-        <OverflowButton setExpandNode={setExpandNode} />
+        {!showMini && isOverflowV ?
+            <OverflowButton setExpandNode={setExpandNode} /> : null}
     </div>
 }
 
