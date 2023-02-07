@@ -118,8 +118,14 @@ function NodeContent(props) {
 
     React.useEffect(() => {
         visibilityManager();
-    }, [highlightedSymbol, state, expandNode])
+        onFullyLoaded(() => visibilityManager());
+    }, [highlightedSymbol, state, expandNode, activeFilters])
 
+    function onFullyLoaded(callback) {
+        setTimeout(function () {
+            requestAnimationFrame(callback)
+        })
+    }
     React.useEffect(() => {
         window.addEventListener('resize', visibilityManager);
         return _ => window.removeEventListener('resize', visibilityManager)
