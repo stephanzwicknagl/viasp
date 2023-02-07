@@ -84,8 +84,7 @@ export function Row(props) {
     const style1 = { "backgroundColor": color};
 
     return <div className="row_container" style={style1}>
-        <RowHeader onToggle={() => dispatch(toggleTransformation(transformation))} transformation={transformation.rules}
-                   contentIsShown={showNodes}/>
+        <RowHeader transformation={transformation.rules} />
         {!showNodes ? null :
             <div ref={ref} className="row_row" >{nodes.map((child) => { 
                 if (child.recursive && shownRecursion.indexOf(child.uuid) !== -1) {
@@ -128,7 +127,6 @@ export function Boxrow(props) {
     const ref = React.useRef(null);
     const { state: { transformations }, dispatch } = useTransformations();
     const { backendURL } = useSettings();
-    const colorPalette = useColorPalette();
 
     React.useEffect(() => {
         let mounted = true;

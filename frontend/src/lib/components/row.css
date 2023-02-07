@@ -6,15 +6,11 @@
     border-top: 1px solid;
     border-bottom: 1px solid;
     border-right: 1px solid;
-    border-radius: 0 5px 5px 0;
+    border-radius: 0 8px 8px 0;
     width: fit-content;
     position: relative;
+    padding: 8px 8px 8px 16px;
     z-index: 8;
-}
-
-.row_header_rule {
-    padding: 5px;
-    border-radius: 0 0 5px 0;
 }
 
 .row_header_bar {
