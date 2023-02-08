@@ -3,11 +3,23 @@
     white-space: nowrap;
     float: right;
     display: flex;
-    position: fixed;
+    position: absolute;
+    color: #444;
     z-index: 10;
     right: 0;
-    color: #444;
     top: 0;
+    margin-right: 5px;
+    margin-top: 5px;
+}
+
+.fadeOut {
+    opacity: 0;
+    transition: opacity 0.8s;
+}
+
+.fadeIn {
+    opacity: 1;
+    transition: opacity 0.8s;
 }
 
 .settings_header {
@@ -32,7 +44,6 @@
 
 .drawer_content {
     z-index: 1;
-    box-shadow: 0 2px 2px -2px rgba(0, 0, 0, .2);
     border-radius: 0 0 0 5px;
 }
 
@@ -44,7 +55,6 @@
 }
 
 .toggle_part.selected {
-    transition: .1s;
     border: 1px solid #2196F3;
     opacity: .8;
     padding-right: 47px;
@@ -52,25 +62,24 @@
 }
 
 .toggle_part.unselected {
-    transition: .1s;
     border: 1px solid #444;
-    padding-right: 40px;
-    padding-left: 40px;
+    padding-right: 20px;
+    padding-left: 20px;
 }
 
 .toggle_part.unselected:hover {
     border: 1px solid #2196F3;
     color: #2196F3;
-    transition: opacity .1s ease-in-out;
-    -moz-transition: opacity .1s ease-in-out;
-    -webkit-transition: opacity .1s ease-in-out;
+    transition: opacity .8s ease-in-out;
+    -moz-transition: opacity .8s ease-in-out;
+    -webkit-transition: opacity .8s ease-in-out;
 }
 
 .toggle_part.selected:hover {
     opacity: 1;
-    transition: opacity .1s ease-in-out;
-    -moz-transition: opacity .1s ease-in-out;
-    -webkit-transition: opacity .1s ease-in-out;
+    transition: opacity .8s ease-in-out;
+    -moz-transition: opacity .8s ease-in-out;
+    -webkit-transition: opacity .8s ease-in-out;
 
 }
 
