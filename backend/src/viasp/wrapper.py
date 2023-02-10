@@ -29,13 +29,6 @@ class ShowConnector:
             self._database = ClingoClient(**kwargs)
         self._connection = None
 
-    def load_program(self, path: str):
-        program = ProgramDatabase()
-        prg = ""
-        with open(path, encoding="utf-8") as f:
-            prg = "\n".join(f.readlines())
-        program.add_to_program(prg)
-
     def show(self):
         self._database.set_target_stable_model(self._marked)
         self._database.show()
@@ -115,6 +108,7 @@ class Control2:
     
     def __init__(self, *args, **kwargs):
         if 'files' in kwargs:
+            # files is only passed to call InnerControl with only the options
             arguments = ([opt for opt in sys.argv[1:] if opt not in kwargs['files']])
             args = (arguments,)
             del kwargs['files']

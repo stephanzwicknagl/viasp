@@ -12,8 +12,8 @@ from viasp.shared.interfaces import ViaspClient
 
 
 def test_instanciations():
-    _ = wrapper.Control()
-    _ = wrapper.Control(["0"])
+    _ = wrapper.Control2()
+    _ = wrapper.Control2(["0"])
 
 
 class DebugClient(ViaspClient):
@@ -36,7 +36,7 @@ class DebugClient(ViaspClient):
 
 def test_load_from_file(client):
     debug_client = DebugClient(client)
-    ctl = wrapper.Control(_viasp_client=debug_client)
+    ctl = wrapper.Control2(_viasp_client=debug_client)
     sample_encoding = pathlib.Path(__file__).parent.resolve() / "resources" / "sample_encoding.lp"
     ctl.load(sample_encoding)
     # Check that the calls were received
@@ -54,7 +54,7 @@ def test_load_from_file(client):
 
 def test_load_from_stdin(client):
     debug_client = DebugClient(client)
-    ctl = wrapper.Control(_viasp_client=debug_client)
+    ctl = wrapper.Control2(_viasp_client=debug_client)
     sys.stdin = io.StringIO("sample.{encoding} :- sample.")
     ctl.load("-")
     # Check that the calls were received
