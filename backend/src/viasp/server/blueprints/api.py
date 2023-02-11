@@ -121,15 +121,6 @@ def wrap_marked_models(marked_models: Iterable[StableModel]):
         result.append(wrapped)
     return result
 
-def factify_marked_models(marked_models: Iterable[StableModel]):
-    result = []
-    for model in marked_models:
-        wrapped = []
-        for part in model.atoms:
-            wrapped.append(f"{part}.")
-        result.append(wrapped)
-    return result
-
 
 def _set_warnings(warnings):
     dc.warnings = warnings
@@ -192,7 +183,7 @@ def clingraph_generate():
 
     if request.method == "POST":
         marked_models = dc.models
-        marked_models = factify_marked_models(marked_models)
+        marked_models = wrap_marked_models(marked_models)
         viz_encoding = request.json["viz-encoding"]
         engine = request.json["engine"]
 
