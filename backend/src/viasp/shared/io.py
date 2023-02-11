@@ -135,6 +135,8 @@ def clingo_model_to_stable_model(model: clingo_Model) -> StableModel:
                        encode_object(model.symbols(terms=True)), encode_object(model.symbols(shown=True)),
                        encode_object(model.symbols(theory=True)))
 
+def clingo_symbols_to_stable_model(atoms: Iterable[Symbol]) -> StableModel:
+    return StableModel(atoms=encode_object(atoms))
 
 def symbol_to_dict(symbol: clingo.Symbol) -> dict:
     symbol_dict = {}

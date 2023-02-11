@@ -87,13 +87,28 @@ class ClingoMethodCall:
 
 @dataclass
 class StableModel:
-    cost: Collection[int]
-    optimality_proven: bool
-    type: ModelType
-    atoms: Collection[Symbol]
-    terms: Collection[Symbol]
-    shown: Collection[Symbol]
-    theory: Collection[Symbol]
+    cost: Collection[int] = field(default_factory=list)
+    optimality_proven: bool = field(default=False)
+    type: ModelType = field(default=ModelType.StableModel)
+    atoms: Collection[Symbol] = field(default_factory=list)
+    terms: Collection[Symbol] = field(default_factory=list)
+    shown: Collection[Symbol] = field(default_factory=list)
+    theory: Collection[Symbol] = field(default_factory=list)
+
+    def __eq__(self, o):
+        return isinstance(o, type(self)) and set(self.atoms) == set(o.atoms)
+
+    def symbols(self, atoms: bool = False, terms: bool = False, shown: bool = False, theory: bool = False) -> Sequence[Symbol]:
+        symbols = []
+        if atoms:
+            symbols.extend(self.atoms)
+        if terms:
+            symbols.extend(self.terms)
+        if shown:
+            symbols.extend(self.shown)
+        if theory:
+            symbols.extend(self.theory)
+        return symbols
 
 
 class FailedReason(Enum):
