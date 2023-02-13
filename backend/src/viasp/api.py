@@ -210,6 +210,7 @@ def mark_from_clingo_model(model: clingo_Model, **kwargs) -> None:
             url of the viasp backend
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
+
     See Also
     --------
     ``unmark_from_clingo_model``
@@ -407,6 +408,7 @@ def mark_from_string(model: str, **kwargs) -> None:
             url of the viasp backend
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
+
     See Also
     --------
     ``mark_from_clingo_model``
@@ -437,6 +439,7 @@ def mark_from_file(path: str, **kwargs) -> None:
             url of the viasp backend
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
+
     See Also
     --------
     ``mark_from_clingo_model``
@@ -465,6 +468,7 @@ def unmark_from_string(model: str, **kwargs) -> None:
             url of the viasp backend
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
+
     See Also
     --------
     ``unmark_from_clingo_model``
@@ -497,6 +501,7 @@ def unmark_from_file(path: str, **kwargs) -> None:
             url of the viasp backend
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
+
     See Also
     --------
     ``unmark_from_clingo_model``
