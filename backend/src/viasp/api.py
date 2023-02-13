@@ -45,6 +45,8 @@ def _get_connector(**kwargs):
     global SHOWCONNECTOR
     if SHOWCONNECTOR is None:
         SHOWCONNECTOR = ShowConnector(**kwargs)
+        SHOWCONNECTOR.register_function_call(
+            "__init__", signature(InnerControl.__init__), [], kwargs={})
     return SHOWCONNECTOR
 
 
@@ -68,8 +70,6 @@ def load_program_file(path: str, **kwargs) -> None:
           a viasp client object
     """
     connector = _get_connector(**kwargs)
-    connector.register_function_call(
-        "__init__", signature(InnerControl.__init__), [], kwargs={})
     connector.register_function_call("load", signature(
         InnerControl.load), [], kwargs={"path": path})
 
@@ -89,11 +89,8 @@ def load_program_string(program: str, **kwargs) -> None:
     connector = _get_connector(**kwargs)
     with open(STDIN_TMP_STORAGE_PATH, "w", encoding="utf-8") as f:
         f.write(program)
-    ctl = InnerControl
-    connector.register_function_call(
-        "__init__", signature(InnerControl.__init__), [], kwargs={})
     connector.register_function_call("load", signature(
-        ctl.load), [], kwargs={"path": STDIN_TMP_STORAGE_PATH})
+        InnerControl.load), [], kwargs={"path": STDIN_TMP_STORAGE_PATH})
 
 
 
