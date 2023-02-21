@@ -161,6 +161,8 @@ function RecursionButton(props) {
     const { node } = props;
     const [, toggleShownRecursion,] = useShownRecursion();
     const [, , setHighlightedSymbol] = useHighlightedSymbol();
+    const colorPalette = useColorPalette();
+
 
     function handleClick(e) {
         e.stopPropagation();
@@ -170,7 +172,9 @@ function RecursionButton(props) {
 
     return <div className={"recursion_button"} onClick={handleClick}>
         {!node.recursive ? null :
-            <div className={"recursion_button_text"}>R</div>
+            <div className={"recursion_button_text"} style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 64 64"><path fill="#4d5357" d="m39.5 61.1l-6.4-8.7h-.8c-5.6 0-10.2-3.6-10.2-8V25h8l-14-19.2L2 25h8v19.4c0 4.7 2.3 9.1 6.6 12.4c4.2 3.3 9.8 5.2 15.8 5.2c2.4 0 4.8-.3 7.1-.9m-7.8-49.5c5.6 0 10.2 3.6 10.2 8v19.5h-8L48 58.3l14-19.2h-8V19.6c0-4.7-2.3-9.1-6.5-12.4C43.3 3.8 37.7 2 31.7 2c-2.5 0-4.9.3-7.2.9l6.4 8.7h.8" /></svg>
+            </div>
         }
     </div>
 }
