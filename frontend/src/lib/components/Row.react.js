@@ -95,7 +95,7 @@ export function Row(props) {
                 else{
                     return <Node key={child.uuid} node={child}
                     showMini={isOverflowH}
-                    notifyClick={notifyClick}/>}})}</div>
+                    notifyClick={notifyClick} isSubnode = {false}/>}})}</div>
         }</div>
 }
 

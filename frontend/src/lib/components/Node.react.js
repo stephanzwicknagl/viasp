@@ -24,10 +24,11 @@ function any(iterable) {
 }
 
 function Symbol(props) {
-    const { symbolId } = props;
+    const { symbolId, isSubnode } = props;
     let atomString = make_atoms_string(symbolId.symbol)
+    let suffix = `_${isSubnode ? "sub" : "main"}`
     atomString = atomString.length === 0 ? "" : atomString;
-    return <div className={"symbol"} id={symbolId.uuid}>{atomString}</div>
+    return <div className={"symbol"} id={symbolId.uuid+suffix}>{atomString}</div>
 }
 
 Symbol.propTypes = {
@@ -56,10 +57,11 @@ function useHighlightedSymbolToCreateClassName(compareHighlightedSymbol, symbol)
 function NodeContent(props) {
 
     const { state } = useSettings();
-    const { node, setHeight, parentID, setIsOverflowV, expandNode } = props;
+    const { node, setHeight, parentID, setIsOverflowV, expandNode, isSubnode } = props;
     const colorPalette = useColorPalette();
     const [{ activeFilters },] = useFilters();
-    const [highlightedSymbol, toggleHighlightedSymbol,] = useHighlightedSymbol();
+    const [highlightedSymbol, toggleHighlightedSymbol, setHighlightedSymbol] = useHighlightedSymbol();
+    const [, toggleShownRecursion,] = useShownRecursion();
     const standardNodeHeight = 80;
     const minimumNodeHeight = 34;
 
@@ -78,15 +80,21 @@ function NodeContent(props) {
     function handleClick(e, src) {
         e.stopPropagation();
 
-        const reasons = node.reason[make_atoms_string(src.symbol)];
+        let reasons = node.reason[make_atoms_string(src.symbol)];
         if (reasons.every(tgt => tgt !== null)) {
+            toggleHighlightedSymbol(reasons.map(tgt => { return { "src": src.uuid, "tgt": tgt.uuid } }), highlightedSymbol);
+        }
+        else {
+            let subNode = node.recursive._graph.nodes.filter(node => node.id.atoms.filter(atom => atom.uuid == src.uuid).length > 0);
+            reasons = subNode[0].id.reason[make_atoms_string(src.symbol)];
+            toggleShownRecursion(node.uuid);
             toggleHighlightedSymbol(reasons.map(tgt => { return { "src": src.uuid, "tgt": tgt.uuid } }), highlightedSymbol);
         }
     }
 
     function symbolVisibilityManager(compareHighlightedSymbol, symbol) {
         const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol.uuid);
-        const childRect = document.getElementById(symbol.uuid).getBoundingClientRect();
+        const childRect = document.getElementById(symbol.uuid+`_${isSubnode?"sub":"main"}`).getBoundingClientRect();
         const parentRect = document.getElementById(parentID).getBoundingClientRect();
         return { "fittingHeight": childRect.bottom - parentRect.top, "isMarked": i !== -1 };
     }
@@ -137,7 +145,7 @@ function NodeContent(props) {
         symbolShouldBeShown(symbol)).map(s => {
             const [classNames1, style1] = useHighlightedSymbolToCreateClassName(highlightedSymbol, s.uuid);
             return <div className={classNames1} style={style1} onClick={(e) => handleClick(e, s)}>
-                <Symbol key={JSON.stringify(s)} symbolId={s} />
+                <Symbol key={JSON.stringify(s)} symbolId={s} isSubnode={isSubnode} />
             </div>
         })
 
@@ -160,14 +168,12 @@ NodeContent.propTypes = {
 function RecursionButton(props) {
     const { node } = props;
     const [, toggleShownRecursion,] = useShownRecursion();
-    const [, , setHighlightedSymbol] = useHighlightedSymbol();
     const colorPalette = useColorPalette();
 
 
     function handleClick(e) {
         e.stopPropagation();
         toggleShownRecursion(node.uuid);
-        setHighlightedSymbol([]);
     }
 
     return <div className={"recursion_button"} onClick={handleClick}>
@@ -206,7 +212,7 @@ function useHighlightedNodeToCreateClassName(node) {
 }
 
 export function Node(props) {
-    const { node, notifyClick, showMini } = props;
+    const { node, notifyClick, showMini, isSubnode } = props;
     const [isOverflowV, setIsOverflowV] = React.useState(false);
     const colorPalette = useColorPalette();
     const [, dispatch] = useShownNodes();
@@ -247,7 +253,8 @@ export function Node(props) {
                         setHeight={setHeight}
                         parentID={divID}
                         setIsOverflowV={setIsOverflowV}
-                        expandNode={expandNode} />
+                        expandNode={expandNode}
+                        isSubnode={isSubnode} />
                     <RecursionButton node={node} />
                 </AnimateHeight>
             </div>
@@ -302,7 +309,8 @@ export function RecursiveSuperNode(props) {
                     return <Node key={subnode}
                         node={subnode}
                         notifyClick={notifyClick}
-                        showMini={showMini} />
+                        showMini={showMini}
+                        isSubnode = {true} />
                 })
         }
     </div>
