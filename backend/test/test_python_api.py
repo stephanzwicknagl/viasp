@@ -37,7 +37,7 @@ class DebugClient(ViaspClient):
 
 
 def test_load_program_file(client):
-    sample_encoding = pathlib.Path(__file__).parent.resolve() / "resources" / "sample_encoding.lp"
+    sample_encoding = str(pathlib.Path(__file__).parent.resolve() / "resources" / "sample_encoding.lp")
     
     debug_client = DebugClient(client)
     load_program_file(sample_encoding, _viasp_client=debug_client)
@@ -73,7 +73,7 @@ def test_load_program_string(client):
 
 
 def test_add_program_file_add1(client):
-    sample_encoding = pathlib.Path(__file__).parent.resolve() / "resources" / "sample_encoding.lp"
+    sample_encoding = str(pathlib.Path(__file__).parent.resolve() / "resources" / "sample_encoding.lp")
     
     debug_client = DebugClient(client)
     load_program_file(sample_encoding, _viasp_client=debug_client)
@@ -96,8 +96,8 @@ def test_add_program_file_add1(client):
 
 
 def test_add_program_file_add2(client):
-    sample_encoding = pathlib.Path(
-        __file__).parent.resolve() / "resources" / "sample_encoding.lp"
+    sample_encoding = str(pathlib.Path(
+        __file__).parent.resolve() / "resources" / "sample_encoding.lp")
 
     debug_client = DebugClient(client)
     load_program_file(sample_encoding, _viasp_client=debug_client)
@@ -121,8 +121,8 @@ def test_add_program_file_add2(client):
 
 
 def test_add_program_string_add1(client):
-    sample_encoding = pathlib.Path(
-        __file__).parent.resolve() / "resources" / "sample_encoding.lp"
+    sample_encoding = str(pathlib.Path(
+        __file__).parent.resolve() / "resources" / "sample_encoding.lp")
 
     debug_client = DebugClient(client)
     load_program_file(sample_encoding, _viasp_client=debug_client)
@@ -144,8 +144,8 @@ def test_add_program_string_add1(client):
 
 
 def test_add_program_string_add2(client):
-    sample_encoding = pathlib.Path(
-        __file__).parent.resolve() / "resources" / "sample_encoding.lp"
+    sample_encoding = str(pathlib.Path(
+        __file__).parent.resolve() / "resources" / "sample_encoding.lp")
 
     debug_client = DebugClient(client)
     load_program_file(sample_encoding, _viasp_client=debug_client)
@@ -215,8 +215,8 @@ def test_mark_model_not_a_fact_file(client):
     load_program_string(
         r"sample.{encoding} :- sample.", _viasp_client=debug_client)
 
-    sample_encoding = pathlib.Path(
-        __file__).parent.resolve() / "resources" / "sample_encoding.lp"
+    sample_encoding = str(pathlib.Path(
+        __file__).parent.resolve() / "resources" / "sample_encoding.lp")
     with raises(FactParserError) as exc_info:
         mark_from_file(sample_encoding)
     exception_raised = exc_info.value
@@ -231,8 +231,8 @@ def test_mark_model_from_file(client):
         r"sample.{encoding} :- sample.", _viasp_client=debug_client)
 
     clear()
-    sample_model = pathlib.Path(
-        __file__).parent.resolve() / "resources" / "sample_model.lp"
+    sample_model = str(pathlib.Path(
+        __file__).parent.resolve() / "resources" / "sample_model.lp")
     mark_from_file(sample_model)
     show()
 
@@ -299,8 +299,8 @@ def test_unmark_model_from_file(client):
         r"sample.{encoding} :- sample.", _viasp_client=debug_client)
 
     clear()
-    sample_model = pathlib.Path(
-        __file__).parent.resolve() / "resources" / "sample_model.lp"
+    sample_model = str(pathlib.Path(
+        __file__).parent.resolve() / "resources" / "sample_model.lp")
     mark_from_file(sample_model)
     unmark_from_file(sample_model)
     show()
@@ -311,8 +311,8 @@ def test_unmark_model_from_file(client):
 
 def test_call_in_different_order(client):
     debug_client = DebugClient(client)
-    sample_model = pathlib.Path(
-        __file__).parent.resolve() / "resources" / "sample_model.lp"
+    sample_model = str(pathlib.Path(
+        __file__).parent.resolve() / "resources" / "sample_model.lp")
 
     show(_viasp_client=debug_client)
     clear()
@@ -329,8 +329,8 @@ def test_call_in_different_order(client):
 
 def test_mix_methods(client):
     debug_client = DebugClient(client)
-    sample_model = pathlib.Path(
-        __file__).parent.resolve() / "resources" / "sample_model.lp"
+    sample_model = str(pathlib.Path(
+        __file__).parent.resolve() / "resources" / "sample_model.lp")
     load_program_string(
         r"sample.{encoding} :- sample.", _viasp_client=debug_client)
 
@@ -352,8 +352,8 @@ def test_mix_methods(client):
 
 def test_mix_methods2(client):
     debug_client = DebugClient(client)
-    sample_encoding = pathlib.Path(
-        __file__).parent.resolve() / "resources" / "sample_encoding.lp"
+    sample_encoding = str(pathlib.Path(
+        __file__).parent.resolve() / "resources" / "sample_encoding.lp")
     clear(_viasp_client=debug_client)
     load_program_file(sample_encoding)
     ctl = InnerControl(['0'])

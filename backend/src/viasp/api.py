@@ -10,7 +10,7 @@ directly from strings or files containing the corresponding facts.
 """
 
 from inspect import signature
-from typing import List, cast
+from typing import List, cast, Union
 
 import clingo
 from clingo import Control as InnerControl
@@ -50,19 +50,22 @@ def _get_connector(**kwargs):
     return SHOWCONNECTOR
 
 
-def _get_program_string(path):
+def _get_program_string(path: Union[str, list[str]]) -> str:
     prg = ""
-    with open(path, encoding="utf-8") as f:
-        prg = "".join(f.readlines())
+    if isinstance(path, str):
+        path = [path]
+    for p in path:
+        with open(p, encoding="utf-8") as f:
+            prg += "".join(f.readlines())
     return prg
 
 
-def load_program_file(path: str, **kwargs) -> None:
+def load_program_file(path: Union[str, list[str]], **kwargs) -> None:
     r"""
     Load a (non-ground) program file into the viasp backend
 
-    :param path: ``str``
-        path to the program file
+    :param path: ``str`` or ``list``
+        path or list of paths to the program file
     :param kwargs: 
         * *viasp_backend_url* (``str``) --
           url of the viasp backend
@@ -70,8 +73,11 @@ def load_program_file(path: str, **kwargs) -> None:
           a viasp client object
     """
     connector = _get_connector(**kwargs)
-    connector.register_function_call("load", signature(
-        InnerControl.load), [], kwargs={"path": path})
+    if isinstance(path, str):
+        path = [path]
+    for p in path:
+        connector.register_function_call("load", signature(
+            InnerControl.load), [], kwargs={"path": p})
 
 
 def load_program_string(program: str, **kwargs) -> None:
@@ -111,8 +117,8 @@ def add_program_file(*args, **kwargs):
         The name of program block to add.
     :param parameters: ``Sequence[str]``
         The parameters of the program block to add.
-    :param path: ``str``
-        The path to the non-ground program.
+    :param path: ``str`` or ``list``
+        The path or list of paths to the non-ground program.
     :param kwargs:
         * *viasp_backend_url* (``str``) --
             url of the viasp backend
@@ -420,7 +426,7 @@ def mark_from_string(model: str, **kwargs) -> None:
     connector.mark(model)
 
 
-def mark_from_file(path: str, **kwargs) -> None:
+def mark_from_file(path: Union[str, list[str]], **kwargs) -> None:
     r"""
     Parse a file containing a string of ASP facts and mark them as a model.
 
@@ -432,8 +438,8 @@ def mark_from_file(path: str, **kwargs) -> None:
     Models can be unmarked and cleared.
     The marked models are propagated to the backend when ``show`` is called.
 
-    :param path: ``str``
-        The path to the file containing the facts of the model to mark.
+    :param path: ``str`` or ``list``
+        The path or list of paths to the file containing the facts of the model to mark.
     :param kwargs:
         * *viasp_backend_url* (``str``) --
             url of the viasp backend
