@@ -94,9 +94,10 @@ function NodeContent(props) {
 
     function symbolVisibilityManager(compareHighlightedSymbol, symbol) {
         const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol.uuid);
+        const j = compareHighlightedSymbol.map(item => item.src).indexOf(symbol.uuid);
         const childRect = document.getElementById(symbol.uuid+`_${isSubnode?"sub":"main"}`).getBoundingClientRect();
         const parentRect = document.getElementById(parentID).getBoundingClientRect();
-        return { "fittingHeight": childRect.bottom - parentRect.top, "isMarked": i !== -1 };
+        return { "fittingHeight": childRect.bottom - parentRect.top, "isMarked": i !== -1 || j !== -1 };
     }
 
     function visibilityManager() {
