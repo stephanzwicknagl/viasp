@@ -10,7 +10,7 @@ directly from strings or files containing the corresponding facts.
 """
 
 from inspect import signature
-from typing import List, cast, Union
+from typing import List, cast, Union    
 
 import clingo
 from clingo import Control as InnerControl
@@ -51,7 +51,7 @@ def _get_connector(**kwargs):
     return SHOWCONNECTOR
 
 
-def _get_program_string(path: Union[str, list[str]]) -> str:
+def _get_program_string(path: Union[str, List[str]]) -> str:
     prg = ""
     if isinstance(path, str):
         path = [path]
