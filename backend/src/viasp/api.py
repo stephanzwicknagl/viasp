@@ -437,7 +437,7 @@ def mark_from_string(model: str, **kwargs) -> None:
     connector.mark(model)
 
 
-def mark_from_file(path: Union[str, list[str]], **kwargs) -> None:
+def mark_from_file(path: Union[str, List[str]], **kwargs) -> None:
     r"""
     Parse a file containing a string of ASP facts and mark them as a model.
 
