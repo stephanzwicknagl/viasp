@@ -5,16 +5,25 @@ from dataclasses import is_dataclass
 from typing import Any, Union, Collection, Iterable, Dict, Sequence
 from pathlib import PosixPath
 from uuid import UUID
+import os
+import sys
+import importlib.util
+
+
+import pickle
+import inspect
+import base64
+import types
 
 import clingo
 import networkx as nx
 from _clingo.lib import clingo_model_type_brave_consequences, clingo_model_type_cautious_consequences, \
     clingo_model_type_stable_model
 from clingo import Model as clingo_Model, ModelType, Symbol, Application
-from clingo.ast import AST
+from clingo.ast import AST, Transformer
 
 from .interfaces import ViaspClient
-from .model import Node, Transformation, Signature, StableModel, ClingoMethodCall, TransformationError, FailedReason, SymbolIdentifier
+from .model import Node, Transformation, Signature, StableModel, ClingoMethodCall, TransformationError, FailedReason, SymbolIdentifier, TransformerTransport
 from ..server.database import ProgramDatabase
 
 
@@ -47,6 +56,48 @@ def object_hook(obj):
         return ClingoMethodCall(**obj)
     elif t == "SymbolIdentifier":
         return SymbolIdentifier(**obj)
+    elif t == "Transformer":
+        # Reconstruct the class definition
+        # Get the path to the module containing MyClass
+        my_module_path = obj["Path"]
+
+        # Add the directory containing my_module to sys.path
+        my_module_dir = os.path.dirname(my_module_path)
+        sys.path.append(my_module_dir)
+
+        # Load the module containing MyClass
+        module_name = os.path.splitext(os.path.basename(my_module_path))[0]
+        module_spec = importlib.util.spec_from_file_location(module_name, my_module_path)
+        my_module = importlib.util.module_from_spec(module_spec)
+        module_spec.loader.exec_module(my_module)
+
+        # Create a temporary module to hold the class definition
+        module_name = '__temp_module__'
+        module = types.ModuleType(module_name)
+
+        # get the string
+        class_definition_str = obj["Imports"] + "\n" \
+                            + base64.b64decode(obj["Transformer_definition"])\
+                                    .decode('utf-8')
+        
+        # Add the module's original package to sys.path
+        module.__file__ = my_module.__file__
+        sys.modules[module_name] = module
+
+        # # Reconstruct the class definition
+        # class_definition = compile(class_definition_str, '<string>', 'exec')
+        # with open("t.log", "a") as f:
+        #     f.write(f"Class Definition:\n    {class_definition_str}\n")
+
+
+        # Execute the class definition in the temporary module
+        exec(class_definition_str, module.__dict__)
+
+        transformer = getattr(module, "Transformer") ## ? Does the name have to be Transformer?
+
+        # o_bytes = obj["Transformer_bytes"].encode("latin-1")
+        # transformer = pickle.loads(o_bytes, encoding="latin-1")
+        return transformer
     return obj
 
 
@@ -74,7 +125,21 @@ def dataclass_to_dict(o):
                 "atoms": o.atoms, "terms": o.terms, "shown": o.shown, "theory": o.theory}
     elif isinstance(o, ClingoMethodCall):
         return {"_type": "ClingoMethodCall", "name": o.name, "kwargs": o.kwargs, "uuid": o.uuid}
+    elif isinstance(o, TransformerTransport):
+        passed_transformer_obj = o.transformer()
+        passed_transformer_bytes = pickle.dumps(passed_transformer_obj)
 
+        # Get the class definition as a string
+        class_definition = inspect.getsource(o.transformer)
+        o_definition = base64.b64encode(
+            class_definition.encode('utf-8')).decode('utf-8')
+        
+        o_json = {"_type": "Transformer",
+                  "Transformer_bytes": passed_transformer_bytes.decode("latin-1"),
+                  "Transformer_definition": o_definition,
+                  "Imports": o.imports,
+                  "Path": o.path}
+        return o_json
     else:
         raise Exception(f"I/O for {type(o)} not implemented!")
 

@@ -14,8 +14,13 @@ export function Arrows() {
         return highlightedSymbol.map(arrow => {
             const suffix1 = `_${document.getElementById(arrow.src+"_main")?"main":"sub"}`;
             const suffix2 = `_${document.getElementById(arrow.tgt+"_main")?"main":"sub"}`;
+            return {"src": arrow.src + suffix1, "tgt": arrow.tgt + suffix2, "color": arrow.color};
+        }).filter(arrow => {
+            // filter false arrows that are not in the DOM
+            return document.getElementById(arrow.src) && document.getElementById(arrow.tgt)
+        }).map(arrow => {
             return <Xarrow
-                key={arrow.src + suffix1 + "-" + arrow.tgt + suffix2} start={arrow.src+suffix1} end={arrow.tgt+suffix2} startAnchor={"top"} endAnchor={"bottom"} color={arrow.color} strokeWidth={2} headSize={5} zIndex={10} />
+                key={arrow.src + "-" + arrow.tgt} start={arrow.src} end={arrow.tgt} startAnchor={"top"} endAnchor={"bottom"} color={arrow.color} strokeWidth={2} headSize={5} zIndex={10} />
         })
     }
 

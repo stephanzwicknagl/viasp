@@ -82,6 +82,7 @@ class DataContainer:
     def __init__(self):
         self.models = []
         self.warnings = []
+        self.transformer = None
 
 
 dc = DataContainer()
@@ -110,6 +111,15 @@ def models_clear():
         dc.models.clear()
         global ctl
         ctl = None
+
+@bp.route("/control/add_transformer", methods=["POST"])
+def set_transformer():
+    if request.method == "POST":
+        try:
+            dc.transformer = request.json
+        except BaseException:
+            return "Invalid transformer object", 400
+    return "ok"
 
 
 def wrap_marked_models(marked_models: Iterable[StableModel]):
@@ -156,7 +166,7 @@ def show_selected_models():
 
     db = ProgramDatabase()
     analyzer = ProgramAnalyzer()
-    analyzer.add_program(db.get_program())
+    analyzer.add_program(db.get_program(), dc.transformer)
     _set_warnings(analyzer.get_filtered())
     if analyzer.will_work():
         recursion_rules = analyzer.check_positive_recursion()

@@ -4,7 +4,7 @@ from typing import Collection
 import requests
 from .shared.defaults import DEFAULT_BACKEND_URL
 from .shared.io import DataclassJSONEncoder
-from .shared.model import ClingoMethodCall, StableModel
+from .shared.model import ClingoMethodCall, StableModel, TransformerTransport
 from .shared.interfaces import ViaspClient
 from .shared.simple_logging import log, Level, error
 
@@ -97,3 +97,15 @@ class ClingoClient(ViaspClient):
             log(f"Cligraph visualization in progress.")
         else:
             error(f"Cligraph visualization failed [{r.status_code}] ({r.reason})")
+
+    def _register_transformer(self, transformer, imports, path):
+        serializable_transformer = TransformerTransport.merge(transformer, imports, path)
+        serialized = json.dumps(serializable_transformer,
+                                cls=DataclassJSONEncoder)
+        r = requests.post(f"{self.backend_url}/control/add_transformer",
+                          data=serialized,
+                          headers={'Content-Type': 'application/json'})
+        if r.ok:
+            log(f"Transformer registered.")
+        else:
+            error(f"Registering transformer failed [{r.status_code}] ({r.reason})")

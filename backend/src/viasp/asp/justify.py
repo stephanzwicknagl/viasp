@@ -29,14 +29,15 @@ def get_h_symbols_from_model(wrapped_stable_model: Iterable[Symbol],
     rules_that_are_reasons_why = []
     ctl = Control()
     stringified = "".join(map(str, transformed_prg))
-    get_new_atoms_rule = f"{h}(I, H, G) :- {h}(I, H, G), not {h}(II,H,_) : II<I, {h}(II,_,_)."
+    new_head = f"_{h}"
+    get_new_atoms_rule = f"{new_head}(I, H, G) :- {h}(I, H, G), not {h}(II,H,_) : II<I, {h}(II,_,_)."
     ctl.add("base", [], "".join(map(str, constants)))
     ctl.add("base", [], "".join(map(stringify_fact, facts)))
     ctl.add("base", [], stringified)
     ctl.add("base", [], "".join(map(str, wrapped_stable_model)))
     ctl.add("base", [], get_new_atoms_rule)
     ctl.ground([("base", [])])
-    for x in ctl.symbolic_atoms.by_signature(h, 3):
+    for x in ctl.symbolic_atoms.by_signature(new_head, 3):
         if x.symbol.arguments[1] in facts:
             continue
         rules_that_are_reasons_why.append(x.symbol)
@@ -106,12 +107,8 @@ def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
 def join_paths_with_facts(paths: Collection[nx.DiGraph]) -> nx.DiGraph:
     combined = nx.DiGraph()
     for path in paths:
-        for node in path.nodes():
-            if node not in combined.nodes:
-                combined.add_node(node)
-        for u, v, r in path.edges(data=True):
-            if u in combined.nodes and v in combined.nodes:
-                combined.add_edge(u, v, transformation=r["transformation"])
+        combined.add_nodes_from(path.nodes(data=True))
+        combined.add_edges_from(path.edges(data=True))
     return combined
 
 

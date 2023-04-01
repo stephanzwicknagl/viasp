@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 import networkx as nx
 
 from clingo import Symbol, ModelType
-from clingo.ast import AST
+from clingo.ast import AST, Transformer
 from .util import DefaultMappingProxyType
 
 @dataclass()
@@ -55,13 +55,16 @@ class Node:
         return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{', '.join(map(str,self.atoms))}}}, reasons={{{', '.join(repr_reasons)}}}, recursive={self.recursive}, uuid={self.uuid})"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class Transformation:
     id: int
     rules: Sequence[str]
 
     def __hash__(self):
         return hash(tuple(self.rules))
+    
+    def __repr__(self):
+        return f"Transformation(id={self.id}, rules={list(map(str,self.rules))})"
 
 
 @dataclass(frozen=True)
@@ -138,3 +141,13 @@ class ReasonNode:
         for key, val in self.reason.items():
             repr_reasons.append(f"{key}: {val}")
         return f"Node(atoms={{{'. '.join(map(str, self.atoms))}}}, reasons={{{'. '.join(repr_reasons)}}}, uuid={self.uuid})"
+
+@dataclass
+class TransformerTransport:
+    transformer: Transformer
+    imports: str
+    path: str
+
+    @classmethod
+    def merge(cls, transformer: Transformer, imports: str, path: str):
+        return cls(transformer, imports, path)

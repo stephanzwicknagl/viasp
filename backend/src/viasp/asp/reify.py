@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, Tuple, Iterable, Set, Collection, Any, Union
+from typing import Dict, List, Tuple, Iterable, Set, Collection, Any, Union, Sequence
 
 import clingo
 import networkx as nx
@@ -21,6 +21,8 @@ def make_signature(literal: clingo.ast.Literal) -> Tuple[str, int]:
     if literal.atom.ast_type in [ast.ASTType.BodyAggregate]:
         return literal, 0
     unpacked = literal.atom.symbol
+    if unpacked.ast_type == ast.ASTType.Pool:
+        unpacked = unpacked.arguments[0]
     return unpacked.name, len(unpacked.arguments) if hasattr(unpacked, "arguments") else 0
 
 
@@ -69,28 +71,97 @@ class FilteredTransformer(Transformer):
 
 class DependencyCollector(Transformer):
 
-    def visit_Aggregate(self, aggregate, deps={}, names=set()):
-        conditional_literals = aggregate.elements
-        for elem in conditional_literals:
-            self.visit(elem, deps=deps)
-        return aggregate
+    def visit_Aggregate(self, aggregate: AST, **kwargs: Any) -> AST:
+        kwargs.update({"in_aggregate": True})
+        return aggregate.update(**self.visit_children(aggregate, **kwargs))
 
-    def visit_ConditionalLiteral(self, conditional_literal, deps={}, names=set()):
-        self.visit(conditional_literal.literal)
+    def visit_BodyAggregateElement(self, aggregate: AST, **kwargs: Any) -> AST:
+        # update flag
+        kwargs.update({"in_aggregate": True})
+
+        # collect conditions
+        conditions = kwargs.get("body_aggregate_elements", [])
+        conditions.extend(aggregate.condition)
+        return aggregate.update(**self.visit_children(aggregate, **kwargs))
+
+    def visit_ConditionalLiteral(self, conditional_literal: AST, **kwargs: Any) -> AST:
+        deps = kwargs.get("deps", {})
+        new_body = kwargs.get("new_body", [])
+
         deps[conditional_literal.literal] = []
         for condition in conditional_literal.condition:
             deps[conditional_literal.literal].append(condition)
-        return conditional_literal
+        new_body.extend(conditional_literal.condition)
+        return conditional_literal.update(**self.visit_children(conditional_literal, **kwargs))
 
+    def visit_Literal(self, literal: AST, **kwargs: Any) -> AST:
+        reasons = kwargs.get("reasons", [])
+        new_body = kwargs.get("new_body", [])
 
-class NameCollector(Transformer):
-
-    def visit_Variable(self, variable, deps={}, names=set()):
+        atom = literal.atom
+        if (literal.sign == ast.Sign.NoSign and
+            atom.ast_type == ast.ASTType.SymbolicAtom):
+            reasons.append(atom)
+            new_body.append(literal)
+        return literal.update(**self.visit_children(literal, **kwargs))
+    
+    def visit_Variable(self, variable: AST, **kwargs: Any) -> AST:
+        # collect names
+        names = kwargs.get("names", set())
         names.add(variable.name)
+
+        # rename if necessary
+        rename_variables = kwargs.get("rename_variables", False)
+        in_aggregate = kwargs.get("in_aggregate", False)
+        if rename_variables and in_aggregate:
+            return ast.Variable(variable.location, f"_{variable.name}")
+        return variable.update(**self.visit_children(variable, **kwargs))
+
+
+class TheoryTransformer(Transformer):
+
+    def visit_TheoryAtom(self, atom: AST) -> AST:
+        term = atom.term
+        new_heads = []
+        if term.name == "diff":
+            content: List[Union[AST, List[AST]]] = []
+            self.visit_children(atom, theory_content=content)
+            for i in content:
+                inner_var = ast.Function(term.location, '', i, 0) if isinstance(i, List) else i
+                inner__   = ast.Variable(term.location, 'X')  # TODO: get conflict free version?
+                outer_function = ast.Function(term.location, 'dl', [inner_var, inner__], 0)
+                outer_symatom = ast.SymbolicAtom(outer_function)
+                new_heads.append(ast.Literal(term.location, 0, outer_symatom))
+
+        return new_heads
+
+    def visit_TheoryAtomElement(self, atom_element, in_elem: bool = False, theory_content: List = []):
+        return atom_element.update(**self.visit_children(atom_element, True, theory_content))
+
+    def visit_TheoryGuard(self, guard, in_elem: bool = False, theory_content: List = []):
+        return guard.update(**self.visit_children(guard, in_elem, theory_content))
+    
+    def visit_SymbolicTerm(self, term, in_elem: bool = False, theory_content: List = []):
+        if in_elem:
+            if term.symbol.type == clingo.SymbolType.Function:
+                theory_content.append(term)
+        return term
+
+    def visit_Variable(self, variable, in_elem: bool = False, theory_content: List = []):
+        if in_elem:
+            theory_content.append(variable)
         return variable
 
+    def visit_TheorySequence(self, sequence, in_elem: bool = False, theory_content: List = []):
+        if in_elem:
+            variables: List[AST] = []
+            for s in sequence.terms:
+                variables.append(s) # TODO: actually s could be any other theory_term
+            theory_content.append(variables)
+        return sequence
 
-class ProgramAnalyzer(DependencyCollector, FilteredTransformer, NameCollector):
+
+class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     """
     Receives a ASP program and finds it's dependencies within, can sort a program by it's dependencies.
     """
@@ -113,7 +184,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer, NameCollector):
     def _get_conflict_free_version_of_name(self, name: str) -> Collection[str]:
         candidates = [name for name, _ in self.dependants.keys()]
         candidates.extend([name for name, _ in self.conditions.keys()])
-        candidates.extend([fact.atom.symbol.name for fact in self.facts])
+        candidates.extend([getattr(getattr(getattr(fact,"atom"), "symbol"), "name", "") for fact in self.facts])
         candidates.extend([name for name in self.names])
         candidates = set(candidates)
         current_best = name
@@ -166,9 +237,8 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer, NameCollector):
                         if (l.atom.symbol.name == u.atom.symbol.name and \
                             l.sign == ast.Sign.NoSign):
                             self.positive_conditions[u_sig].add(rule)
-                    
-
-        for v in filter(lambda symbol: symbol.atom.ast_type != ASTType.BooleanConstant, deps.keys()):
+        
+        for v in filter(lambda symbol: symbol.atom.ast_type != ASTType.BooleanConstant if hasattr(symbol, "atom") else False, deps.keys()):
             v_sig = make_signature(v)
             self.dependants[v_sig].add(rule)
 
@@ -185,10 +255,17 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer, NameCollector):
             deps[rule.head] = []
         for _, cond in deps.items():
             cond.extend(filter(filter_body_arithmetic, rule.body))
+            cond.extend(self.get_body_aggregate_elements(rule.body))
         self.register_symbolic_dependencies(deps)
         self.names = self.names.union(names)
         self.register_rule_dependencies(rule, deps)
         self.rules.append(rule)
+    
+    def get_body_aggregate_elements(self, body: Sequence[AST]) -> List[AST]:
+        body_aggregate_elements: List[AST] = []
+        for elem in body:
+            self.visit(elem, body_aggregate_elements=body_aggregate_elements)
+        return body_aggregate_elements
 
 
     def visit_Minimize(self, minimize: Minimize):
@@ -201,8 +278,22 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer, NameCollector):
         self.constants.add(definition)
         return definition
 
-    def add_program(self, program: str) -> None:
-        parse_string(program, lambda statement: self.visit(statement))
+    def add_program(self, program: str, registered_transformer: Transformer = None) -> None:
+        if registered_transformer is not None:
+            registered_visitor = registered_transformer()
+            new_program: List[AST] = []
+
+            def add(statement):
+                nonlocal new_program
+                if isinstance(statement, List):
+                    new_program.extend(statement)
+                else:
+                    new_program.append(statement)
+            parse_string(program, lambda statement: add(registered_visitor.visit(statement)))
+            for statement in new_program:
+                self.visit(statement)
+        else: 
+            parse_string(program, lambda statement: self.visit(statement))
 
     def sort_program(self, program) -> List[Transformation]:
         parse_string(program, lambda rule: self.visit(rule))
@@ -253,7 +344,20 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer, NameCollector):
         deps1 = merge_constraints(deps1)
         deps2, where1 = merge_cycles(deps1)
         _, where2 = remove_loops(deps2)
-        return where1.union(where2)
+        return {recursive_set for recursive_set in where1.union(where2)
+                if self.should_include_recursive_set(recursive_set)}
+    
+    def should_include_recursive_set(self, recursive_set):
+        """
+        Drop the set of integrity constraints from the recursive set.
+        """
+        for rule in recursive_set:
+            head = getattr(rule, "head", None)
+            atom = getattr(head, "atom", None)
+            ast_type = getattr(atom, "ast_type", None)
+            if ast_type != ASTType.BooleanConstant:
+                return True
+        return False
 
 
 
@@ -267,7 +371,10 @@ class ProgramReifier(DependencyCollector):
         self.get_conflict_free_variable = get_conflict_free_variable
 
     def _nest_rule_head_in_h_with_explanation_tuple(self, loc: ast.Location,
-                dependant: ast.Literal, body: List[ast.Literal]):
+                dependant: ast.Literal,
+                conditions: List[ast.Literal],
+                body: List[ast.Literal],
+                new_body: List[ast.Literal]):
         """
         In: H :- B.
         Out: h(0, H, pos_atoms(B)),
@@ -277,10 +384,14 @@ class ProgramReifier(DependencyCollector):
         loc_atm = ast.SymbolicAtom(loc_fun)
         loc_lit = ast.Literal(loc, ast.Sign.NoSign, loc_atm)
         reasons = []
-        for literal in body:
-            if literal.sign == ast.Sign.NoSign and \
-                literal.atom.ast_type == ast.ASTType.SymbolicAtom:
+        for literal in conditions:
+            if literal.atom.ast_type == ast.ASTType.SymbolicAtom:
                 reasons.append(literal.atom)
+        for literal in body:
+            reason_literals = []
+            _ = self.visit(literal, reasons = reason_literals, new_body = new_body)
+            reasons.extend([r for r in reason_literals if r not in reasons])
+
         reason_fun = ast.Function(loc, '', reasons, 0)
         reason_lit = ast.Literal(loc, ast.Sign.NoSign, reason_fun)
 
@@ -319,13 +430,21 @@ class ProgramReifier(DependencyCollector):
                                                        variables,
                                                        False))
                 dependant = ast.Literal(loc, ast.Sign.NoSign, symbol)
+
+            new_body = []
             new_head_s = self._nest_rule_head_in_h_with_explanation_tuple(rule.location,
                                                                           dependant,
-                                                                          rule.body)
-            # Add reified head to body
-            new_body = [dependant]
-            new_body.extend(rule.body)
+                                                                          conditions,
+                                                                          rule.body,
+                                                                          new_body)
+
+            new_body.insert(0, dependant)
+            for r in rule.body:
+                new_body.append(self.visit(r, rename_variables=True))
             new_body.extend(conditions)
+            # Remove duplicates but preserve order
+            new_body = [x for i, x in enumerate(new_body) if x not in new_body[:i]]
+
             new_rules.extend([Rule(rule.location, new_head, new_body) for new_head in new_head_s])
 
         return new_rules

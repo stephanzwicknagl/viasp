@@ -65,6 +65,9 @@ class ShowConnector:
     def clingraph(self, viz_encoding, engine="dot"):
         self._database.clingraph(viz_encoding, engine)
 
+    def register_transformer(self, transformer, imports="", path=""):
+        self._database._register_transformer(transformer, imports, path)
+
 
 
 class Control(InnerControl):

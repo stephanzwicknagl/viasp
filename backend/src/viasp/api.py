@@ -16,7 +16,7 @@ import clingo
 from clingo import Control as InnerControl
 from clingo import Model as clingo_Model
 from clingo import ast
-from clingo.ast import AST, ASTSequence, ASTType, Symbol
+from clingo.ast import AST, ASTSequence, ASTType, Symbol, Transformer
 
 from .shared.defaults import STDIN_TMP_STORAGE_PATH
 from .shared.io import clingo_symbols_to_stable_model
@@ -36,7 +36,8 @@ __all__ = [
     "clear",
     "show",
     "relax_constraints",
-    "clingraph"
+    "clingraph",
+    "register_transformer",
 ]
 
 SHOWCONNECTOR = None
@@ -278,6 +279,16 @@ def clingraph(viz_encoding, engine) -> None:
     connector = _get_connector()
     connector.clingraph(viz_encoding, engine)
 
+def register_transformer(transformer: Transformer, imports: str = "", path: str = "") -> None:
+    r"""
+    Register a transformer to the backend. The program will be transformed
+    in the backend before further processing is made.
+
+    :param transformer: ``Transformer``
+        The transformer to register.
+    """
+    connector = _get_connector()
+    connector.register_transformer(transformer, imports, path)
 
 # ------------------------------------------------------------------------------
 # Parse ASP facts from a string or files into a clingo model

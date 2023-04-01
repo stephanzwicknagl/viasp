@@ -1,8 +1,12 @@
+from typing import List
+
 import clingo
 import pytest
-from clingo.ast import Rule, parse_string, ASTType
-from viasp.asp.reify import transform, ProgramAnalyzer
-from viasp.asp.ast_types import SUPPORTED_TYPES, make_unknown_AST_enum_types, UNSUPPORTED_TYPES
+from clingo.ast import ASTType, parse_string
+
+from viasp.asp.ast_types import (SUPPORTED_TYPES, UNSUPPORTED_TYPES,
+                                 make_unknown_AST_enum_types)
+from viasp.asp.reify import ProgramAnalyzer, transform
 
 
 def assertProgramEqual(actual, expected, message=None):
@@ -14,7 +18,7 @@ def assertProgramEqual(actual, expected, message=None):
     assert actual == expected, message if message is not None else f"{expected} should be equal to {actual}"
 
 
-def parse_program_to_ast(prg: str) -> [clingo.ast.AST]:
+def parse_program_to_ast(prg: str) -> List[clingo.ast.AST]:
     parsed = []
     parse_string(prg, lambda rule: parsed.append(rule))
     return parsed
@@ -99,22 +103,46 @@ def test_normal_rule_with_choice_in_head_is_transformed_correctly():
 
 def test_head_aggregate_is_transformed_correctly():
     rule = "{a(X) : b(X)}."
-    expected = "#program base.h(1, a(X), ()) :- a(X), b(X)."
+    expected = """#program base.
+    h(1, a(X), (b(X),)) :- a(X), b(X)."""
+    assertProgramEqual(transform(rule), parse_program_to_ast(expected))
+
+
+def test_conditional_with_interval_transformed_correctly():
+    rule = "{a(X) : b(X), X=1..3 }:- f(X)."
+    expected = """#program base.
+    h(1, a(X), (b(X),f(X))) :- a(X), f(X), b(X), X=1..3."""
+    assertProgramEqual(transform(rule), parse_program_to_ast(expected))
+
+
+def test_head_aggregate_groups_is_transformed_correctly():
+    rule = "{a(X) : b(X), c(X); d(X) : e(X), X=1..3 }:- f(X)."
+    expected = """#program base.
+    h(1, d(X), (e(X),f(X))) :- d(X), f(X), e(X), X=1..3.
+    h(1, a(X), (b(X), c(X), f(X))) :- a(X), f(X), b(X), c(X)."""
+    assertProgramEqual(transform(rule), parse_program_to_ast(expected))
+
+
+def test_aggregate_choice_is_transformed_correctly():
+    rule = "1{a(X) : b(X), c(X); d(X) : e(X), X=1..3 }1:- f(X)."
+    expected = """#program base.
+    h(1, d(X), (e(X),f(X))) :- d(X), f(X), e(X), X=1..3.
+    h(1, a(X), (b(X), c(X), f(X))) :- a(X), f(X), b(X), c(X)."""
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
 def test_multiple_conditional_groups_in_head():
     rule = "1 #sum { X,Y : a(X,Y) : b(Y), c(X) ; X,Z : b(X,Z) : e(Z) }  :- c(X)."
     expected = """#program base.
-    h(1, a(X,Y), (c(X),)) :- a(X,Y), c(X), b(Y), c(X). 
-    h(1, b(X,Z), (c(X),)) :- b(X,Z), c(X), e(Z). 
-"""
+    h(1, a(X,Y), (b(Y), c(X))) :- a(X,Y), c(X), b(Y). 
+    h(1, b(X,Z), (e(Z), c(X))) :- b(X,Z), c(X), e(Z). 
+    """
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
 def test_multiple_aggregates_in_body():
     rule = "s(Y) :- r(Y), 2 #sum{X : p(X,Y), q(X) } 7."
-    expected = "#program base. h(1, s(Y), (r(Y),)) :- s(Y), r(Y),  2 #sum{X : p(X,Y), q(X) } 7."
+    expected = "#program base. h(1, s(Y), (r(Y),p(X,Y), q(X))) :- s(Y), r(Y),  p(X,Y), q(X), 2 #sum{_X : p(_X,_Y), q(_X) } 7."
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
