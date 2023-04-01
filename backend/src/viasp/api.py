@@ -61,7 +61,7 @@ def _get_program_string(path: Union[str, List[str]]) -> str:
     return prg
 
 
-def load_program_file(path: Union[str, list[str]], **kwargs) -> None:
+def load_program_file(path: Union[str, List[str]], **kwargs) -> None:
     r"""
     Load a (non-ground) program file into the viasp backend
 
