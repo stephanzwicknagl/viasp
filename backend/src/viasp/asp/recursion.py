@@ -18,6 +18,7 @@ class RecursionReasoner:
         self.init = kwargs.pop("init", [])
         self.program = kwargs.pop("program", "")
         self.register_h_symbols = kwargs.pop("callback", None)
+        self.conflict_free_h = kwargs.pop("conflict_free_h", "h")
 
     def new(self):
         return self.atoms
@@ -30,17 +31,17 @@ class RecursionReasoner:
         step = 1
         while self.atoms != []:
             control.ground([("iter", [Number(step)])], context=self)
-            self.atoms = [ x.symbol.arguments[1] for x in \
-                            control.symbolic_atoms.by_signature("h", 4)
+            self.atoms = [ x.symbol.arguments[1] for x in
+                            control.symbolic_atoms.by_signature(self.conflict_free_h, 4)
                            if x.is_fact and x.symbol.arguments[3].number == step
                          ]
             step += 1
 
-        for x in control.symbolic_atoms.by_signature("h", 4):
+        for x in control.symbolic_atoms.by_signature(self.conflict_free_h, 4):
             self.register_h_symbols(x.symbol)
 
 
-def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset, \
+def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
                         transformation: Union[AST, str], conflict_free_h: str):
     """
     Get a recursion explanation for the given facts and the recursive transformation.
@@ -65,11 +66,13 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset, \
     justification_program += "model(@new())."
 
     h_syms = set()
-
+    with open("t.log", "a") as f:
+        f.write(f"Justification Program:\n{justification_program}\n\n")
     try:
-        RecursionReasoner(init = init, \
-                            program = justification_program, \
-                            callback = h_syms.add).main()
+        RecursionReasoner(init = init,
+                            program = justification_program,
+                            callback = h_syms.add,
+                            conflict_free_h = conflict_free_h).main()
     except RuntimeError:
         return False
 
@@ -105,13 +108,13 @@ def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], supernode_
         tmp_reason[iter_nr.number][str(symbol)] = reasons.arguments
     for iter_nr in tmp_symbol.keys():
         tmp_symbol[iter_nr] = set(tmp_symbol[iter_nr])
-        tmp_symbol[iter_nr] = map(lambda symbol: next(filter( \
-                lambda supernode_symbol: supernode_symbol==symbol, supernode_symbols)) if \
-                symbol in supernode_symbols else SymbolIdentifier(symbol), \
+        tmp_symbol[iter_nr] = map(lambda symbol: next(filter(
+                lambda supernode_symbol: supernode_symbol==symbol, supernode_symbols)) if
+                symbol in supernode_symbols else SymbolIdentifier(symbol),
                 tmp_symbol[iter_nr])
 
     h_symbols = [
-        Node(frozenset(tmp_symbol[iter_nr]), iter_nr, reason=tmp_reason[iter_nr]) \
+        Node(frozenset(tmp_symbol[iter_nr]), iter_nr, reason=tmp_reason[iter_nr])
             if iter_nr in tmp_symbol else Node(frozenset(), iter_nr) 
             for iter_nr in range(1, max(tmp_symbol.keys(), default=-1) + 1)]
 
