@@ -222,6 +222,13 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         self.names = self.names.union({new_var})
         return new_var
 
+    def get_conflict_free_iterindex(self):
+        """
+        For use in generation of subgraphs at recursive
+        transformations.
+        """
+        return self._get_conflict_free_version_of_name("n")
+
     def get_facts(self):
         return extract_symbols(self.facts, self.constants)
 

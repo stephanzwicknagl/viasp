@@ -79,7 +79,11 @@ def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_i
 def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
                                             rule_mapping: Dict[int, Union[AST, str]],
                                             fact_node: Node, h_syms,
-                                            recursive_transformations:frozenset, h="h", pad=True) \
+                                            recursive_transformations:frozenset, 
+                                            h="h", 
+                                            get_conflict_free_model: callable = lambda s: "model",
+                                            get_conflict_free_iterindex: callable = lambda s: "n",
+                                            pad=True) \
                                             -> nx.DiGraph:
     h_syms = collect_h_symbols_and_create_nodes(h_syms, rule_mapping.keys(), pad)
     h_syms.sort(key=lambda node: node.rule_nr)
@@ -98,7 +102,12 @@ def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
 
     for a, b in pairwise(h_syms):
         if rule_mapping[b.rule_nr].rules in recursive_transformations:
-            b.recursive = get_recursion_subgraph(a.atoms, b.diff, rule_mapping[b.rule_nr], h)
+            b.recursive = get_recursion_subgraph(a.atoms, 
+                                                 b.diff,
+                                                 rule_mapping[b.rule_nr],
+                                                 h,
+                                                 get_conflict_free_model,
+                                                 get_conflict_free_iterindex)
         g.add_edge(a, b, transformation=rule_mapping[b.rule_nr])
 
     return g
@@ -144,7 +153,7 @@ def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collect
     for model in wrapped_stable_models:
         h_symbols = get_h_symbols_from_model(model, transformed_prg, facts, analyzer.get_constants(),
                                             conflict_free_h)
-        new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, h_symbols, recursion_transformations, conflict_free_h)
+        new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, h_symbols, recursion_transformations, conflict_free_h, analyzer.get_conflict_free_model, analyzer.get_conflict_free_iterindex)
         paths.append(new_path)
 
     result_graph = identify_reasons(join_paths_with_facts(paths))

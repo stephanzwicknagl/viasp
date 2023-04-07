@@ -19,13 +19,14 @@ class RecursionReasoner:
         self.program = kwargs.pop("program", "")
         self.register_h_symbols = kwargs.pop("callback", None)
         self.conflict_free_h = kwargs.pop("conflict_free_h", "h")
+        self.conflict_free_n = kwargs.pop("conflict_free_n", "n")
 
     def new(self):
         return self.atoms
 
     def main(self):
         control = Control()
-        control.add("iter", ["n"], self.program)
+        control.add("iter", [f"{self.conflict_free_n}"], self.program)
         self.atoms = self.init
 
         step = 1
@@ -42,7 +43,9 @@ class RecursionReasoner:
 
 
 def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
-                        transformation: Union[AST, str], conflict_free_h: str):
+                        transformation: Union[AST, str], conflict_free_h: str,
+                        get_conflict_free_model: callable = lambda s: "model",
+                        get_conflict_free_iterindex: callable = lambda s: "n") -> nx.DiGraph:
     """
     Get a recursion explanation for the given facts and the recursive transformation.
     Generate graph from explanation, sorted by the iteration step number.
@@ -55,22 +58,25 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
     enable_python()
     init = [fact.symbol for fact in facts]
     justification_program = ""
+    model_str:str = get_conflict_free_model()
+    n_str:str = get_conflict_free_iterindex()
     for i,rule in enumerate(transformation.rules):
         tupleified = ",".join(list(map(str,rule.body)))
-        justification_head = f"{conflict_free_h}({i+1}, {rule.head}, ({tupleified}), n)"
-        justification_body = ",".join(f"model({atom})" for atom in rule.body)
-        justification_body += f", not model({rule.head})"
+        justification_head = f"{conflict_free_h}({i+1}, {rule.head}, ({tupleified}), {n_str})"
+        justification_body = ",".join(f"{model_str}({atom})" for atom in rule.body)
+        justification_body += f", not {model_str}({rule.head})"
 
         justification_program += f"{justification_head} :- {justification_body}.\n"
 
-    justification_program += "model(@new())."
+    justification_program += f"{model_str}(@new())."
 
     h_syms = set()
     try:
         RecursionReasoner(init = init,
                             program = justification_program,
                             callback = h_syms.add,
-                            conflict_free_h = conflict_free_h).main()
+                            conflict_free_h = conflict_free_h,
+                            conflict_free_n = n_str).main()
     except RuntimeError:
         return False
 
