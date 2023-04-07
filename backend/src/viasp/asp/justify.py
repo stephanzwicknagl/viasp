@@ -10,7 +10,7 @@ from clingo.ast import AST, Function
 from networkx import DiGraph
 
 from .reify import ProgramAnalyzer
-from .recursion import get_recursion_subgraph
+from .recursion import RecursionReasoner
 from .utils import insert_atoms_into_nodes, identify_reasons
 from ..shared.model import Node, Transformation, SymbolIdentifier
 from ..shared.simple_logging import info, warn
@@ -56,7 +56,7 @@ def get_facts(original_program) -> Collection[Symbol]:
     return frozenset(facts)
 
 
-def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_indices, pad: bool) -> List[Node]:
+def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_indices, pad: bool, supernode_symbols: frozenset = frozenset([])) -> List[Node]:
     tmp_symbol: Dict[int, List[SymbolIdentifier]] = defaultdict(list)
     tmp_reason: Dict[int, Dict[Symbol, List[Symbol]]] = defaultdict(dict)
     for sym in h_symbols:
@@ -65,13 +65,18 @@ def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_i
         tmp_reason[rule_nr.number][str(symbol)] = reasons.arguments
     for rule_nr in tmp_symbol.keys():
         tmp_symbol[rule_nr] = set(tmp_symbol[rule_nr])
-        tmp_symbol[rule_nr] = map(SymbolIdentifier, tmp_symbol[rule_nr])
+        tmp_symbol[rule_nr] = map(lambda symbol: next(filter(
+        lambda supernode_symbol: supernode_symbol==symbol, supernode_symbols)) if
+        symbol in supernode_symbols else
+        SymbolIdentifier(symbol),tmp_symbol[rule_nr])
     if pad:
         h_symbols = [
             Node(frozenset(tmp_symbol[rule_nr]), rule_nr, reason=tmp_reason[rule_nr]) if rule_nr in tmp_symbol else Node(frozenset(), rule_nr) for 
             rule_nr in relevant_indices]
     else:
-        h_symbols = [Node(frozenset(tmp_symbol[rule_nr]), rule_nr, reason=frozenset(tmp_reason[rule_nr])) for rule_nr in tmp_symbol.keys()]
+        h_symbols = [
+            Node(frozenset(tmp_symbol[rule_nr]), rule_nr, reason=tmp_reason[rule_nr]) if rule_nr in tmp_symbol else Node(frozenset(), rule_nr)
+            for rule_nr in range(1, max(tmp_symbol.keys(), default=-1) + 1)]
 
     return h_symbols
 
@@ -167,3 +172,54 @@ def save_model(model: Model) -> Collection[str]:
     for part in model.symbols(atoms=True):
         wrapped.append(f"{part}.")
     return wrapped
+
+
+def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
+                           transformation: Union[AST, str], conflict_free_h: str,
+                           get_conflict_free_model: callable = lambda s: "model",
+                           get_conflict_free_iterindex: callable = lambda s: "n") -> Union[bool, nx.DiGraph]:
+    """
+    Get a recursion explanation for the given facts and the recursive transformation.
+    Generate graph from explanation, sorted by the iteration step number.
+
+    :param facts: The symbols that were true before the recursive node.
+    :param supernode_symbols: The SymbolIdentifiers of the recursive node.
+    :param transformation: The recursive transformation. An ast object.
+    :param conflict_free_h: The name of the h predicate.
+    """
+    init = [fact.symbol for fact in facts]
+    justification_program = ""
+    model_str: str = get_conflict_free_model()
+    n_str: str = get_conflict_free_iterindex()
+    for rule in transformation.rules:
+        # TODO: get reasons by transformer
+        tupleified = ",".join(list(map(str, rule.body)))
+        justification_head = f"{conflict_free_h}({n_str}, {rule.head}, ({tupleified}))"
+        justification_body = ",".join(
+            f"{model_str}({atom})" for atom in rule.body)
+        justification_body += f", not {model_str}({rule.head})"
+
+        justification_program += f"{justification_head} :- {justification_body}.\n"
+
+    justification_program += f"{model_str}(@new())."
+
+    h_syms = set()
+    try:
+        RecursionReasoner(init=init,
+                          program=justification_program,
+                          callback=h_syms.add,
+                          conflict_free_h=conflict_free_h,
+                          conflict_free_n=n_str).main()
+    except RuntimeError:
+        return False
+
+    h_syms = collect_h_symbols_and_create_nodes(h_syms, relevant_indices = [], pad = False, supernode_symbols = supernode_symbols)
+    # here: rule_nr is iteration number
+    h_syms.sort(key=lambda node: node.rule_nr)
+    h_syms.insert(0, Node(frozenset(facts), -1))
+    insert_atoms_into_nodes(h_syms)
+
+    reasoning_subgraph = nx.DiGraph()
+    for a, b in pairwise(h_syms[1:]):
+        reasoning_subgraph.add_edge(a, b)
+    return reasoning_subgraph if reasoning_subgraph.size() != 0 else False
