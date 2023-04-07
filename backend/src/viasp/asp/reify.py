@@ -73,7 +73,11 @@ class DependencyCollector(Transformer):
 
     def visit_Aggregate(self, aggregate: AST, **kwargs: Any) -> AST:
         kwargs.update({"in_aggregate": True})
-        return aggregate.update(**self.visit_children(aggregate, **kwargs))
+        new_body = kwargs.get("new_body", [])
+
+        aggregate_update = aggregate.update(**self.visit_children(aggregate, **kwargs))
+        new_body.append(aggregate_update)
+        return aggregate_update
 
     def visit_BodyAggregateElement(self, aggregate: AST, **kwargs: Any) -> AST:
         # update flag
@@ -95,27 +99,34 @@ class DependencyCollector(Transformer):
         return conditional_literal.update(**self.visit_children(conditional_literal, **kwargs))
 
     def visit_Literal(self, literal: AST, **kwargs: Any) -> AST:
-        reasons = kwargs.get("reasons", [])
-        new_body = kwargs.get("new_body", [])
+        reasons: List[AST] = kwargs.get("reasons", [])
+        new_body: List[AST] = kwargs.get("new_body", [])
 
-        atom = literal.atom
+        literal_update = literal.update(**self.visit_children(literal, **kwargs))
+
+        atom: AST = literal.atom
         if (literal.sign == ast.Sign.NoSign and
             atom.ast_type == ast.ASTType.SymbolicAtom):
             reasons.append(atom)
-            new_body.append(literal)
+        new_body.append(literal_update)
         return literal.update(**self.visit_children(literal, **kwargs))
     
     def visit_Variable(self, variable: AST, **kwargs: Any) -> AST:
         # collect names
-        names = kwargs.get("names", set())
+        names: Set = kwargs.get("names", set())
         names.add(variable.name)
 
         # rename if necessary
-        rename_variables = kwargs.get("rename_variables", False)
-        in_aggregate = kwargs.get("in_aggregate", False)
+        rename_variables: bool = kwargs.get("rename_variables", False)
+        in_aggregate: bool = kwargs.get("in_aggregate", False)
         if rename_variables and in_aggregate:
             return ast.Variable(variable.location, f"_{variable.name}")
         return variable.update(**self.visit_children(variable, **kwargs))
+    
+    def visit_BooleanConstant(self, boolean_constant: AST, **kwargs: Any) -> AST:
+        new_body: List[AST] = kwargs.get("new_body", [])
+        new_body.append(boolean_constant)
+        return boolean_constant.update(**self.visit_children(boolean_constant, **kwargs))
 
 
 class TheoryTransformer(Transformer):
@@ -373,8 +384,7 @@ class ProgramReifier(DependencyCollector):
     def _nest_rule_head_in_h_with_explanation_tuple(self, loc: ast.Location,
                 dependant: ast.Literal,
                 conditions: List[ast.Literal],
-                body: List[ast.Literal],
-                new_body: List[ast.Literal]):
+                reasons: List[ast.Literal]):
         """
         In: H :- B.
         Out: h(0, H, pos_atoms(B)),
@@ -383,15 +393,11 @@ class ProgramReifier(DependencyCollector):
         loc_fun = ast.Function(loc, str(self.rule_nr), [], False)
         loc_atm = ast.SymbolicAtom(loc_fun)
         loc_lit = ast.Literal(loc, ast.Sign.NoSign, loc_atm)
-        reasons = []
         for literal in conditions:
             if literal.atom.ast_type == ast.ASTType.SymbolicAtom:
                 reasons.append(literal.atom)
-        for literal in body:
-            reason_literals = []
-            _ = self.visit(literal, reasons = reason_literals, new_body = new_body)
-            reasons.extend([r for r in reason_literals if r not in reasons])
-
+        reasons.reverse()
+        reasons = [r for i,r in enumerate(reasons) if r not in reasons[:i]]
         reason_fun = ast.Function(loc, '', reasons, 0)
         reason_lit = ast.Literal(loc, ast.Sign.NoSign, reason_fun)
 
@@ -431,20 +437,21 @@ class ProgramReifier(DependencyCollector):
                                                        False))
                 dependant = ast.Literal(loc, ast.Sign.NoSign, symbol)
 
-            new_body = []
-            new_head_s = self._nest_rule_head_in_h_with_explanation_tuple(rule.location,
-                                                                          dependant,
-                                                                          conditions,
-                                                                          rule.body,
-                                                                          new_body)
+            new_body: List[ast.Literal] = []
+            reason_literals: List[ast.Literal] = []
+            _ = self.visit_sequence(rule.body, reasons = reason_literals, new_body = new_body, rename_variables = False)
+            new_head_s = self._nest_rule_head_in_h_with_explanation_tuple(
+                    rule.location,
+                    dependant,
+                    conditions,
+                    reason_literals)
 
             new_body.insert(0, dependant)
-            for r in rule.body:
-                new_body.append(self.visit(r, rename_variables=True))
             new_body.extend(conditions)
             # Remove duplicates but preserve order
             new_body = [x for i, x in enumerate(new_body) if x not in new_body[:i]]
-
+            # rename variables inside body aggregates
+            new_body = self.visit_sequence(new_body, rename_variables=True)
             new_rules.extend([Rule(rule.location, new_head, new_body) for new_head in new_head_s])
 
         return new_rules

@@ -44,7 +44,7 @@ def test_normal_rule_without_negation_is_transformed_correctly():
 
 def test_multiple_nested_variable_gets_transformed_correctly():
     program = "x(1). y(1). l(x(X),y(Y)) :- x(X), y(Y)."
-    expected = "x(1). y(1). h(1, l(x(X),y(Y)), (x(X),y(Y))) :- l(x(X),y(Y)), x(X), y(Y)."
+    expected = "x(1). y(1). h(1, l(x(X),y(Y)), (y(Y),x(X))) :- l(x(X),y(Y)), x(X), y(Y)."
     assertProgramEqual(transform(program), parse_program_to_ast(expected))
 
 
@@ -119,7 +119,7 @@ def test_head_aggregate_groups_is_transformed_correctly():
     rule = "{a(X) : b(X), c(X); d(X) : e(X), X=1..3 }:- f(X)."
     expected = """#program base.
     h(1, d(X), (e(X),f(X))) :- d(X), f(X), e(X), X=1..3.
-    h(1, a(X), (b(X), c(X), f(X))) :- a(X), f(X), b(X), c(X)."""
+    h(1, a(X), (c(X),b(X),f(X))) :- a(X), f(X), b(X), c(X)."""
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
@@ -127,14 +127,14 @@ def test_aggregate_choice_is_transformed_correctly():
     rule = "1{a(X) : b(X), c(X); d(X) : e(X), X=1..3 }1:- f(X)."
     expected = """#program base.
     h(1, d(X), (e(X),f(X))) :- d(X), f(X), e(X), X=1..3.
-    h(1, a(X), (b(X), c(X), f(X))) :- a(X), f(X), b(X), c(X)."""
+    h(1, a(X), (c(X),b(X),f(X))) :- a(X), f(X), b(X), c(X)."""
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
 def test_multiple_conditional_groups_in_head():
     rule = "1 #sum { X,Y : a(X,Y) : b(Y), c(X) ; X,Z : b(X,Z) : e(Z) }  :- c(X)."
     expected = """#program base.
-    h(1, a(X,Y), (b(Y), c(X))) :- a(X,Y), c(X), b(Y). 
+    h(1, a(X,Y), (c(X),b(Y))) :- a(X,Y), c(X), b(Y). 
     h(1, b(X,Z), (e(Z), c(X))) :- b(X,Z), c(X), e(Z). 
     """
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
@@ -142,7 +142,7 @@ def test_multiple_conditional_groups_in_head():
 
 def test_multiple_aggregates_in_body():
     rule = "s(Y) :- r(Y), 2 #sum{X : p(X,Y), q(X) } 7."
-    expected = "#program base. h(1, s(Y), (r(Y),p(X,Y), q(X))) :- s(Y), r(Y),  p(X,Y), q(X), 2 #sum{_X : p(_X,_Y), q(_X) } 7."
+    expected = "#program base. h(1, s(Y), (q(X),p(X,Y),r(Y))) :- s(Y), r(Y),  p(X,Y), q(X), 2 #sum{_X : p(_X,_Y), q(_X) } 7."
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
