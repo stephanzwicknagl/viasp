@@ -66,8 +66,6 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
     justification_program += "model(@new())."
 
     h_syms = set()
-    with open("t.log", "a") as f:
-        f.write(f"Justification Program:\n{justification_program}\n\n")
     try:
         RecursionReasoner(init = init,
                             program = justification_program,
