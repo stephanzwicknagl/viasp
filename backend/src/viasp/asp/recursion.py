@@ -33,12 +33,12 @@ class RecursionReasoner:
         while self.atoms != []:
             control.ground([("iter", [Number(step)])], context=self)
             self.atoms = [ x.symbol.arguments[1] for x in
-                            control.symbolic_atoms.by_signature(self.conflict_free_h, 4)
-                           if x.is_fact and x.symbol.arguments[3].number == step
+                            control.symbolic_atoms.by_signature(self.conflict_free_h, 3)
+                           if x.is_fact and x.symbol.arguments[0].number == step
                          ]
             step += 1
 
-        for x in control.symbolic_atoms.by_signature(self.conflict_free_h, 4):
+        for x in control.symbolic_atoms.by_signature(self.conflict_free_h, 3):
             self.register_h_symbols(x.symbol)
 
 
@@ -61,9 +61,9 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
     model_str:str = get_conflict_free_model()
     n_str:str = get_conflict_free_iterindex()
     for i,rule in enumerate(transformation.rules):
-        tupleified = ",".join(list(map(str,rule.body)))
-        justification_head = f"{conflict_free_h}({i+1}, {rule.head}, ({tupleified}), {n_str})"
         # TODO: get reasons by transformer
+        tupleified = ",".join(list(map(str,rule.body)))
+        justification_head = f"{conflict_free_h}({n_str}, {rule.head}, ({tupleified}))"
         justification_body = ",".join(f"{model_str}({atom})" for atom in rule.body)
         justification_body += f", not {model_str}({rule.head})"
 
@@ -108,7 +108,7 @@ def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], supernode_
     tmp_reason: Dict[int, Dict[Symbol, List[Symbol]]] = defaultdict(dict)
 
     for sym in h_symbols:
-        _, symbol, reasons, iter_nr = sym.arguments
+        iter_nr, symbol, reasons  = sym.arguments
         tmp_symbol[iter_nr.number].append(symbol)
         tmp_reason[iter_nr.number][str(symbol)] = reasons.arguments
     for iter_nr in tmp_symbol.keys():
