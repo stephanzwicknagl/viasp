@@ -76,9 +76,9 @@ def test_unwanted_TheoryAtom():
     visitor = ProgramRelaxer(head_name = "unsat", collect_variables = True)
     assertProgramEqual(relax_constraints(visitor,rule), parse_program_to_ast(expected))
 
-def test_unwanted_Aggregate():
+def test_unwanted_Conditional():
     rule = "c(1..3).d(X):-c(X).:- g(X): X=1..3."
-    expected = "c((1..3)).d(X) :- c(X).unsat(r1) :-  g(X): X=1..3.:~ unsat(R,T). [1,R,T]"
+    expected = "c((1..3)).d(X) :- c(X).unsat(r1) :- g(X): X=1..3.:~ unsat(R,T). [1,R,T]"
     visitor = ProgramRelaxer(head_name = "unsat", collect_variables = True)
     assertProgramEqual(relax_constraints(visitor,rule), parse_program_to_ast(expected))
 
