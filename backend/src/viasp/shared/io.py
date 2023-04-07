@@ -60,11 +60,9 @@ def object_hook(obj):
         # Reconstruct the class definition
         # Get the path to the module containing MyClass
         my_module_path = obj["Path"]
-
         # Add the directory containing my_module to sys.path
         my_module_dir = os.path.dirname(my_module_path)
         sys.path.append(my_module_dir)
-
         # Load the module containing MyClass
         module_name = os.path.splitext(os.path.basename(my_module_path))[0]
         module_spec = importlib.util.spec_from_file_location(module_name, my_module_path)
@@ -84,20 +82,9 @@ def object_hook(obj):
         module.__file__ = my_module.__file__
         sys.modules[module_name] = module
 
-        # # Reconstruct the class definition
-        # class_definition = compile(class_definition_str, '<string>', 'exec')
-        # with open("t.log", "a") as f:
-        #     f.write(f"Class Definition:\n    {class_definition_str}\n")
-
-
         # Execute the class definition in the temporary module
         exec(class_definition_str, module.__dict__)
-
-        transformer = getattr(module, "Transformer") ## ? Does the name have to be Transformer?
-
-        # o_bytes = obj["Transformer_bytes"].encode("latin-1")
-        # transformer = pickle.loads(o_bytes, encoding="latin-1")
-        return transformer
+        return getattr(module, "Transformer")
     return obj
 
 
