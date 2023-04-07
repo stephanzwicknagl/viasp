@@ -45,7 +45,7 @@ class RecursionReasoner:
 def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
                         transformation: Union[AST, str], conflict_free_h: str,
                         get_conflict_free_model: callable = lambda s: "model",
-                        get_conflict_free_iterindex: callable = lambda s: "n") -> nx.DiGraph:
+                        get_conflict_free_iterindex: callable = lambda s: "n") -> Union[bool, nx.DiGraph]:
     """
     Get a recursion explanation for the given facts and the recursive transformation.
     Generate graph from explanation, sorted by the iteration step number.
@@ -63,6 +63,7 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
     for i,rule in enumerate(transformation.rules):
         tupleified = ",".join(list(map(str,rule.body)))
         justification_head = f"{conflict_free_h}({i+1}, {rule.head}, ({tupleified}), {n_str})"
+        # TODO: get reasons by transformer
         justification_body = ",".join(f"{model_str}({atom})" for atom in rule.body)
         justification_body += f", not {model_str}({rule.head})"
 
