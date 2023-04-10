@@ -11,7 +11,7 @@ import os
 from jupyter_dash import JupyterDash
 from jupyter_dash.comms import _jupyter_config
 import viasp_dash
-from viasp import Control2
+from viasp import Control
 from viasp.server import startup
 from .html import display_refresh_button
 
@@ -44,7 +44,7 @@ app.layout = viasp_dash.ViaspDash(
 def load(argv):
     options = ["0"]
 
-    ctl = Control2(options, viasp_backend_url="http://localhost:5050")
+    ctl = Control(options, viasp_backend_url="http://localhost:5050")
     for path in argv:
         ctl.load(path)
     if not argv:

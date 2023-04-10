@@ -14,8 +14,8 @@ from viasp.shared.io import DataclassJSONEncoder
 
 
 def test_instanciations():
-    _ = wrapper.Control2()
-    _ = wrapper.Control2(["0"])
+    _ = wrapper.Control()
+    _ = wrapper.Control(["0"])
 
 
 class DebugClient(ViaspClient):
@@ -38,7 +38,7 @@ class DebugClient(ViaspClient):
 
 def test_load_from_stdin(client):
     debug_client = DebugClient(client)
-    ctl = wrapper.Control2(_viasp_client=debug_client)
+    ctl = wrapper.Control(_viasp_client=debug_client)
     sys.stdin = io.StringIO("1{person(a);person(b)}1.person(c) :- person(a).person(d) :- person(b).")
     ctl.load("-")
     # Check that the calls were received

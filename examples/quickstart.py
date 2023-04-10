@@ -1,12 +1,12 @@
 import sys
-from viasp import Control2
+from viasp import Control
 from viasp.server import startup
 
 
 def main():
     options = ['0']
 
-    ctl = Control2(options, viasp_backend_url="http://localhost:5050")
+    ctl = Control(options, viasp_backend_url="http://localhost:5050")
     for path in sys.argv[1:]:
         ctl.load(path)
     if not sys.argv[1:]:

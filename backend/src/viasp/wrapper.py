@@ -47,19 +47,43 @@ class ShowConnector:
     def register_function_call(self, name, sig, args, kwargs):
         self._database.register_function_call(name, sig, args, kwargs)
 
-    def relax_constraints(self, *args, **kwargs):
-        r"""This method relaxes integrity constraints and returns a modified program.
+    def get_relaxed_program(self,  head_name:str = "unsat", collect_variables:bool = True) -> str:
+        r"""This method relaxes integrity constraints and returns
+        the relaxed program as a string.
+
         Parameters
         ----------
-        **kwargs:
-            Valid keyword arguments are:
-
-            head_name: str
-                default="unsat" (name of the head literal)
-            collect_variables: bool
-                default=True (collect variables from body as a tuple in the head literal)
+        :param head_name: ``str``
+            default="unsat" (name of the head literal)
+        :param collect_variables: ``bool``
+            default=True (collect variables from body as a tuple in the head literal)
         """
-        return self._database.relax_constraints(*args, **kwargs)
+        kwargs = {"head_name": head_name, "collect_variables": collect_variables}
+        return self._database.get_relaxed_program(**kwargs)
+
+    def relax_constraints(self, head_name:str = "unsat", collect_variables:bool = True):
+        r"""This method relaxes integrity constraints and returns
+        a new viaspControl object with the relaxed program loaded
+        and stable models marked.
+
+        Parameters
+        ----------
+        :param head_name: ``str``
+            default="unsat" (name of the head literal)
+        :param collect_variables: ``bool``
+            default=True (collect variables from body as a tuple in the head literal)
+        """
+        self.show()
+        kwargs = {"head_name": head_name, "collect_variables": collect_variables}
+        
+        relaxed_prg = self._database.relax_constraints(**kwargs)
+        ctl = Control()
+        ctl.add("base", [], relaxed_prg)
+        ctl.ground([("base", [])])
+        with ctl.solve(yield_=True) as handle:
+            for m in handle:
+                ctl.viasp.mark(m)
+        return ctl
 
 
     def clingraph(self, viz_encoding, engine="dot"):
@@ -69,44 +93,7 @@ class ShowConnector:
         self._database._register_transformer(transformer, imports, path)
 
 
-
-class Control(InnerControl):
-
-    def __init__(self, *args, **kwargs):
-        self.viasp = ShowConnector(**kwargs)
-        if "_viasp_client" in kwargs:
-            del kwargs["_viasp_client"]
-        if "viasp_backend_url" in kwargs:
-            del kwargs["viasp_backend_url"]
-        self.viasp.register_function_call("__init__", signature(super().__init__), args, kwargs)
-        super().__init__(*args, **kwargs)
-
-    def load(self, path: str) -> None:
-        if path == "-":
-            path = STDIN_TMP_STORAGE_PATH
-            tmp = sys.stdin.readlines()
-            with open(path, "w", encoding="utf-8") as f:
-                f.writelines(tmp)
-        else:
-            shutil.copy(path, STDIN_TMP_STORAGE_PATH)
-            path = STDIN_TMP_STORAGE_PATH
-        self.viasp.register_function_call("load", signature(self.load), [], kwargs={"path": path})
-        super().load(path=str(path))
-
-    def __getattribute__(self, name):
-        attr = InnerControl.__getattribute__(self, name)
-        if is_non_cython_function_call(attr) and name != "load":
-            def wrapper_func(*args, **kwargs):
-                self.viasp.register_function_call(attr.__name__, signature(attr), args, kwargs)
-                result = attr(*args, **kwargs)
-                return result
-
-            return wrapper_func
-        else:
-            return attr
-
-
-class Control2:
+class Control:
     
     
     def __init__(self, *args, **kwargs):

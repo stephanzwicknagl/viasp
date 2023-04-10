@@ -261,7 +261,16 @@ def relax_constraints(*args, **kwargs) -> str:
     r"""
     Relax constraints in the marked models.
 
-
+    :param kwargs:
+        * *head_name* (``str``) --
+            default="unsat", name of head literal
+        * *collect_variables* (``bool``) --
+            default=True, collect variables from
+            body as a tuple in the head literal
+        * *viasp_backend_url* (``str``) --
+            url of the viasp backend
+        * *_viasp_client* (``ClingoClient``) --
+          a viasp client object
     """
     connector = _get_connector()
     return connector.relax_constraints(*args, **kwargs)
