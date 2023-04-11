@@ -20,7 +20,7 @@ from clingo.ast import AST, ASTSequence, ASTType, Symbol, Transformer
 
 from .shared.defaults import STDIN_TMP_STORAGE_PATH
 from .shared.io import clingo_symbols_to_stable_model
-from .wrapper import ShowConnector
+from .wrapper import ShowConnector, Control as viaspControl
 
 __all__ = [
     "load_program_file",
@@ -279,7 +279,7 @@ def get_relaxed_program(*args, **kwargs) -> str:
     connector = _get_connector(**kwargs)
     return connector.get_relaxed_program(head_name, collect_variables)
 
-def relax_constraints(*args, **kwargs):
+def relax_constraints(*args, **kwargs) -> viaspControl:
     r"""
     Relax constraints in the marked models. Returns 
     a new viaspControl object with the relaxed program loaded
