@@ -35,6 +35,7 @@ __all__ = [
     "unmark_from_file",
     "clear",
     "show",
+    "get_relaxed_program",
     "relax_constraints",
     "clingraph",
     "register_transformer",
@@ -257,9 +258,32 @@ def clear(**kwargs) -> None:
     connector.clear()
 
 
-def relax_constraints(*args, **kwargs) -> str:
+def get_relaxed_program(*args, **kwargs) -> str:
     r"""
-    Relax constraints in the marked models.
+    Relax constraints in the marked models. Returns
+    the relaxed program as a string.
+
+    :param kwargs:
+        * *head_name* (``str``) --
+            default = "unsat", name of head literal
+        * *collect_variables* (``bool``) --
+            default = True, collect variables from
+            body as a tuple in the head literal
+        * *viasp_backend_url* (``str``) --
+            url of the viasp backend
+        * *_viasp_client* (``ClingoClient``) --
+          a viasp client object
+    """
+    head_name = kwargs.pop("head_name", "unsat")
+    collect_variables = kwargs.pop("collect_variables", True)
+    connector = _get_connector(**kwargs)
+    return connector.get_relaxed_program(head_name, collect_variables)
+
+def relax_constraints(*args, **kwargs):
+    r"""
+    Relax constraints in the marked models. Returns 
+    a new viaspControl object with the relaxed program loaded
+    and stable models marked.
 
     :param kwargs:
         * *head_name* (``str``) --
@@ -272,11 +296,12 @@ def relax_constraints(*args, **kwargs) -> str:
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
     """
-    connector = _get_connector()
-    return connector.relax_constraints(*args, **kwargs)
+    head_name = kwargs.pop("head_name", "unsat")
+    collect_variables = kwargs.pop("collect_variables", True)
+    connector = _get_connector(**kwargs)
+    return connector.relax_constraints(head_name, collect_variables)
 
-
-def clingraph(viz_encoding, engine) -> None:
+def clingraph(viz_encoding, engine, **kwargs) -> None:
     r"""
     Generate the a clingraph from the marked models. And the visualization encoding
 
@@ -284,19 +309,35 @@ def clingraph(viz_encoding, engine) -> None:
         The path to the visualization encoding.
     :param engine: ``str``
         The visualization engine. See ``clingraph`` for more details.
+    :param kwargs:
+        * *viasp_backend_url* (``str``) --
+            url of the viasp backend
+        * *_viasp_client* (``ClingoClient``) --
+          a viasp client object
     """
-    connector = _get_connector()
+    connector = _get_connector(**kwargs)
     connector.clingraph(viz_encoding, engine)
 
-def register_transformer(transformer: Transformer, imports: str = "", path: str = "") -> None:
+def register_transformer(transformer: Transformer, imports: str = "", path: str = "", **kwargs) -> None:
     r"""
     Register a transformer to the backend. The program will be transformed
     in the backend before further processing is made.
 
     :param transformer: ``Transformer``
         The transformer to register.
+    :param imports: ``str``
+        The imports usued by the transformer.
+        (Can only be clingo imports and standard imports. 
+        String lines must be separated by newlines.)
+    :param path: ``str``
+        The path to the transformer.
+    :param kwargs:
+        * *viasp_backend_url* (``str``) --
+            url of the viasp backend
+        * *_viasp_client* (``ClingoClient``) --
+          a viasp client object
     """
-    connector = _get_connector()
+    connector = _get_connector(**kwargs)
     connector.register_transformer(transformer, imports, path)
 
 # ------------------------------------------------------------------------------

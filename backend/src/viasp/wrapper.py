@@ -59,7 +59,7 @@ class ShowConnector:
             default=True (collect variables from body as a tuple in the head literal)
         """
         kwargs = {"head_name": head_name, "collect_variables": collect_variables}
-        return self._database.get_relaxed_program(**kwargs)
+        return self._database.relax_constraints(**kwargs)
 
     def relax_constraints(self, head_name:str = "unsat", collect_variables:bool = True):
         r"""This method relaxes integrity constraints and returns
