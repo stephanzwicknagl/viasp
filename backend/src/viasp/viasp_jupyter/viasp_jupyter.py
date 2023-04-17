@@ -42,6 +42,14 @@ app.layout = viasp_dash.ViaspDash(
 )
 
 def load(argv):
+    """
+    An auxiliary function for quickly visualizing a program in Jupyter Notebook. Solves the program and marks all models for viasp.
+    Usage: 
+    ```python
+        vj.load(['path/to/program.lp', ...])
+        vj.app.run_server(mode='inline')
+    ```
+    """
     options = ["0"]
 
     ctl = Control(options, viasp_backend_url="http://localhost:5050")
