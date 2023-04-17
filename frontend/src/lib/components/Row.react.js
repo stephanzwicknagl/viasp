@@ -125,7 +125,6 @@ export function Boxrow(props) {
     const [isOverflowH, setIsOverflowH] = React.useState(false);
     const [overflowBreakingPoint, setOverflowBreakingPoint] = React.useState(null);
     const ref = React.useRef(null);
-    const { state: { transformations }, dispatch } = useTransformations();
     const { backendURL } = useSettings();
 
     React.useEffect(() => {
@@ -176,10 +175,6 @@ export function Boxrow(props) {
             </div>
         )
     }
-    const showNodes = transformations.find(({
-        transformation: t,
-        shown
-    }) => transformation.id === t.id && shown) !== undefined
     return <div className="boxrow_container">
         {/* TODO: make boxrow_header to toggle showing of visualization */}
             <div ref={ref} className="boxrow_row">  
