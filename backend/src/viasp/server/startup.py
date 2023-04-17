@@ -26,7 +26,7 @@ def run(mode="dash", host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
     command = ["viasp", "--host", host, "--port", str(port)]
 
-    if mode == "jupyter":
+    if mode.lower() == "jupyter":
         from jupyter_dash import JupyterDash
         app = JupyterDash(__name__)
     else:
