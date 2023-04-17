@@ -10,7 +10,6 @@ import sys
 import importlib.util
 
 
-import pickle
 import inspect
 import base64
 import types
@@ -113,17 +112,13 @@ def dataclass_to_dict(o):
     elif isinstance(o, ClingoMethodCall):
         return {"_type": "ClingoMethodCall", "name": o.name, "kwargs": o.kwargs, "uuid": o.uuid}
     elif isinstance(o, TransformerTransport):
-        passed_transformer_obj = o.transformer()
-        passed_transformer_bytes = pickle.dumps(passed_transformer_obj)
-
         # Get the class definition as a string
         class_definition = inspect.getsource(o.transformer)
-        o_definition = base64.b64encode(
+        transformer_bytes = base64.b64encode(
             class_definition.encode('utf-8')).decode('utf-8')
         
         o_json = {"_type": "Transformer",
-                  "Transformer_bytes": passed_transformer_bytes.decode("latin-1"),
-                  "Transformer_definition": o_definition,
+                  "Transformer_definition": transformer_bytes,
                   "Imports": o.imports,
                   "Path": o.path}
         return o_json
