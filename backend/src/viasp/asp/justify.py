@@ -236,7 +236,7 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
 
             new_head_s = [ast.Function(loc, analyzer.get_conflict_free_h(), [loc_lit, dependant, reason_lit], 0)]
 
-            new_body.insert(0, dependant)
+            # new_body.insert(0, dependant)
             new_body.extend(conditions)
             # Remove duplicates but preserve order
             new_body = [x for i, x in enumerate(
@@ -247,22 +247,9 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
             new_body.append(ast.Function(loc, f"not {model_str}", [dependant], 0))
             justification_program += "\n".join(map(str, (ast.Rule(rule.location, new_head, new_body)
                             for new_head in new_head_s)))
-            
-
-
-        # TODO: get reasons by transformer
-        # tupleified = ",".join(list(map(str, rule.body)))
-        # justification_head = f"{conflict_free_h}({n_str}, {rule.head}, ({tupleified}))"
-        # justification_body = ",".join(
-        #     f"{model_str}({atom})" for atom in rule.body)
-        # justification_body += f", not {model_str}({rule.head})"
-
-        # justification_program += f"{justification_head} :- {justification_body}.\n"
+    # TODO: add proper edge generation
 
     justification_program += f"{model_str}(@new())."
-    with open("t.log", "a") as f:
-        f.write(f"New rule:\n    {justification_program}\n\n")
-
     h_syms = set()
 
     try:
