@@ -148,7 +148,7 @@ def add_program_file(*args, **kwargs):
 
 def add_program_string(*args, **kwargs) -> None:
     r"""
-    Add a (non-ground) program file to the viasp backend.
+    Add a (non-ground) program to the viasp backend.
     This function provides two overloads, similar to ``clingo.control.Control.add``.
 
     ```python
@@ -303,7 +303,7 @@ def relax_constraints(*args, **kwargs) -> viaspControl:
 
 def clingraph(viz_encoding, engine, **kwargs) -> None:
     r"""
-    Generate the a clingraph from the marked models. And the visualization encoding
+    Generate the a clingraph from the marked models and the visualization encoding.
 
     :param viz_encoding: ``str``
         The path to the visualization encoding.

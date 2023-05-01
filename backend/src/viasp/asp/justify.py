@@ -4,12 +4,12 @@ from typing import List, Collection, Dict, Iterable, Union
 
 import networkx as nx
 
-from clingo import Control, Symbol, Model
+from clingo import Control, Symbol, Model, ast
 
 from clingo.ast import AST, Function
 from networkx import DiGraph
 
-from .reify import ProgramAnalyzer
+from .reify import ProgramAnalyzer, DependencyCollector, has_an_interval
 from .recursion import RecursionReasoner
 from .utils import insert_atoms_into_nodes, identify_reasons
 from ..shared.model import Node, Transformation, SymbolIdentifier
@@ -86,8 +86,7 @@ def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
                                             fact_node: Node, h_syms,
                                             recursive_transformations:frozenset, 
                                             h="h", 
-                                            get_conflict_free_model: callable = lambda s: "model",
-                                            get_conflict_free_iterindex: callable = lambda s: "n",
+                                            analyzer: ProgramAnalyzer = None,
                                             pad=True) \
                                             -> nx.DiGraph:
     h_syms = collect_h_symbols_and_create_nodes(h_syms, rule_mapping.keys(), pad)
@@ -111,8 +110,7 @@ def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
                                                  b.diff,
                                                  rule_mapping[b.rule_nr],
                                                  h,
-                                                 get_conflict_free_model,
-                                                 get_conflict_free_iterindex)
+                                                 analyzer)
         g.add_edge(a, b, transformation=rule_mapping[b.rule_nr])
 
     return g
@@ -158,7 +156,7 @@ def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collect
     for model in wrapped_stable_models:
         h_symbols = get_h_symbols_from_model(model, transformed_prg, facts, analyzer.get_constants(),
                                             conflict_free_h)
-        new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, h_symbols, recursion_transformations, conflict_free_h, analyzer.get_conflict_free_model, analyzer.get_conflict_free_iterindex)
+        new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, h_symbols, recursion_transformations, conflict_free_h, analyzer)
         paths.append(new_path)
 
     result_graph = identify_reasons(join_paths_with_facts(paths))
@@ -176,8 +174,7 @@ def save_model(model: Model) -> Collection[str]:
 
 def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
                            transformation: Union[AST, str], conflict_free_h: str,
-                           get_conflict_free_model: callable = lambda s: "model",
-                           get_conflict_free_iterindex: callable = lambda s: "n") -> Union[bool, nx.DiGraph]:
+                           analyzer: ProgramAnalyzer) -> Union[bool, nx.DiGraph]:
     """
     Get a recursion explanation for the given facts and the recursive transformation.
     Generate graph from explanation, sorted by the iteration step number.
@@ -187,23 +184,87 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
     :param transformation: The recursive transformation. An ast object.
     :param conflict_free_h: The name of the h predicate.
     """
+    # get_conflict_free_model = analyzer.get_conflict_free_model()
+    # get_conflict_free_iterindex = analyzer.get_conflict_free_iterindex()
+
     init = [fact.symbol for fact in facts]
     justification_program = ""
-    model_str: str = get_conflict_free_model()
-    n_str: str = get_conflict_free_iterindex()
-    for rule in transformation.rules:
-        # TODO: get reasons by transformer
-        tupleified = ",".join(list(map(str, rule.body)))
-        justification_head = f"{conflict_free_h}({n_str}, {rule.head}, ({tupleified}))"
-        justification_body = ",".join(
-            f"{model_str}({atom})" for atom in rule.body)
-        justification_body += f", not {model_str}({rule.head})"
+    model_str: str = analyzer.get_conflict_free_model()
+    n_str: str = analyzer.get_conflict_free_iterindex()
 
-        justification_program += f"{justification_head} :- {justification_body}.\n"
+    for rule in transformation.rules:
+        # f.write(f"Recursion Program:\n{justification_program}\n")
+        # visitor = DependencyCollector()
+        deps = defaultdict(list)
+        loc = rule.location
+        new_rules = []
+
+        _ = analyzer.visit(rule.head, deps=deps)
+        if not deps:
+            deps[rule.head] = []
+        for dependant, conditions in deps.items():
+            if has_an_interval(dependant):
+                # replace dependant with variable: e.g. (1..3) -> X
+                variables = [ast.Variable(loc, analyzer.get_conflict_free_variable())
+                                if arg.ast_type == ast.ASTType.Interval else arg
+                                for arg in dependant.atom.symbol.arguments]
+                symbol = ast.SymbolicAtom(ast.Function(loc,
+                                                        dependant.atom.symbol.name,
+                                                        variables,
+                                                        False))
+                dependant = ast.Literal(loc, ast.Sign.NoSign, symbol)
+
+            new_body: List[ast.Literal] = []
+            reason_literals: List[ast.Literal] = []
+            _ = analyzer.visit_sequence(
+                rule.body, reasons=reason_literals, new_body=new_body, rename_variables=False)
+            # new_head_s = analyzer._nest_rule_head_in_h_with_explanation_tuple(
+            #     rule.location,
+            #     dependant,
+            #     conditions,
+            #     reason_literals)
+            loc_fun = ast.Function(loc, n_str, [], False)
+            loc_atm = ast.SymbolicAtom(loc_fun)
+            loc_lit = ast.Literal(loc, ast.Sign.NoSign, loc_atm)
+            for literal in conditions:
+                if literal.atom.ast_type == ast.ASTType.SymbolicAtom:
+                    reason_literals.append(literal.atom)
+            reason_literals.reverse()
+            reason_literals = [r for i,r in enumerate(reason_literals) if r not in reason_literals[:i]]
+            reason_fun = ast.Function(loc, '', reason_literals, 0)
+            reason_lit = ast.Literal(loc, ast.Sign.NoSign, reason_fun)
+
+            new_head_s = [ast.Function(loc, analyzer.get_conflict_free_h(), [loc_lit, dependant, reason_lit], 0)]
+
+            new_body.insert(0, dependant)
+            new_body.extend(conditions)
+            # Remove duplicates but preserve order
+            new_body = [x for i, x in enumerate(
+                new_body) if x not in new_body[:i]]
+            # rename variables inside body aggregates
+            new_body = analyzer.visit_sequence(new_body, rename_variables=True)
+            new_body = [ast.Function(loc, model_str, [bb], 0) for bb in new_body]
+            new_body.append(ast.Function(loc, f"not {model_str}", [dependant], 0))
+            justification_program += "\n".join(map(str, (ast.Rule(rule.location, new_head, new_body)
+                            for new_head in new_head_s)))
+            
+
+
+        # TODO: get reasons by transformer
+        # tupleified = ",".join(list(map(str, rule.body)))
+        # justification_head = f"{conflict_free_h}({n_str}, {rule.head}, ({tupleified}))"
+        # justification_body = ",".join(
+        #     f"{model_str}({atom})" for atom in rule.body)
+        # justification_body += f", not {model_str}({rule.head})"
+
+        # justification_program += f"{justification_head} :- {justification_body}.\n"
 
     justification_program += f"{model_str}(@new())."
+    with open("t.log", "a") as f:
+        f.write(f"New rule:\n    {justification_program}\n\n")
 
     h_syms = set()
+
     try:
         RecursionReasoner(init=init,
                           program=justification_program,
