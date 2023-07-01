@@ -8,7 +8,7 @@ flask-cors
 build
 dash[dev]>=1.15.0
 pyyaml
-dash==2.10
+dash==2.10.1
 dash-html-components
 igraph>=0.8
 numpy
