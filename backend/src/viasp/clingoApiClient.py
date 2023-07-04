@@ -83,12 +83,12 @@ class ClingoClient(ViaspClient):
             error(f"Transforming constraints failed [{r.status_code}] ({r.reason})")    
             return None
 
-    def clingraph(self, viz_encoding_path, engine):
+    def clingraph(self, viz_encoding_path, engine, graphviz_type):
         with open(viz_encoding_path, "r") as f:
             prg = f.read().splitlines()
             prg = '\n'.join(prg)
         
-        serialized = json.dumps({"viz-encoding":prg, "engine":engine}, cls=DataclassJSONEncoder)
+        serialized = json.dumps({"viz-encoding":prg, "engine":engine, "graphviz-type":graphviz_type}, cls=DataclassJSONEncoder)
 
         r = requests.post(f"{self.backend_url}/control/clingraph",
                               data=serialized,

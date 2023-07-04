@@ -301,7 +301,7 @@ def relax_constraints(*args, **kwargs) -> viaspControl:
     connector = _get_connector(**kwargs)
     return connector.relax_constraints(head_name, collect_variables)
 
-def clingraph(viz_encoding, engine, **kwargs) -> None:
+def clingraph(viz_encoding, engine="dot", graphviz_type="graph", **kwargs) -> None:
     r"""
     Generate the a clingraph from the marked models and the visualization encoding.
 
@@ -309,6 +309,8 @@ def clingraph(viz_encoding, engine, **kwargs) -> None:
         The path to the visualization encoding.
     :param engine: ``str``
         The visualization engine. See ``clingraph`` for more details.
+    :param graphviz_type: ``str``
+        The graph type. See ``clingraph`` for more details.
     :param kwargs:
         * *viasp_backend_url* (``str``) --
             url of the viasp backend
@@ -316,7 +318,7 @@ def clingraph(viz_encoding, engine, **kwargs) -> None:
           a viasp client object
     """
     connector = _get_connector(**kwargs)
-    connector.clingraph(viz_encoding, engine)
+    connector.clingraph(viz_encoding, engine, graphviz_type)
 
 def register_transformer(transformer: Transformer, imports: str = "", path: str = "", **kwargs) -> None:
     r"""
