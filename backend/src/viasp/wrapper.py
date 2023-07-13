@@ -89,8 +89,8 @@ class ShowConnector:
         return ctl
 
 
-    def clingraph(self, viz_encoding, engine="dot"):
-        self._database.clingraph(viz_encoding, engine)
+    def clingraph(self, viz_encoding, engine="dot", graphviz_type="graph"):
+        self._database.clingraph(viz_encoding, engine, graphviz_type)
 
     def register_transformer(self, transformer, imports="", path=""):
         self._database._register_transformer(transformer, imports, path)

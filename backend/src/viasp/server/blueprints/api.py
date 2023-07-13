@@ -196,6 +196,7 @@ def clingraph_generate():
         marked_models = wrap_marked_models(marked_models)
         viz_encoding = request.json["viz-encoding"]
         engine = request.json["engine"]
+        graphviz_type = request.json["graphviz-type"]
 
 
         # for every model that was maked
@@ -208,7 +209,7 @@ def clingraph_generate():
             with control.solve(yield_=True) as handle:
                 for m in handle:
                     fb = Factbase.from_model(m, default_graph="base")
-                    graphs = compute_graphs(fb)
+                    graphs = compute_graphs(fb, graphviz_type)
 
                     filename = uuid4().hex
                     using_clingraph.append(filename)

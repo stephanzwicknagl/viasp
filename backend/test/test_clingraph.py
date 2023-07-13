@@ -63,7 +63,7 @@ def test_load_from_stdin(client):
     assert res.status_code == 200
     assert res.data == b'{"using_clingraph":false}\n'
     prg = "node(X):-person(X).attr(node,a,color,blue):-node(a).attr(node,b,color,red):-node(b).attr(node,c,color,blue):-node(c).attr(node,d,color,red):-node(d)."
-    serialized = json.dumps({"viz-encoding":prg, "engine":"dot"}, cls=DataclassJSONEncoder)
+    serialized = json.dumps({"viz-encoding":prg, "engine":"dot", "graphviz-type": "graph"}, cls=DataclassJSONEncoder)
     res = client.post("/control/clingraph", data=serialized, headers={'Content-Type': 'application/json'})
     assert res.status_code == 200
     assert res.data == b'ok'
