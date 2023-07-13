@@ -102,8 +102,10 @@ class Control:
     def __init__(self, *args, **kwargs):
         if 'files' in kwargs:
             # files is only passed to call InnerControl with only the options
-            arguments = ([opt for opt in sys.argv[1:] if opt not in kwargs['files']])
-            args = (arguments,)
+            if 'ipykernel_launcher.py' in sys.argv[0]:
+                args = ()
+            else:
+                args = ([opt for opt in sys.argv[1:] if opt not in kwargs['files']],)
             del kwargs['files']
         if 'control' in kwargs:
             self.passed_control = kwargs['control']
@@ -117,6 +119,8 @@ class Control:
         if "viasp_backend_url" in kwargs:
             del kwargs["viasp_backend_url"]
         
+        with open("t.log", "a") as f:
+            f.write(f"Sending args {args} and kwargs {kwargs} to register_function_call\n")
         self.viasp.register_function_call("__init__", signature(self.passed_control.__init__), args, kwargs)
 
     def load(self, path: str) -> None:

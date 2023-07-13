@@ -14,6 +14,7 @@ import atexit
 from subprocess import Popen
 from time import time
 import viasp_dash
+from dash import Dash
 
 from viasp import clingoApiClient
 from viasp.shared.defaults import (DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT,
@@ -26,12 +27,8 @@ def run(mode="dash", host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
     command = ["viasp", "--host", host, "--port", str(port)]
 
-    if mode.lower() == "jupyter":
-        from jupyter_dash import JupyterDash
-        app = JupyterDash(__name__)
-    else:
-        from dash import Dash
-        app = Dash(__name__)
+    app = Dash(__name__)
+    if mode.lower() != "jupyter":
         app.layout = viasp_dash.ViaspDash(
             id="myID",
             backendURL=backend_url
