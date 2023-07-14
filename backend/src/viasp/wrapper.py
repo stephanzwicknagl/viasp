@@ -119,8 +119,6 @@ class Control:
         if "viasp_backend_url" in kwargs:
             del kwargs["viasp_backend_url"]
         
-        with open("t.log", "a") as f:
-            f.write(f"Sending args {args} and kwargs {kwargs} to register_function_call\n")
         self.viasp.register_function_call("__init__", signature(self.passed_control.__init__), args, kwargs)
 
     def load(self, path: str) -> None:
