@@ -33,40 +33,34 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     # and set the backend URL, which will be used
     # by the frontend
     if 'BINDER_SERVICE_HOST' in os.environ:
-        with open("debug.log", "a") as f:
-            f.write("Found Binder Service Host\n\n")
         JupyterDash.infer_jupyter_proxy_config()
     if ('server_url' in _jupyter_config and 'base_subpath' in _jupyter_config):
         _default_server_url = _jupyter_config['server_url']
 
         _default_requests_pathname_prefix = (
-            _jupyter_config['base_subpath'].rstrip('/') + '/proxy/5050'
+            _jupyter_config['base_subpath'].rstrip('/') + '/proxy/' + str(port)
         )
 
         backend_url = _default_server_url+_default_requests_pathname_prefix
-        with open("debug.log", "a") as f:
-            f.write(f"Found generated Backend URL: {backend_url}\n\n")
     else:
-        with open("debug.log", "a") as f:
-            f.write(f"Using default Backend URL: {backend_url}\n\n")
         backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
 
-    print(f"Starting backend at {backend_url}")
 
     command = ["viasp", "--host", host, "--port", str(port)]
 
     if 'ipykernel_launcher.py' in sys.argv[0]:
         display_refresh_button()
 
-
-    log = open('viasp.log', 'a', encoding="utf-8")
-    viasp_backend = Popen(command, stdout=log, stderr=log)
-
     app = Dash(__name__)
     app.layout = viasp_dash.ViaspDash(
         id="myID",
         backendURL=backend_url
         )
+
+    print(f"Starting backend at {backend_url}")
+    log = open('viasp.log', 'a', encoding="utf-8")
+    viasp_backend = Popen(command, stdout=log, stderr=log)
+
     # make sure the backend is up, before continuing with other modules
     t_start = time()
     while True:
