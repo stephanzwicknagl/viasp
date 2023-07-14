@@ -9,30 +9,55 @@
 
     The backend is started on the localhost on port 5050.
 """
-
+import sys
+import os
 import atexit
 from subprocess import Popen
 from time import time
 import viasp_dash
 from dash import Dash
+from jupyter_dash import JupyterDash
+from jupyter_dash.comms import _jupyter_config
+from .html import display_refresh_button
 
 from viasp import clingoApiClient
 from viasp.shared.defaults import (DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT,
                                    DEFAULT_BACKEND_PROTOCOL)
 
 
-def run(mode="dash", host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
-    """ create the dash app, set layout and start the backend on host:port """
 
-    backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
+def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
+    """ create the dash app, set layout and start the backend on host:port """
+       
+    # if running in binder, get proxy information
+    # and set the backend URL, which will be used
+    # by the frontend
+    if 'BINDER_SERVICE_HOST' in os.environ:
+        JupyterDash.infer_jupyter_proxy_config()
+        # display_refresh_button()
+    if ('server_url' in _jupyter_config and 'base_subpath' in _jupyter_config):
+        _default_server_url = _jupyter_config['server_url']
+
+        _default_requests_pathname_prefix = (
+            _jupyter_config['base_subpath'].rstrip('/') + '/proxy/5050'
+        )
+
+        backend_url = _default_server_url+_default_requests_pathname_prefix
+    else:
+        backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
+
+    print(f"Starting backend at {backend_url}")
+
     command = ["viasp", "--host", host, "--port", str(port)]
 
+    if 'ipykernel_launcher.py' in sys.argv[0]:
+        display_refresh_button()
+
     app = Dash(__name__)
-    if mode.lower() != "jupyter":
-        app.layout = viasp_dash.ViaspDash(
-            id="myID",
-            backendURL=backend_url
-            )
+    app.layout = viasp_dash.ViaspDash(
+        id="myID",
+        backendURL=backend_url
+        )
 
     log = open('viasp.log', 'a', encoding="utf-8")
     viasp_backend = Popen(command, stdout=log, stderr=log)
