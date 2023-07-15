@@ -29,7 +29,7 @@ jobs:
         id: cache
 
       - name: Install requirements
-        run: pip install --upgrade --upgrade-strategy eager -r requirements.txt
+        run: pip install --upgrade --upgrade-strategy eager -r binder/requirements.txt
         if: steps.cache.outputs.cache-hit != 'true'
 
   node:
@@ -209,7 +209,7 @@ jobs:
       - name: Install dev dependencies, backend and frontend
         shell: bash -l {0}
         run: |
-          pip install --upgrade --upgrade-strategy eager -r requirements.txt
+          pip install --upgrade --upgrade-strategy eager -r binder/requirements.txt
           pip install "viasp_backend-$(sh .github/backend-version.sh)-py3-none-any.whl"
           pip install "viasp_dash-$(sh .github/frontend-version.sh)-py3-none-any.whl"
         #if: steps.cache.outputs.cache-hit != 'true'
