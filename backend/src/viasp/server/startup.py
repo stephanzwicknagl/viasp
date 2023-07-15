@@ -15,8 +15,7 @@ import atexit
 from subprocess import Popen
 from time import time
 import viasp_dash
-from dash import Dash
-from jupyter_dash import JupyterDash
+from dash import Dash, jupyter_dash
 from jupyter_dash.comms import _jupyter_config
 from .html import display_refresh_button
 
@@ -33,7 +32,7 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     # and set the backend URL, which will be used
     # by the frontend
     if 'BINDER_SERVICE_HOST' in os.environ:
-        JupyterDash.infer_jupyter_proxy_config()
+        jupyter_dash.infer_jupyter_proxy_config()
     if ('server_url' in _jupyter_config and 'base_subpath' in _jupyter_config):
         _default_server_url = _jupyter_config['server_url']
 
