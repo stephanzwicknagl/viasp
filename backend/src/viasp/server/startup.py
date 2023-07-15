@@ -50,15 +50,15 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     if 'ipykernel_launcher.py' in sys.argv[0]:
         display_refresh_button()
 
+    print(f"Starting backend at {backend_url}")
+    log = open('viasp.log', 'a', encoding="utf-8")
+    viasp_backend = Popen(command, stdout=log, stderr=log)
+
     app = Dash(__name__)
     app.layout = viasp_dash.ViaspDash(
         id="myID",
         backendURL=backend_url
         )
-
-    print(f"Starting backend at {backend_url}")
-    log = open('viasp.log', 'a', encoding="utf-8")
-    viasp_backend = Popen(command, stdout=log, stderr=log)
 
     # make sure the backend is up, before continuing with other modules
     t_start = time()
