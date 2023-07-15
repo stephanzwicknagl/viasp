@@ -5,7 +5,7 @@
 **viASP visualizes an interactive explanation of your ASP program and its stable models** 
 
 Try it out in Binder!
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stephanzwicknagl/viasp/dash_update?filepath=examples%2Fintro_viasp.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stephanzwicknagl/viasp/dash_update?filepath=examples%2FIntroduction to viASP.ipynb)
 
 
 
