@@ -94,9 +94,9 @@ class ClingoClient(ViaspClient):
                               data=serialized,
                               headers={'Content-Type': 'application/json'})
         if r.ok:
-            log(f"Cligraph visualization in progress.")
+            log(f"Clingraph visualization in progress.")
         else:
-            error(f"Cligraph visualization failed [{r.status_code}] ({r.reason})")
+            error(f"Clingraph visualization failed [{r.status_code}] ({r.reason})")
 
     def _register_transformer(self, transformer, imports, path):
         serializable_transformer = TransformerTransport.merge(transformer, imports, path)
