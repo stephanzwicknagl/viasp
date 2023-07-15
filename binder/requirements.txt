@@ -4,8 +4,8 @@ dash==2.11.1
 Flask==2.2.5
 Flask_Cors==4.0.0
 jupyter_dash==0.4.2
-numpy==1.25.1
-pytest==7.4.0
+numpy
+pytest
 python_igraph==0.10.5
 Requests==2.31.0
 setuptools==67.8.0
