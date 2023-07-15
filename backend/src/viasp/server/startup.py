@@ -16,7 +16,7 @@ from subprocess import Popen
 from time import time
 import viasp_dash
 from dash import Dash, jupyter_dash
-from jupyter_dash.comms import _jupyter_config
+from dash._jupyter import _jupyter_config
 from .html import display_refresh_button
 
 from viasp import clingoApiClient
