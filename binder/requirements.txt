@@ -3,7 +3,6 @@ clingraph==1.0.0
 dash==2.11.1
 Flask==2.2.5
 Flask_Cors==4.0.0
-ipython>=8.6.0
 jupyter_dash==0.4.2
 networkx==3.1
 numpy==1.25.1
@@ -12,3 +11,6 @@ python_igraph==0.10.5
 Requests==2.31.0
 setuptools==67.8.0
 Werkzeug==2.2.3
+ipython
+clingraph
+graphviz
