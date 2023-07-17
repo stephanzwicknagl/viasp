@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
@@ -64,7 +64,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
@@ -102,7 +102,7 @@ jobs:
           kill -9 $PID
 
       - name: Upload frontend to GitHub
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           retention-days: 7
           name: frontend-${{ github.sha }}
@@ -117,7 +117,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
@@ -133,7 +133,7 @@ jobs:
         run: python -m build --sdist --wheel --outdir dist/;
 
       - name: Upload backend to GitHub
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           retention-days: 7
           name: backend-${{ github.sha }}
@@ -147,12 +147,12 @@ jobs:
       - name: Checking out repository
         uses: actions/checkout@v3
       - name: Get artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: backend-${{ github.sha }}
 
       - name: Setup Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
@@ -186,16 +186,16 @@ jobs:
       - name: Checking out repository
         uses: actions/checkout@v3
       - name: Get backend artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: backend-${{ github.sha }}
       - name: Get frontend artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: frontend-${{ github.sha }}
 
       - name: Setup Python
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
