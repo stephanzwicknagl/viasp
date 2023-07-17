@@ -1,5 +1,5 @@
 clingo==5.6.1
-flask>=2.0
+flask>=2.0,<=2.2.5
 networkx>=2.6
 pytest>=6.2.4
 clingox>=1.0.0
@@ -7,7 +7,7 @@ requests==2.26.0
 dash
 flask-cors
 build
-dash[dev]>=1.15.0,<2.11
+dash>=2.11
 pyyaml
 dash-html-components
 igraph>=0.8
