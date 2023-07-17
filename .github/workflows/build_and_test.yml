@@ -19,13 +19,13 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v1
         with:
-          python-version: 3.7
+          python-version: 3.10
 
       - name: Cache dependencies
         uses: actions/cache@v2
         with:
           path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}
+          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/requirements.txt') }}
         id: cache
 
       - name: Install requirements
@@ -72,7 +72,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}
+          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/requirements.txt') }}
         id: cache
 
       - name: Setup node
@@ -125,7 +125,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}
+          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/requirements.txt') }}
         id: cache
 
       - name: Build package
@@ -154,19 +154,19 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v1
         with:
-          python-version: 3.7
+          python-version: 3.10
 
       - name: Get python packages from cache
         uses: actions/cache@v2
         with:
           path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}
+          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/requirements.txt') }}
         id: cache
 
       - name: Install dev dependencies and the backend
         shell: bash -l {0}
         run: |
-          pip install --upgrade --upgrade-strategy eager -r requirements.txt
+          pip install --upgrade --upgrade-strategy eager -r binder/requirements.txt
           pip install "viasp_backend-$(sh .github/backend-version.sh)-py3-none-any.whl"
         if: steps.cache.outputs.cache-hit != 'true'
       
@@ -203,7 +203,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}
+          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/requirements.txt') }}
         id: cache
 
       - name: Install dev dependencies, backend and frontend
