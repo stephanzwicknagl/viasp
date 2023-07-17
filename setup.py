@@ -38,7 +38,8 @@ REQUIRED = [
     # 'viasp-dash',#>=1.1.6
     'jupyter-dash',
     'jupyter-server-proxy',
-    'clingraph'
+    'clingraph',
+    'graphviz',
 ]
 
 # What packages are optional?
