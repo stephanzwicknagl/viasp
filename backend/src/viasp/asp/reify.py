@@ -91,11 +91,18 @@ class DependencyCollector(Transformer):
     def visit_ConditionalLiteral(self, conditional_literal: AST, **kwargs: Any) -> AST:
         deps = kwargs.get("deps", {})
         new_body = kwargs.get("new_body", [])
-
-        deps[conditional_literal.literal] = []
-        for condition in conditional_literal.condition:
-            deps[conditional_literal.literal].append(condition)
-        new_body.extend(conditional_literal.condition)
+        in_head = kwargs.get("in_head", False)
+        body_aggregate_elements = kwargs.get("body_aggregate_elements", [])
+        
+        if in_head:
+            deps[conditional_literal.literal] = []
+            for condition in conditional_literal.condition:
+                deps[conditional_literal.literal].append(condition)
+            new_body.extend(conditional_literal.condition)
+        else:
+            body_aggregate_elements.append(conditional_literal.literal)
+            for condition in conditional_literal.condition:
+                body_aggregate_elements.append(condition)
         return conditional_literal.update(**self.visit_children(conditional_literal, **kwargs))
 
     def visit_Literal(self, literal: AST, **kwargs: Any) -> AST:
@@ -263,7 +270,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     def visit_Rule(self, rule: Rule):
         deps = defaultdict(list)
         names = set()
-        _ = self.visit(rule.head, deps=deps, names=names)
+        _ = self.visit(rule.head, deps=deps, names=names, in_head=True)
         for b in rule.body:
             self.visit(b, deps=deps, names=names)
 
@@ -424,7 +431,7 @@ class ProgramReifier(DependencyCollector):
         # Embed the head
         deps = defaultdict(list)
         loc = rule.location
-        _ = self.visit(rule.head, deps=deps)
+        _ = self.visit(rule.head, deps=deps, in_head=True)
 
         if is_fact(rule, deps) or is_constraint(rule):
             return [rule]

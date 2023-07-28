@@ -155,12 +155,10 @@ def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol,
     :param v: The node that contains the symbol r
     :param r: The symbol that is the reason
     """
+    if (r in v.diff): return next(s for s in v.atoms if s == r)
     if (g.in_degree(v) != 0): 
         for u in g.predecessors(v):
-            if r in u.diff:
-                return next(s for s in u.atoms if s == r)
-            else:
-                return get_identifiable_reason(g, u, r, super_graph=super_graph, super_node=super_node)
+            return get_identifiable_reason(g, u, r, super_graph=super_graph, super_node=super_node)
     if (super_graph != None and super_node != None):
         return get_identifiable_reason(super_graph, super_node, r)
     

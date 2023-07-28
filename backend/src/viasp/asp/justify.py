@@ -9,12 +9,12 @@ from clingo import Control, Symbol, Model, ast
 from clingo.ast import AST, Function
 from networkx import DiGraph
 
-from .reify import ProgramAnalyzer, DependencyCollector, has_an_interval
+from .reify import ProgramAnalyzer, has_an_interval
 from .recursion import RecursionReasoner
 from .utils import insert_atoms_into_nodes, identify_reasons
 from ..shared.model import Node, Transformation, SymbolIdentifier
 from ..shared.simple_logging import info, warn
-from ..shared.util import pairwise, get_leafs_from_graph, get_root_node_from_graph
+from ..shared.util import pairwise, get_leafs_from_graph
 
 
 def stringify_fact(fact: Function) -> str:
@@ -172,6 +172,15 @@ def save_model(model: Model) -> Collection[str]:
     return wrapped
 
 
+def filter_body_aggregates(element: AST):
+    print(f"Filtering element: {element}, {element.ast_type}\n",flush=True)
+    if (element.ast_type == ast.ASTType.Aggregate):
+        return False
+    if (getattr(getattr(element, "atom", None), "ast_type",None) == ast.ASTType.Aggregate):
+        return False
+    return True
+
+
 def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
                            transformation: Union[AST, str], conflict_free_h: str,
                            analyzer: ProgramAnalyzer) -> Union[bool, nx.DiGraph]:
@@ -193,11 +202,8 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
     n_str: str = analyzer.get_conflict_free_iterindex()
 
     for rule in transformation.rules:
-        # f.write(f"Recursion Program:\n{justification_program}\n")
-        # visitor = DependencyCollector()
         deps = defaultdict(list)
         loc = rule.location
-        new_rules = []
 
         _ = analyzer.visit(rule.head, deps=deps)
         if not deps:
@@ -218,11 +224,6 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
             reason_literals: List[ast.Literal] = []
             _ = analyzer.visit_sequence(
                 rule.body, reasons=reason_literals, new_body=new_body, rename_variables=False)
-            # new_head_s = analyzer._nest_rule_head_in_h_with_explanation_tuple(
-            #     rule.location,
-            #     dependant,
-            #     conditions,
-            #     reason_literals)
             loc_fun = ast.Function(loc, n_str, [], False)
             loc_atm = ast.SymbolicAtom(loc_fun)
             loc_lit = ast.Literal(loc, ast.Sign.NoSign, loc_atm)
@@ -243,7 +244,7 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
                 new_body) if x not in new_body[:i]]
             # rename variables inside body aggregates
             new_body = analyzer.visit_sequence(new_body, rename_variables=True)
-            new_body = [ast.Function(loc, model_str, [bb], 0) for bb in new_body]
+            new_body = [ast.Function(loc, model_str, [bb], 0) for bb in filter(filter_body_aggregates,new_body)]
             new_body.append(ast.Function(loc, f"not {model_str}", [dependant], 0))
             justification_program += "\n".join(map(str, (ast.Rule(rule.location, new_head, new_body)
                             for new_head in new_head_s)))
