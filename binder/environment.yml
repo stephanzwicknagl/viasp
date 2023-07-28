@@ -1,0 +1,19 @@
+channels:
+  - conda-forge
+  - potassco
+dependencies:
+  - clingo==5.6.1
+  - flask>=2.0,<=2.2.5
+  - networkx>=2.6
+  - pytest>=6.2.4
+  - python-clingox>=1.0.0
+  - requests==2.26.0
+  - dash>=2.11
+  - flask-cors
+  - pyyaml
+  - dash-html-components
+  - python-igraph>=0.8
+  - numpy
+  - jupyter-dash
+  - clingraph
+  - pygraphviz
