@@ -145,6 +145,11 @@ def test_multiple_aggregates_in_body():
     expected = "#program base. h(1, s(Y), (q(X),p(X,Y),r(Y))) :- s(Y), r(Y),  p(X,Y), q(X), 2 #sum{_X : p(_X,_Y), q(_X) } 7."
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
+def test_aggregates_in_body():
+    rule = "reached(V) :- reached(U), hc(U,V),1{edge(U,V)}."
+    expected = "#program base. h(1,reached(V),(edge(U,V),hc(U,V),reached(U))) :- reached(V); reached(U); hc(U,V); edge(U,V); 1 <= { edge(_U,_V) }; 1 <= { edge(_U,_V) }."
+    assertProgramEqual(transform(rule), parse_program_to_ast(expected))
+
 
 def test_disjunctions_in_head():
     rule = "p(X); q(X) :- r(X)."
