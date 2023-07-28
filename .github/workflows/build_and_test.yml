@@ -25,11 +25,11 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/requirements.txt') }}
+          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/environment.yml') }}
         id: cache
 
       - name: Install requirements
-        run: pip install --upgrade --upgrade-strategy eager -r binder/requirements.txt
+        run: conda install --update-deps --file=binder/environment.yml
         if: steps.cache.outputs.cache-hit != 'true'
 
   node:
@@ -72,7 +72,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/requirements.txt') }}
+          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/environment.yml') }}
         id: cache
 
       - name: Setup node
@@ -125,7 +125,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/requirements.txt') }}
+          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/environment.yml') }}
         id: cache
 
       - name: Build package
@@ -160,13 +160,13 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/requirements.txt') }}
+          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/environment.yml') }}
         id: cache
 
       - name: Install dev dependencies and the backend
         shell: bash -l {0}
         run: |
-          pip install --upgrade --upgrade-strategy eager -r binder/requirements.txt
+          conda install --update-deps --file=binder/environment.yml
           pip install "viasp_backend-$(sh .github/backend-version.sh)-py3-none-any.whl"
         if: steps.cache.outputs.cache-hit != 'true'
       
@@ -203,13 +203,13 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/requirements.txt') }}
+          key: ${{ env.pythonLocation }}-${{ hashFiles('binder/environment.yml') }}
         id: cache
 
       - name: Install dev dependencies, backend and frontend
         shell: bash -l {0}
         run: |
-          pip install --upgrade --upgrade-strategy eager -r binder/requirements.txt
+          conda install --update-deps --file=binder/environment.yml
           pip install "viasp_backend-$(sh .github/backend-version.sh)-py3-none-any.whl"
           pip install "viasp_dash-$(sh .github/frontend-version.sh)-py3-none-any.whl"
         #if: steps.cache.outputs.cache-hit != 'true'
