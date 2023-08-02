@@ -23,10 +23,8 @@ class App(Application):
             if handle.get().unsatisfiable:
                 ctl = ctl.viasp.relax_constraints()
         ctl.viasp.show()
-        # ctl.viasp.clingraph(viz_encoding="clingraph/example5_viz.lp",
-        #     engine="dot",
-        #     graphviz_type="digraph"
-        # )
+        # ctl.viasp.clingraph(viz_encoding="viz_encoding.lp",
+        #    engine="dot", graphviz_type="digraph")
         
 
 app = startup.run()
