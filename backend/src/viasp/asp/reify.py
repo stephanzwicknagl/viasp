@@ -27,7 +27,18 @@ def make_signature(literal: clingo.ast.Literal) -> Tuple[str, int]:
 
 
 def filter_body_arithmetic(elem: clingo.ast.Literal):
-    return elem.atom.ast_type not in ARITH_TYPES
+    elem_ast_type = getattr(getattr(elem, "atom", ""), "ast_type", None)
+    return elem_ast_type not in ARITH_TYPES
+
+def separate_body_conditionals(body: List[AST]) -> List[AST]: 
+    separated: List[AST] = []
+    for body_elem in body:
+        if body_elem.ast_type == ASTType.ConditionalLiteral:
+            separated.append(body_elem.literal)
+            separated.extend(body_elem.condition)
+        else:
+            separated.append(body_elem)
+    return separated
 
 
 class FilteredTransformer(Transformer):
@@ -101,7 +112,7 @@ class DependencyCollector(Transformer):
             new_body.extend(conditional_literal.condition)
         else:
             body_aggregate_elements.append(conditional_literal.literal)
-            for condition in conditional_literal.condition:
+            for condition in filter(filter_body_arithmetic,conditional_literal.condition):
                 body_aggregate_elements.append(condition)
         return conditional_literal.update(**self.visit_children(conditional_literal, **kwargs))
 
@@ -257,10 +268,16 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             for u in filter(filter_body_arithmetic,uu):
                 u_sig = make_signature(u)
                 self.conditions[u_sig].add(rule)
-                for l in rule.body:
-                    if l.atom.ast_type == ASTType.SymbolicAtom:
-                        if (l.atom.symbol.name == u.atom.symbol.name and \
-                            l.sign == ast.Sign.NoSign):
+                for body_item in rule.body:
+                    if hasattr(body_item, "atom") and hasattr(body_item.atom, "ast_type") and body_item.atom.ast_type == ASTType.SymbolicAtom:
+                        if (
+                            hasattr(body_item.atom.symbol, "name")
+                            and hasattr(u, "atom")
+                            and hasattr(u.atom, "symbol")
+                            and hasattr(u.atom.symbol, "name")
+                            and body_item.atom.symbol.name == u.atom.symbol.name
+                            and body_item.sign == ast.Sign.NoSign
+                        ):
                             self.positive_conditions[u_sig].add(rule)
         
         for v in filter(lambda symbol: symbol.atom.ast_type != ASTType.BooleanConstant if hasattr(symbol, "atom") else False, deps.keys()):
@@ -279,8 +296,8 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         if not len(deps) and len(rule.body):
             deps[rule.head] = []
         for _, cond in deps.items():
-            cond.extend(filter(filter_body_arithmetic, rule.body))
-            cond.extend(self.get_body_aggregate_elements(rule.body))
+            flattened_body= separate_body_conditionals(rule.body)
+            cond.extend(filter(filter_body_arithmetic, flattened_body))
         self.register_symbolic_dependencies(deps)
         self.names = self.names.union(names)
         self.register_rule_dependencies(rule, deps)

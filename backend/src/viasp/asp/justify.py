@@ -173,7 +173,6 @@ def save_model(model: Model) -> Collection[str]:
 
 
 def filter_body_aggregates(element: AST):
-    print(f"Filtering element: {element}, {element.ast_type}\n",flush=True)
     if (element.ast_type == ast.ASTType.Aggregate):
         return False
     if (getattr(getattr(element, "atom", None), "ast_type",None) == ast.ASTType.Aggregate):
