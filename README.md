@@ -27,8 +27,11 @@ API.
 
 # Installation
 
-`pip install viasp`
-will install all necessary dependencies.
+1. Clone the repository using `git clone https://github.com/stephanzwicknagl/viasp.git --depth 1`
+2. Create and activate a conda environment
+3. Install pip `conda install pip`
+4. Install viasp in editable mode `pip install -e viasp -e viasp/backend -e viasp/frontend`
+
 
 ## Usage
 
@@ -56,27 +59,6 @@ or what ever port you have set.
 
 If you want to learn more about Dash, check out their [documentation](https://dash.plotly.com/layout).
 
-## Limitations
-
-viASP only works if you run your ASP programs using the python API, e.g.:
-
-```python
-from viasp import Control
-
-program = """
-1{rain; sprinkler}1.
-wet :- rain.
-wet :- sprinkler.
-"""
-ctl = Control(["0"])
-ctl.add("base", [], program)
-ctl.ground([("base", [])])
-with ctl.solve(yield_=True) as handle:
-    for model in handle:
-        ctl.viasp.mark(model)
-ctl.viasp.show()
-```
-
 # Contributing
 
 ## Installation
@@ -92,8 +74,8 @@ ctl.viasp.show()
 
 1. Clone the repository using `git clone https://github.com/stephanzwicknagl/viasp.git --depth 1`
 2. Create and activate a conda environment
-4. Install pip `conda install pip`
-6. Install viasp in editable mode `pip install -e viasp -e viasp/backend -e viasp/frontend`
+3. Install pip `conda install pip`
+4. Install viasp in editable mode `pip install -e viasp -e viasp/backend -e viasp/frontend`
 
 ## Developing the backend
 
