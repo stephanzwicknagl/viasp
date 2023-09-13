@@ -59,6 +59,45 @@ or what ever port you have set.
 
 If you want to learn more about Dash, check out their [documentation](https://dash.plotly.com/layout).
 
+# API Reference
+
+| Name                            | Description and Parameters                                                                                                  |
+|---------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| load\_program\_file             | Load a (non-ground) program file into the viasp backend                                                                     |
+|                                 | `str` *or* `List[str]`: path or list of paths to the program file                                               |
+| load\_program\_string       | Load a (non-ground) program into the viasp backend                                                                          |
+|                                 | `str`: the program to load                                                                                                |
+| add\_program\_file          | Add a (non-ground) program file to the viasp backend                                                                        |
+|                                 | `str`: name, `Sequence[str]`: parameters, `str`: path                                                                 |
+|                                 | *or*                                                                                                                 |
+|                                 | `str`: path                                                                                                               |
+| add\_program\_string        | Add a (non-ground) program to the viasp backend                                                                             |
+|                                 | `str`: name, `Sequence[str]`: parameters, `str`: program                                                              |
+|                                 | *or*                                                                                                                 |
+|                                 | `str`: program                                                                                                               |
+|  mark\_from\_clingo\_model   | Mark a program from a clingo model                                                                                          |
+|                                 | `clingo.solving.Model`: the model to mark                                                                                 |
+| mark\_from\_string          | Parse a string of ASP facts and mark them as a model.                                                                       |
+|                                 | `str`: The facts of the model to mark.                                                                                    |
+| mark\_from\_file            | Parse a file containing a string of ASP facts and mark them as a model.                                                     |
+|                                 | `str` *or* `List[str]` The path or list of paths to the file containing the facts of the model to mark.          |
+| unmark\_from\_clingo\_model | Unmark a program from a clingo model                                                                                        |
+|                                 | `clingo.solving.Model`: the model to unmark                                                                               |
+| unmark\_from\_string   | Parse a string of ASP facts and unmark the corresponding model.                                                             |
+|                                 | `str`: The facts of the model to unmark.                                                                                  |
+| unmark\_from\_file       | Parse a file containing a string of ASP facts and unmark the corresponding model.                                           |
+|                                 | `str` *or* `List[str]`: The path or list of paths to the file containing the facts of the model to unmark. |
+| clear                      | Clear all marked models.                                                                                                    |
+| show                        | Propagate the marked models to the backend and generate the graph.                                                          |
+| get\_relaxed\_program       | Relax constraints in the marked models. Returns the relaxed program as a string.                                            |
+|                                 | `str`: name of the head literal, `bool`: collect variables from body                                                      |
+| relax\_constraints          | Relax constraints in the marked models. Returns a new viASP control object with the relaxed program loaded and all stable models marked. |
+|                                 | `str`: name of the head literal, `bool`: collect variables from body |
+| clingraph                   | Generate a clingraph from the marked models and the visualization encoding.                                                 |
+|                                 | `str`: The path to the visualization encoding, `str`: The visualization engine. `str`: the graph type                    |
+| register\_transformer       | Register a transformer to the backend. The backend transforms the program in the backend before further processing is made. |
+|                                 | `clingo.ast.Transformer`: transformer, `str`: imports used by the transformer, `str`: path to the transformer            |
+
 # Contributing
 
 ## Installation
