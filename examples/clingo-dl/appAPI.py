@@ -600,12 +600,15 @@ class DLApp(Application):
     _propagator: DLPropagator
     _minimize: Optional[Symbol]
     _bound: Optional[int]
+    _transformer: ClingoTransformer
+    _models: dict[str, int]
 
     def __init__(self):
         self._propagator = DLPropagator()
         self._minimize = None
         self._bound = None
         self._transformer = Transformer
+        self._models = dict()
 
     def _parse_minimize(self, val):
         var = parse_term(val)
@@ -646,10 +649,9 @@ class DLApp(Application):
             if symbol.match("dl", 2):
                 n, v = symbol.arguments
                 if n == self._minimize:
+                    self._models[stringified] = v.number
                     self._bound = v.number
                     break
-        viasp.mark_from_string(stringified)
-
 
     def main(self, ctl: Control, files: Sequence[str]):
         '''
@@ -683,6 +685,8 @@ class DLApp(Application):
 
             if self._bound is not None:
                 print("Optimum found")
+        for m in list(filter(lambda i: self._models.get(i) == self._bound, self._models)): 
+            viasp.mark_from_string(m)
         viasp.show()
 
 app = startup.run()

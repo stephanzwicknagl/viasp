@@ -16,7 +16,6 @@ build/
 *deps
 *man
 # notes
-*.md
 # ignore build of viasp dash
 # frontend/viasp_dash/*
 # data
