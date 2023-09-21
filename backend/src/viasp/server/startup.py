@@ -41,6 +41,9 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
         )
 
         backend_url = _default_server_url+_default_requests_pathname_prefix
+    elif 'google.colab' in sys.modules:
+        from google.colab.output import eval_js
+        backend_url=eval_js(f"google.colab.kernel.proxyPort({port})")
     else:
         backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
 
