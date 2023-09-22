@@ -7,10 +7,6 @@
 Try it out in Binder!
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/stephanzwicknagl/viasp/main?filepath=examples%2FIntroduction%20to%20viASP.ipynb)
 
-Try it out in Colab!
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/stephanzwicknagl/viasp/blob/colab_support/examples/Introduction%20to%20viASP%20(colab%20version).ipynb)
-
-
 
 ![Example visualization](docs/img/header.png)
 
