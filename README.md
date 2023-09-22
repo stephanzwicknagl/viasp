@@ -25,37 +25,34 @@ API.
 
 # Installation
 
-1. Clone the repository using `git clone https://github.com/stephanzwicknagl/viasp.git --depth 1`
-2. Create and activate a conda environment
-3. Install pip `conda install pip`
-4. Install viasp in editable mode `pip install -e viasp -e viasp/backend -e viasp/frontend`
+1. Clone the repository using `git clone https://github.com/stephanzwicknagl/viasp.git`
+2. Install viasp in editable mode `pip install -q viasp viasp/backend viasp/frontend`
 
 
-## Usage
+# Usage
 
-### Overview
+## Quickstart
 
-viASP has two parts, its frontend [Dash](https://dash.plotly.com) component and the backend server. To get everything
-running, do the following:
+viASP has two parts, its frontend [Dash](https://dash.plotly.com) component and the backend server. Both can be started and intialized from a single python script. Simply run [`examples/quickstart.py`](examples/quickstart.py) with your encoding
 
-1. Start your dash app, a basic version can be found at [`examples/minimal_dash.py`](examples/minimal_dash.py). This will also automatically start the backend server.
-2. Replace `clingo.Control` with `viasp.Control` in your python scripts and use `viasp.mark(model)` to select the models
-   you want to show
+   $ python quickstart.py encoding.lp
 
-### Quick start
+You can now inspect them using viASP at [http://127.0.0.1:8050/](http://127.0.0.1:8050/).
 
-If you don't have any scripts handy that use the python API of clingo, you can use our quickstart script.
+## API
 
-Simply run [`examples/quickstart.py`](examples/quickstart.py).
+If you have an encoding and stable models on hand without wanting to solve them again, you might want to use the viASP API directly. Adapt and run [`examples/quickstartAPI.py`](examples/quickstartAPI.py) with your encoding and stable models.
 
-It works very similar to the usual `clingo`, you can call it as `python quickstart.py encoding.lp` or
-even `cat encoding | python quickstart.py`
-If you want to filter the models you have to edit the script, however.
+A full documentation of the API can be found [below](#api-reference).
 
-If you now run your ASP programs, you can inspect them using viASP at [http://127.0.0.1:8050/](http://127.0.0.1:8050/)
-or what ever port you have set.
+## Adapting your scripts
 
-If you want to learn more about Dash, check out their [documentation](https://dash.plotly.com/layout).
+If you want to adapt your scripts using the clingo python API, you can chose from interjecting API calls directly or using the Control proxy.
+
+1. Initialize the viASP server using `app = startup.run()`
+2. a.) Call the API to load the program and mark models, or 
+   b.) Replace `clingo.Control` with `viasp.Control` and use `ctl.viasp.mark(model)` to select the models
+3. Append `viasp.show()` and `app.run()` to the end of your script
 
 # API Reference
 
