@@ -8,7 +8,6 @@ dash
 flask-cors
 build
 dash>=2.11
-dash-jupyterlab
 pyyaml
 dash-html-components
 igraph>=0.8
