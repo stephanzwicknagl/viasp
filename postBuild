@@ -3,3 +3,4 @@
 pip install -e .
 pip install -e backend
 pip install -e frontend
+apt install graphviz
