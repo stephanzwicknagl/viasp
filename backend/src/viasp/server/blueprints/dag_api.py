@@ -6,7 +6,7 @@ from typing import Union, Collection, Dict, List
 import igraph
 import networkx as nx
 import numpy as np
-from flask import Blueprint, request, jsonify, abort, Response, url_for
+from flask import Blueprint, request, jsonify, abort, Response, send_file
 from flask_cors import cross_origin
 from networkx import DiGraph
 
@@ -325,10 +325,10 @@ def search():
 def get_image(uuid):
     # check if file with name uuid exists in static folder
     filename = os.path.join("clingraph", f"{uuid}.png")
-    if not os.path.isfile(os.path.join(STATIC_PATH, filename)):
+    file_path = os.path.join(STATIC_PATH, filename)
+    if not os.path.isfile(file_path):
         return None
-    url = url_for('static', filename=filename)
-    return jsonify(url)
+    return send_file(file_path, mimetype='image/png')
 
 def last_nodes_in_graph(graph):
     return [n.uuid for n in graph.nodes() if graph.out_degree(n) == 0]
