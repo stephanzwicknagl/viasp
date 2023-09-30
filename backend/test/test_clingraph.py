@@ -76,4 +76,4 @@ def test_load_from_stdin(client):
     assert len(clingraph_uuids) == 2
     res = client.get(f"/graph/clingraph/{clingraph_uuids[0]}")
     assert res.status_code == 200
-    assert len(json.loads(res.data)) == 54
+    assert res.content_type == 'image/png'
