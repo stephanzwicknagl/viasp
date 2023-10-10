@@ -301,7 +301,7 @@ export function RecursiveSuperNode(props) {
     })
 
     return <div className={classNames}
-        style={{ "backgroundColor": colorPalette.fourty.dark, "color": colorPalette.ten.dark }}
+        style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.ten.dark }}
         id={node.uuid}
         onClick={(e) => { e.stopPropagation(); notifyClick(node) }} >
         <RecursionButton node={node} />
