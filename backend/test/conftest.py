@@ -19,7 +19,7 @@ from viasp.server.blueprints.dag_api import bp as dag_bp
 from viasp.shared.io import DataclassJSONEncoder, DataclassJSONDecoder, clingo_model_to_stable_model
 from viasp.shared.model import ClingoMethodCall, Node, StableModel, SymbolIdentifier
 from viasp.server.database import ProgramDatabase
-
+from viasp.shared.defaults import CLINGRAPH_PATH, GRAPH_PATH, PROGRAM_STORAGE_PATH, STDIN_TMP_STORAGE_PATH
 
 def create_app_with_registered_blueprints(*bps) -> Flask:
     app = Flask(__name__)
@@ -130,3 +130,19 @@ def client_with_a_recursive_graph(serializable_recursive_graph) -> FlaskClient:
     with app.test_client() as client:
         client.post("graph", json=serializable_recursive_graph)
         yield client
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup(request):
+    """Cleanup files once testing is finished."""
+    def remove_test_dir():
+        """ when quitting app, remove all files in the static/clingraph folder and auxiliary program files
+        """
+        import os
+        import shutil
+        if os.path.exists(CLINGRAPH_PATH):
+            shutil.rmtree(CLINGRAPH_PATH)
+        for file in [GRAPH_PATH, PROGRAM_STORAGE_PATH, STDIN_TMP_STORAGE_PATH]:
+            if os.path.exists(file):
+                os.remove(file)
+
+    request.addfinalizer(remove_test_dir)
