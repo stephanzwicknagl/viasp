@@ -17,7 +17,6 @@ from time import time
 import viasp_dash
 from dash import Dash, jupyter_dash
 from dash._jupyter import _jupyter_config
-from .html import display_refresh_button
 
 from viasp import clingoApiClient
 from viasp.shared.defaults import (DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT,
