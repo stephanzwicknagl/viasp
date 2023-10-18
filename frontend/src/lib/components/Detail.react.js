@@ -13,8 +13,8 @@ function DetailSymbolPill(props) {
     const colorPalette = useColorPalette();
     return <span className="detail_atom_view_content"
                  style={{
-                     backgroundColor: colorPalette.ten.bright,
-                     color: colorPalette.sixty.dark
+                     backgroundColor: colorPalette.fifty.dark,
+                     color: colorPalette.thirty.bright
                  }}>{make_atoms_string(symbol)}</span>
 
 }
@@ -97,13 +97,13 @@ export function Detail(props) {
     }
     if (data === null) {
         return <div id="detailSidebar"
-                    style={{backgroundColor: colorPalette.sixty.dark, color: colorPalette.thirty.bright}}
+                    style={{backgroundColor: colorPalette.fifty.dark, color: colorPalette.thirty.dark}}
                     className="detail">
             <h3><CloseButton onClick={clearDetail}/>{type}</h3>
             Loading..
         </div>
     }
-    return <div id="detailSidebar" style={{backgroundColor: colorPalette.sixty.dark, color: colorPalette.thirty.bright}}
+    return <div id="detailSidebar" style={{backgroundColor: colorPalette.sixty.dark, color: colorPalette.thirty.dark}}
                 className="detail">
         <h3><CloseButton onClick={clearDetail}/>{type}</h3>
         {data.map((resp) =>

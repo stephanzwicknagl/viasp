@@ -30,7 +30,7 @@ function SuggestionContent(props) {
     }
     if (value._type === "Signature") {
         suggestionSymbol = "  /"
-        color = colorPalette.ten.bright;
+        color = colorPalette.ten.dark;
         display = `${value.name}/${value.args}`
     }
 

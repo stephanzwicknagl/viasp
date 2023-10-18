@@ -4,6 +4,7 @@ import PropTypes, { node } from "prop-types";
 import useResizeObserver from "@react-hook/resize-observer";
 import {useShownNodes} from "../contexts/ShownNodes";
 import {useSettings} from "../contexts/Settings";
+import {useColorPalette} from "../contexts/ColorPalette";
 import {useFilters} from "../contexts/Filters";
 import { useShownRecursion } from "../contexts/ShownRecursion";
 import { useAnimationUpdater } from "../contexts/AnimationUpdater";
@@ -41,6 +42,7 @@ const useResize = (target) => {
 
 export function Edges(props) {
     const { usingClingraph } = props;
+    const colorPalete = useColorPalette();
     const [edges, setEdges] = React.useState([]);
     const [clingraphEdges, setClingraphEdges] = React.useState([]);
     const target = React.useRef(null)
@@ -87,11 +89,11 @@ export function Edges(props) {
     return <div ref={target} className="edge_container" >
             {edges.map(link => <LineTo
                 key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"top center"}
-                to={link.tgt} zIndex={1} borderColor={"black"} borderStyle={"solid"} borderWidth={1} />)}
+                to={link.tgt} zIndex={1} borderColor={colorPalete.seventy.dark} borderStyle={"solid"} borderWidth={1} />)}
             {!usingClingraph ? null:
             clingraphEdges.map(link => <LineTo
                 key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"top center"}
-                to={link.tgt} zIndex={1} borderColor={"black"} borderStyle={"dashed"} borderWidth={2} />)}
+                to={link.tgt} zIndex={1} borderColor={colorPalete.seventy.bright} borderStyle={"dashed"} borderWidth={2} />)}
         </div>
 
         
