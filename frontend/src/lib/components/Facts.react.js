@@ -58,7 +58,7 @@ function FactBanner(props) {
     }, [])
     const clazzName = `${fact.uuid} facts_banner noselect`
     return <div className={clazzName}
-                style={{"color": colorPalette.sixty, "backgroundColor": colorPalette.ten}}>Facts</div>
+                style={{"color": colorPalette.sixty.dark, "backgroundColor": colorPalette.ten.dark}}>Facts</div>
 }
 
 FactBanner.propTypes = {
