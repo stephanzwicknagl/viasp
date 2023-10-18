@@ -24,7 +24,7 @@ from viasp.shared.defaults import (DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT,
 
 
 
-def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
+def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT, colors=None):
     """ create the dash app, set layout and start the backend on host:port """
        
     # if running in binder, get proxy information
@@ -59,7 +59,8 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     app = Dash(__name__)
     app.layout = viasp_dash.ViaspDash(
         id="myID",
-        backendURL=backend_url
+        backendURL=backend_url,
+        colors=colors
         )
 
     # make sure the backend is up, before continuing with other modules
