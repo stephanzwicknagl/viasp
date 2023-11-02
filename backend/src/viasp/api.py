@@ -16,7 +16,8 @@ import clingo
 from clingo import Control as InnerControl
 from clingo import Model as clingo_Model
 from clingo import ast
-from clingo.ast import AST, ASTSequence, ASTType, Symbol, Transformer
+from clingo.ast import AST, ASTSequence, ASTType, Transformer
+from clingo.symbol import Symbol
 
 from .shared.defaults import STDIN_TMP_STORAGE_PATH
 from .shared.io import clingo_symbols_to_stable_model
@@ -282,7 +283,7 @@ def clear(**kwargs) -> None:
     connector.clear()
 
 
-def get_relaxed_program(*args, **kwargs) -> str:
+def get_relaxed_program(*args, **kwargs) -> Union[str, None]:
     r"""
     Relax constraints in the marked models. Returns
     the relaxed program as a string.
@@ -519,8 +520,8 @@ def mark_from_string(model: str, **kwargs) -> None:
     try:
         symbols = parse_fact_string(model, raise_nonfact=True)
         connector = _get_connector(**kwargs)
-        model = clingo_symbols_to_stable_model(symbols)
-        connector.mark(model)
+        stable_model = clingo_symbols_to_stable_model(symbols)
+        connector.mark(stable_model)
     except RuntimeError as e:
         msg = "Syntactic error the input string can't be read as facts. \n"
         raise InvalidSyntax(msg,str(e)) from None
@@ -588,8 +589,8 @@ def unmark_from_string(model: str, **kwargs) -> None:
     try:
         symbols = parse_fact_string(model, raise_nonfact=True)
         connector = _get_connector(**kwargs)
-        model = clingo_symbols_to_stable_model(symbols)
-        connector.unmark(model)
+        stable_model = clingo_symbols_to_stable_model(symbols)
+        connector.unmark(stable_model)
     except RuntimeError as e:
         msg = "Syntactic error the input string can't be read as facts. \n"
         raise InvalidSyntax(msg,str(e)) from None

@@ -1,18 +1,16 @@
 import json
 import sys
 import shutil
-import re
 from inspect import signature
-from typing import List
+from typing import List, Union
 
 from clingo import Control as InnerControl, Model
 from dataclasses import asdict, is_dataclass
 
 from .clingoApiClient import ClingoClient
-from .shared.defaults import STDIN_TMP_STORAGE_PATH, SHARED_PATH
+from .shared.defaults import STDIN_TMP_STORAGE_PATH
 from .shared.io import clingo_model_to_stable_model
 from .shared.model import StableModel
-from .server.database import ProgramDatabase
 
 
 def is_non_cython_function_call(attr: classmethod):
@@ -33,12 +31,18 @@ class ShowConnector:
         self._database.set_target_stable_model(self._marked)
         self._database.show()
 
-    def unmark(self, model: Model):
-        serialized = clingo_model_to_stable_model(model)
+    def unmark(self, model: Union[Model, StableModel]):
+        if isinstance(model, Model):
+            serialized = clingo_model_to_stable_model(model)
+        else:
+            serialized = model
         self._marked.remove(serialized)
 
-    def mark(self, model: Model):
-        serialized = clingo_model_to_stable_model(model)
+    def mark(self, model: Union[Model, StableModel]):
+        if isinstance(model, Model):
+            serialized = clingo_model_to_stable_model(model)
+        else:
+            serialized = model
         self._marked.append(serialized)
 
     def clear(self):
@@ -47,7 +51,7 @@ class ShowConnector:
     def register_function_call(self, name, sig, args, kwargs):
         self._database.register_function_call(name, sig, args, kwargs)
 
-    def get_relaxed_program(self,  head_name:str = "unsat", collect_variables:bool = True) -> str:
+    def get_relaxed_program(self,  head_name:str = "unsat", collect_variables:bool = True) -> Union[str, None]:
         r"""This method relaxes integrity constraints and returns
         the relaxed program as a string.
 
@@ -123,13 +127,13 @@ class Control:
 
     def load(self, path: str) -> None:
         if path == "-":
-            path = STDIN_TMP_STORAGE_PATH
+            path = str(STDIN_TMP_STORAGE_PATH)
             tmp = sys.stdin.readlines()
             with open(path, "w", encoding="utf-8") as f:
                 f.writelines(tmp)
         else:
             shutil.copy(path, STDIN_TMP_STORAGE_PATH)
-            path = STDIN_TMP_STORAGE_PATH
+            path = str(STDIN_TMP_STORAGE_PATH)
         self.viasp.register_function_call("load", signature(self.passed_control.load), [], kwargs={"path": path}) #? or self.passed_control.load
         self.passed_control.load(path=str(path))
 
