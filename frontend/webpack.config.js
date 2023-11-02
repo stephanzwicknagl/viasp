@@ -71,7 +71,7 @@ module.exports = (env, argv) => {
                         {
                             loader: 'style-loader',
                             options: {
-                                insertAt: 'top'
+                                insert: 'top'
                             }
                         },
                         {
@@ -84,17 +84,27 @@ module.exports = (env, argv) => {
         optimization: {
             minimizer: [
                 new TerserPlugin({
-                    sourceMap: true,
+                    test: /\.js(\?.*)?$/i,
                     parallel: true,
-                    cache: './.build_cache/terser',
                     terserOptions: {
-                        warnings: false,
-                        ie8: false
-                    }
+                        compress: {
+                            drop_console: true,
+                        },
+                    },
                 })
+                //     sourceMap: true,
+                //     parallel: true,
+                //     cache: './.build_cache/terser',
+                //     terserOptions: {
+                //         warnings: false,
+                //         ie8: false
+                //     }
+                // })
             ],
             splitChunks: {
-                name: true,
+                name(module, chunks, cacheGroupKey) {
+                    return `${cacheGroupKey}-${chunks[0].name}`;
+                },
                 cacheGroups: {
                     async: {
                         chunks: 'async',
