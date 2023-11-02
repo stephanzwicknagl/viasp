@@ -21,6 +21,7 @@ from clingo.ast import AST, ASTSequence, ASTType, Symbol, Transformer
 from .shared.defaults import STDIN_TMP_STORAGE_PATH
 from .shared.io import clingo_symbols_to_stable_model
 from .wrapper import ShowConnector, Control as viaspControl
+from .exceptions import InvalidSyntax
 
 __all__ = [
     "load_program_file",
@@ -73,6 +74,10 @@ def load_program_file(path: Union[str, List[str]], **kwargs) -> None:
           url of the viasp backend
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
+    
+    See Also
+    --------
+    ``load_program_string``
     """
     connector = _get_connector(**kwargs)
     if isinstance(path, str):
@@ -93,6 +98,10 @@ def load_program_string(program: str, **kwargs) -> None:
           url of the viasp backend
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
+    
+    See Also
+    --------
+    ``load_program_file``
     """
     connector = _get_connector(**kwargs)
     with open(STDIN_TMP_STORAGE_PATH, "w", encoding="utf-8") as f:
@@ -247,6 +256,12 @@ def unmark_from_clingo_model(model: clingo_Model, **kwargs) -> None:
           url of the viasp backend
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
+    
+    See Also
+    --------
+    ``mark_from_clingo_model``
+    ``unmark_from_string``
+    ``unmark_from_file``
     """
     connector = _get_connector(**kwargs)
     connector.unmark(model)
@@ -279,6 +294,10 @@ def get_relaxed_program(*args, **kwargs) -> str:
           url of the viasp backend
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
+    
+    See also
+    --------
+    ``relax_constraints``
     """
     head_name = kwargs.pop("head_name", "unsat")
     collect_variables = kwargs.pop("collect_variables", True)
@@ -298,6 +317,10 @@ def relax_constraints(*args, **kwargs) -> viaspControl:
           url of the viasp backend
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
+
+    See also
+    --------
+    ``get_relaxed_program``
     """
     head_name = kwargs.pop("head_name", "unsat")
     collect_variables = kwargs.pop("collect_variables", True)
@@ -484,16 +507,23 @@ def mark_from_string(model: str, **kwargs) -> None:
           url of the viasp backend
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
+        
+    :raises: :py:class:`InvalidSyntax` if the string contains non-facts.
 
     See Also
     --------
     ``mark_from_clingo_model``
     ``mark_from_file``
+    ``unmark_from_string``
     """
-    symbols = parse_fact_string(model, raise_nonfact=True)
-    connector = _get_connector(**kwargs)
-    model = clingo_symbols_to_stable_model(symbols)
-    connector.mark(model)
+    try:
+        symbols = parse_fact_string(model, raise_nonfact=True)
+        connector = _get_connector(**kwargs)
+        model = clingo_symbols_to_stable_model(symbols)
+        connector.mark(model)
+    except RuntimeError as e:
+        msg = "Syntactic error the input string can't be read as facts. \n"
+        raise InvalidSyntax(msg,str(e)) from None
 
 
 def mark_from_file(path: Union[str, List[str]], **kwargs) -> None:
@@ -515,11 +545,14 @@ def mark_from_file(path: Union[str, List[str]], **kwargs) -> None:
           url of the viasp backend
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
+    
+    :raises: :py:class:`InvalidSyntax` if the string contains non-facts.
 
     See Also
     --------
     ``mark_from_clingo_model``
     ``mark_from_string``
+    ``unmark_from_file``
     """
     mark_from_string(_get_program_string(path), **kwargs)
 
@@ -545,15 +578,21 @@ def unmark_from_string(model: str, **kwargs) -> None:
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
 
+    :raises: :py:class:`InvalidSyntax` if the string contains non-facts.
+
     See Also
     --------
     ``unmark_from_clingo_model``
-    ``unmark_from_string``
+    ``unmark_from_file``
     """
-    symbols = parse_fact_string(model, raise_nonfact=True)
-    connector = _get_connector(**kwargs)
-    model = clingo_symbols_to_stable_model(symbols)
-    connector.unmark(model)
+    try:
+        symbols = parse_fact_string(model, raise_nonfact=True)
+        connector = _get_connector(**kwargs)
+        model = clingo_symbols_to_stable_model(symbols)
+        connector.unmark(model)
+    except RuntimeError as e:
+        msg = "Syntactic error the input string can't be read as facts. \n"
+        raise InvalidSyntax(msg,str(e)) from None
 
 
 def unmark_from_file(path: str, **kwargs) -> None:
@@ -569,7 +608,6 @@ def unmark_from_file(path: str, **kwargs) -> None:
 
     Changes to marked models are propagated to the backend when ``show`` is called.
 
-
     :param path: ``str``
         The path to the file containing the facts of the model to unmark.
     :param \**kwargs:
@@ -577,6 +615,8 @@ def unmark_from_file(path: str, **kwargs) -> None:
           url of the viasp backend
         * *_viasp_client* (``ClingoClient``) --
           a viasp client object
+    
+    :raises: :py:class:`InvalidSyntax` if the string contains non-facts.
 
     See Also
     --------
