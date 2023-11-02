@@ -385,7 +385,7 @@ class NonFactVisitor:
         ASTType.Pool,
         ASTType.BooleanConstant,
         ASTType.Comparison,
-        getattr(ASTType, "Guard" if clingo.version() >= (5, 6, 0)
+        getattr(ASTType, "Guard" if isinstance(clingo.version(), tuple) and clingo.version() >= (5, 6, 0)
                          else "AggregateGuard"),
         ASTType.ConditionalLiteral,
         ASTType.Aggregate,
