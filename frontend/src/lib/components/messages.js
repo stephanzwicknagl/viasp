@@ -1,7 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 import {useColorPalette} from "../contexts/ColorPalette";
-import {RiErrorWarningFill} from "react-icons/all";
+import {RiErrorWarningFill} from "react-icons/ri";
 import {useMessages} from "../contexts/UserMessages";
 
 

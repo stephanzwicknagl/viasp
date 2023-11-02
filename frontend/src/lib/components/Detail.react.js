@@ -5,7 +5,7 @@ import PropTypes from "prop-types";
 import {useColorPalette} from "../contexts/ColorPalette";
 import {useSettings} from "../contexts/Settings";
 import {SIGNATURE, SYMBOL} from "../types/propTypes";
-import {IoChevronDown, IoChevronForward, IoCloseSharp} from "react-icons/all";
+import {IoChevronDown, IoChevronForward, IoCloseSharp} from "react-icons/io5";
 
 
 function DetailSymbolPill(props) {
