@@ -16,7 +16,7 @@ author = 'Stephan Zwicknagl, Luis Glaser'
 extensions = [
     'nbsphinx',
     'sphinx_rtd_theme',
-    # 'sphinx.ext.autodoc',
+    'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosectionlabel',
     'sphinx.ext.intersphinx'
@@ -34,6 +34,11 @@ napoleon_use_admonition_for_references = True
 #     "Factbase": "clingraph.orm.Factbase",
 #     "dict-like": ":term:`array-like`",
 # }
+
+# autodocs options
+add_module_names = False
+autodoc_member_order = 'bysource'
+autodoc_typehints = 'none'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

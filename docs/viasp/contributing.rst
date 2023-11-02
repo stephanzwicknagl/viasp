@@ -33,3 +33,8 @@ Developing the frontend
 3. Run :code:`npx webpack` to pack the javascript
 4. Run viASP with a clingo program :code:`viasp encoding.lp`
 
+.. Note::
+    The JavaScript and CSS files are located at ``/frontend/src/lib``. The frontend code needs to be packed before changes become visible to the webpage.
+
+Code your heart out!
+
