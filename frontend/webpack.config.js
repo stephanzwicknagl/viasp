@@ -1,5 +1,4 @@
 const path = require('path');
-const TerserPlugin = require('terser-webpack-plugin');
 const webpack = require('webpack');
 const WebpackDashDynamicImport = require('@plotly/webpack-dash-dynamic-import');
 const packagejson = require('./package.json');
@@ -28,12 +27,12 @@ module.exports = (env, argv) => {
     }
 
     let filename = (overrides.output || {}).filename;
-    if(!filename) {
+    if (!filename) {
         const modeSuffix = mode === 'development' ? 'dev' : 'min';
         filename = `${dashLibraryName}.${modeSuffix}.js`;
     }
 
-    const entry = overrides.entry || {main: './src/lib/index.js'};
+    const entry = overrides.entry || { main: './src/lib/index.js' };
 
     const devtool = overrides.devtool || 'source-map';
 
@@ -55,6 +54,11 @@ module.exports = (env, argv) => {
             libraryTarget: 'window',
         },
         devtool,
+        devServer: {
+            static: {
+                directory: path.join(__dirname, '/')
+            }
+        },
         externals,
         module: {
             rules: [
@@ -82,29 +86,8 @@ module.exports = (env, argv) => {
             ],
         },
         optimization: {
-            minimizer: [
-                new TerserPlugin({
-                    test: /\.js(\?.*)?$/i,
-                    parallel: true,
-                    terserOptions: {
-                        compress: {
-                            drop_console: true,
-                        },
-                    },
-                })
-                //     sourceMap: true,
-                //     parallel: true,
-                //     cache: './.build_cache/terser',
-                //     terserOptions: {
-                //         warnings: false,
-                //         ie8: false
-                //     }
-                // })
-            ],
             splitChunks: {
-                name(module, chunks, cacheGroupKey) {
-                    return `${cacheGroupKey}-${chunks[0].name}`;
-                },
+                name: '[name].js',
                 cacheGroups: {
                     async: {
                         chunks: 'async',
