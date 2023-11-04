@@ -79,12 +79,12 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '19'
-      # - name: Get node from cache
-      #   id: cache-node-modules
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: ./frontend/node_modules
-      #     key: node-modules-${{ hashFiles('./frontend/package-lock.json') }}
+      - name: Get node from cache
+        id: cache-node-modules
+        uses: actions/cache@v3
+        with:
+          path: ./frontend/node_modules
+          key: node-modules-${{ hashFiles('./frontend/package-lock.json') }}
 
       - name: Building react
         working-directory: ./frontend
