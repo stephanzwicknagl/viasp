@@ -20,20 +20,19 @@ Keyword arguments:
 
 - colors (dict; optional):
     Colors to be used in the application."""
+    _children_props = []
+    _base_nodes = ['children']
+    _namespace = 'viasp_dash'
+    _type = 'ViaspDash'
     @_explicitize_args
     def __init__(self, id=Component.UNDEFINED, colors=Component.UNDEFINED, clickedOn=Component.UNDEFINED, backendURL=Component.UNDEFINED, **kwargs):
         self._prop_names = ['id', 'backendURL', 'clickedOn', 'colors']
-        self._type = 'ViaspDash'
-        self._namespace = 'viasp_dash'
         self._valid_wildcard_attributes =            []
         self.available_properties = ['id', 'backendURL', 'clickedOn', 'colors']
         self.available_wildcard_properties =            []
         _explicit_args = kwargs.pop('_explicit_args')
         _locals = locals()
-        _locals.update(kwargs)  # For wildcard attrs
-        args = {k: _locals[k] for k in _explicit_args if k != 'children'}
-        for k in []:
-            if k not in args:
-                raise TypeError(
-                    'Required argument `' + k + '` was not specified.')
+        _locals.update(kwargs)  # For wildcard attrs and excess named props
+        args = {k: _locals[k] for k in _explicit_args}
+
         super(ViaspDash, self).__init__(**args)
