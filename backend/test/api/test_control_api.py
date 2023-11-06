@@ -7,7 +7,7 @@ from viasp.shared.model import ClingoMethodCall
 
 def test_add_call_endpoint(client, clingo_call_run_sample):
     bad_value = {"foo": "bar"}
-    res = client.post("/control/add_call", data=bad_value)
+    res = client.post("/control/add_call", json=bad_value)
     assert res.status_code == 400
     res = client.post("/control/add_call", json=clingo_call_run_sample)
     assert res.status_code == 200
