@@ -3,6 +3,7 @@ import { useHighlightedSymbol } from "../contexts/HighlightedSymbol";
 import { useShownRecursion } from "../contexts/ShownRecursion";
 import Xarrow from "react-xarrows";
 import { useAnimationUpdater } from "../contexts/AnimationUpdater";
+import PropTypes from 'prop-types'
 
 export function Arrows() {
     const [highlightedSymbol, ,] = useHighlightedSymbol();

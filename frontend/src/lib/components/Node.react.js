@@ -150,7 +150,7 @@ function NodeContent(props) {
             </div>
         })
 
-    return <div className={containerNames} style={{ "color": colorPalette.thirty.bright }}>
+    return <div className={containerNames} style={{ "color": colorPalette.thirty.dark }}>
         <span className={classNames2}>{renderedSymbols.length > 0 ? renderedSymbols : ""}</span>
     </div>
 }
@@ -301,7 +301,7 @@ export function RecursiveSuperNode(props) {
     })
 
     return <div className={classNames}
-        style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.ten.dark }}
+        style={{ "backgroundColor": colorPalette.fourty.dark, "color": colorPalette.fourty.bright }}
         id={node.uuid}
         onClick={(e) => { e.stopPropagation(); notifyClick(node) }} >
         <RecursionButton node={node} />
