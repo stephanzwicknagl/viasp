@@ -41,7 +41,7 @@
     "eslint-plugin-import": "^2.29.0",
     "eslint-plugin-react": "^7.33.2",
     "prop-types": "^15.8.1",
-    "react-docgen": "^7.0.0",
+    "react-docgen": "^5.4.3",
     "react-lineto": "^3.3.0",
     "style-loader": "^3.3.3",
     "styled-jsx": "^5.1.2",
