@@ -68,8 +68,6 @@
 }
 
 .toggle_part.unselected:hover {
-    border: 1px solid #2196F3;
-    color: #2196F3;
     transition: opacity .8s ease-in-out;
     -moz-transition: opacity .8s ease-in-out;
     -webkit-transition: opacity .8s ease-in-out;

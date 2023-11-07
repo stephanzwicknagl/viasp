@@ -92,21 +92,12 @@ export function Detail(props) {
         return () => mounted = false;
     }, [shows])
 
-    if (shows === null) {
-        return null;
-    }
-    if (data === null) {
-        return <div id="detailSidebar"
-                    style={{backgroundColor: colorPalette.fifty.dark, color: colorPalette.thirty.dark}}
-                    className="detail">
-            <h3><CloseButton onClick={clearDetail}/>{type}</h3>
-            Loading..
-        </div>
-    }
-    return <div id="detailSidebar" style={{backgroundColor: colorPalette.sixty.dark, color: colorPalette.thirty.dark}}
-                className="detail">
+    return <div id="detailSidebar" style={{ backgroundColor: colorPalette.info, color: colorPalette.thirty.dark}}
+                className={shows === null ? `detail`:`detail detail-open`}>
         <h3><CloseButton onClick={clearDetail}/>{type}</h3>
-        {data.map((resp) =>
+        {data===null ? 
+            <div>Loading..</div> :
+            data.map((resp) =>
             <DetailForSignature key={`${resp[0].name}/${resp[0].args}`} signature={resp[0]} symbols={resp[1]}
                                 uuid={shows}/>)}
     </div>

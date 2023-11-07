@@ -28,7 +28,7 @@ export const NODE = PropTypes.exact({
     atoms: PropTypes.array,
     diff: PropTypes.array,
     rule_nr: PropTypes.number,
-    reason: PropTypes.array, 
+    reason: PropTypes.oneOf([PropTypes.array, PropTypes.bool]), 
     recursive: PropTypes.oneOf([PropTypes.bool, GRAPH]),
     uuid: PropTypes.string
 })

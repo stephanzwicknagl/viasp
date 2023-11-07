@@ -74,9 +74,6 @@ module.exports = (env, argv) => {
                     use: [
                         {
                             loader: 'style-loader',
-                            options: {
-                                insert: 'top'
-                            }
                         },
                         {
                             loader: 'css-loader',

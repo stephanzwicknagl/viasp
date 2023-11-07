@@ -16,7 +16,7 @@ function ClearMarked() {
 
     return <span onClick={() => setHighlightedSymbol([])}
                  className={className}
-                 style={{ backgroundColor: colorPalette.sixty.dark}}>
+                 style={{ backgroundColor: colorPalette.success}}>
             clear marked symbols</span>
 }
 

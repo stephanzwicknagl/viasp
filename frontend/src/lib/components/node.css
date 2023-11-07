@@ -19,19 +19,6 @@
     filter: drop-shadow(0 0 2px #333);
 }
 
-.mouse_over_symbol {
-    margin: 1px 2px;
-    border-radius: 7px;
-}
-
-.mouse_over_symbol:hover {
-    box-shadow: inset 0px 2px 2px 0 rgba(0, 0, 0, 0.2),
-            inset 0px 1px 20px 0px rgba(0, 0, 0, 0.2);
-    transition: .2s ease-in-out;
-    -moz-transition: .2s ease-in-out;
-    -webkit-transition: .2s ease-in-out;
-}
-
 .highlighted_node {
     transition: drop-shadow .1s;
     filter: drop-shadow(0 0 2px #333);
@@ -64,17 +51,10 @@
 }
 
 .symbol {
+    margin: 1px 1px;
     display: flex;
     border-radius: 7px;
     translate: 1px -3px;
-}
-
-.symbol:hover {
-    transform: translate(0px, 2px);
-    transform-box: fill-box;
-    transition: .2s ease-in-out;
-    -moz-transition: .2s ease-in-out;
-    -webkit-transition: .2s ease-in-out;
 }
 
 .mark_symbol {
