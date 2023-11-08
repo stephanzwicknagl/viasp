@@ -4,7 +4,6 @@
     float: right;
     display: flex;
     position: absolute;
-    color: #444;
     z-index: 10;
     right: 0;
     top: 0;
@@ -47,38 +46,10 @@
     border-radius: 0 0 0 5px;
 }
 
-
 .toggle_part {
     font-family: monospace;
     border-radius: 3px 3px 3px 3px;
     cursor: pointer;
-}
-
-.toggle_part.selected {
-    border: 1px solid #2196F3;
-    opacity: .8;
-    padding-right: 47px;
-    padding-left: 47px;
-}
-
-.toggle_part.unselected {
-    border: 1px solid #444;
     padding-right: 20px;
     padding-left: 20px;
 }
-
-.toggle_part.unselected:hover {
-    transition: opacity .8s ease-in-out;
-    -moz-transition: opacity .8s ease-in-out;
-    -webkit-transition: opacity .8s ease-in-out;
-}
-
-.toggle_part.selected:hover {
-    opacity: 1;
-    transition: opacity .8s ease-in-out;
-    -moz-transition: opacity .8s ease-in-out;
-    -webkit-transition: opacity .8s ease-in-out;
-
-}
-
-

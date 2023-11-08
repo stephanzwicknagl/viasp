@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {Suspense} from 'react';
 import PropTypes from 'prop-types';
 import {Row, Boxrow} from "../components/Row.react";
 import "../components/main.css";
@@ -12,7 +12,7 @@ import {TransformationProvider, useTransformations} from "../contexts/transforma
 import { ColorPaletteProvider, useColorPalette } from "../contexts/ColorPalette"; 
 import {HighlightedNodeProvider} from "../contexts/HighlightedNode";
 import {showError, useMessages, UserMessagesProvider} from "../contexts/UserMessages";
-import {Settings} from "../components/settings";
+import { Settings } from '../LazyLoader';
 import {UserMessages} from "../components/messages";
 import {DEFAULT_BACKEND_URL, SettingsProvider, useSettings} from "../contexts/Settings";
 import {FilterProvider} from "../contexts/Filters";
@@ -45,7 +45,7 @@ function GraphContainer(props) {
             notifyDash(clickedOn)
             setDetail(clickedOn.uuid)
             }}
-        /><Settings/>
+        /><Suspense fallback={<div>Loading...</div>}><Settings /></Suspense>
         {transformations.map(({transformation}, i) => {
             if (i === lastNodeInGraph && usingClingraph) {
                 return <div>
