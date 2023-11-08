@@ -16,7 +16,7 @@ export const defaultPalette = {
     warning: "#FFAB00",
     danger: "#FF5630",
     light: "#F4F5F7",
-    medium: "#a9a9a94a",
+    medium: "#a9a9a9",
     dark: "#444",
     // node border colors
     ten: { dark: "#0052CC", bright: "#0052CC"}, 
