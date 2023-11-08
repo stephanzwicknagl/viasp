@@ -1,20 +1,21 @@
-import React, {useState} from "react";
+import React, {lazy, Suspense} from "react";
 import { make_atoms_string } from "../utils/index";
-import './node.css'
-import PropTypes, { symbol } from "prop-types";
+import './node.css';
+import PropTypes from "prop-types";
+import { Symbol } from "./Symbol.react";
 import { hideNode, showNode, useShownNodes } from "../contexts/ShownNodes";
 import { useColorPalette } from "../contexts/ColorPalette";
 import { useHighlightedNode } from "../contexts/HighlightedNode";
 import { useHighlightedSymbol } from "../contexts/HighlightedSymbol";
 import { useShownRecursion } from "../contexts/ShownRecursion";
 import { useSettings } from "../contexts/Settings";
-import { NODE, SYMBOLIDENTIFIER } from "../types/propTypes";
+import { NODE } from "../types/propTypes";
 import { useFilters } from "../contexts/Filters";
 import AnimateHeight from 'react-animate-height';
 import { useAnimationUpdater } from "../contexts/AnimationUpdater";
-import { Icon } from '@iconify/react';
 import clockwiseVerticalArrows from '@iconify/icons-emojione-monotone/clockwise-vertical-arrows';
 import arrowDownDoubleFill from '@iconify/icons-ri/arrow-down-double-fill';
+import { IconWrapper as RealComponent } from '../LazyLoader';
 
 function any(iterable) {
     for (let index = 0; index < iterable.length; index++) {
@@ -23,66 +24,6 @@ function any(iterable) {
         }
     }
     return false;
-}
-
-function Symbol(props) {
-    const { symbolIdentifier, isSubnode, highlightedSymbols, reasons, handleClick } = props;
-    const [isHovered, setIsHovered] = useState(false);
-    const colorPalette = useColorPalette();
-
-    let atomString = make_atoms_string(symbolIdentifier.symbol)
-    let suffix = `_${isSubnode ? "sub" : "main"}`
-    let [classNames1, style1] = useHighlightedSymbolToCreateClassName(highlightedSymbols, symbolIdentifier.uuid);
-    atomString = atomString.length === 0 ? "" : atomString;
-
-    if (reasons !== undefined && reasons.length !== 0 && isHovered) {
-        style1 = { backgroundColor: colorPalette.success }; // Replace with your hover color
-    }
-
-    const handleMouseEnter = () => setIsHovered(true);
-    const handleMouseLeave = () => setIsHovered(false);
-
-    return <div className={classNames1} id={symbolIdentifier.uuid + suffix} style={style1} onClick={(e) => handleClick(e, symbolIdentifier)} onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>{atomString}</div>
-}
-
-Symbol.propTypes = {
-    /**
-     * The symbolidentifier of the symbol to display
-     */
-    symbolIdentifier: SYMBOLIDENTIFIER,
-    /**
-     * If the symbol is a subnode
-     */
-    isSubnode: PropTypes.bool,
-    /**
-     * All symbols that are currently highlighted
-     */
-    highlightedSymbols: PropTypes.array,
-    /**
-     * The reasons of the symbol
-     */
-    reasons: PropTypes.array,
-    /**
-     * The function to be called if the symbol is clicked on
-     */
-    handleClick: PropTypes.func,
-
-}
-
-function useHighlightedSymbolToCreateClassName(compareHighlightedSymbol, symbol) {
-    let classNames = "symbol";
-    let style = null;
-
-    const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol);
-    const j = compareHighlightedSymbol.map(item => item.src).indexOf(symbol);
-    if (i !== -1) {
-        classNames += " mark_symbol";
-        style = { "backgroundColor": compareHighlightedSymbol[i].color };
-    }
-    else if (j !== -1) {
-        classNames += " mark_symbol";
-    }
-    return [classNames, style]
 }
 
 function NodeContent(props) {
@@ -187,16 +128,16 @@ function NodeContent(props) {
     let renderedSymbols = contentToShow.filter(symbol =>
         symbolShouldBeShown(symbol)).map(s => {
             // const [classNames1, style1] = useHighlightedSymbolAndReasonToCreateClassName(highlightedSymbol, s.uuid, node.reason[make_atoms_string(s)]);
-            return <Symbol key={JSON.stringify(s)} symbolIdentifier={s} isSubnode={isSubnode} highlightedSymbols={highlightedSymbol} reasons={node.reason[make_atoms_string(s)]} handleClick={handleClick}/>
+            return <Symbol key={JSON.stringify(s)} symbolIdentifier={s} isSubnode={isSubnode} reasons={node.reason[make_atoms_string(s)]} handleClick={handleClick}/>
         })
 
-    return <div className={containerNames} style={{ "color": colorPalette.thirty.dark }}>
+    return <div className={containerNames} style={{ "color": colorPalette.dark }}>
         <span className={classNames2}>{renderedSymbols.length > 0 ? renderedSymbols : ""}</span>
     </div>
 }
 
 NodeContent.propTypes = {
-    /**node, setHeight, parentID, setIsOverflowV, expandNode, isSubnode
+    /**
      * object containing the node data to be displayed
      */
     node: NODE,
@@ -236,7 +177,9 @@ function RecursionButton(props) {
     return <div className={"recursion_button"} onClick={handleClick}>
         {!node.recursive ? null :
             <div className={"recursion_button_text"} style={{ "backgroundColor": colorPalette.primary, "color": colorPalette.sixty.dark }}>
-                <Icon icon={clockwiseVerticalArrows} width="9" height="9" />
+                <Suspense fallback={<div>R</div>}>
+                    <RealComponent icon={clockwiseVerticalArrows} width="9" height="9" />
+                </Suspense>
             </div>
         }
     </div>
@@ -254,7 +197,9 @@ function OverflowButton(props) {
     return <div style={{ "backgroundColor": colorPalette.primary, "color": colorPalette.sixty.dark }}
                 className={"bauchbinde"} onClick={handleClick}>
         <div className={"bauchbinde_text"}>
-            <Icon icon={arrowDownDoubleFill} width="12" height="12" />
+            <Suspense fallback={<div>...</div>}>
+                <RealComponent icon={arrowDownDoubleFill} width="12" height="12" />
+            </Suspense>
         </div>
     </div>
 }
