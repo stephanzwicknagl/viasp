@@ -96,7 +96,8 @@ def dataclass_to_dict(o):
     if isinstance(o, Node):
         sorted_atoms = sorted(o.atoms, key=lambda x: x.symbol)
         sorted_diff = sorted(o.diff, key=lambda x: x.symbol)
-        return {"_type": "Node", "atoms": sorted_atoms, "diff": sorted_diff, "reason": o.reason, "recursive": o.recursive, "uuid": o.uuid,
+        sorted_reason = {} if len(o.reason) == 0 else o.reason
+        return {"_type": "Node", "atoms": sorted_atoms, "diff": sorted_diff, "reason": sorted_reason, "recursive": o.recursive, "uuid": o.uuid,
                 "rule_nr": o.rule_nr}
     elif isinstance(o, TransformationError):
         return {"_type": "TransformationError", "ast": o.ast, "reason": o.reason}
