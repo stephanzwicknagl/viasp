@@ -16,7 +16,14 @@ function useHighlightedSymbolToCreateClassName(symbol) {
     const j = compareHighlightedSymbol.map(item => item.src).indexOf(symbol);
     if (i !== -1) {
         classNames += " mark_symbol";
-        style = { "backgroundColor": compareHighlightedSymbol[i].color };
+        // all colors where item.tgt is equal to symbol
+        let colors = compareHighlightedSymbol.map(item => item.tgt).map((item, index) => item === symbol ? index : -1).filter(item => item !== -1).map(item => compareHighlightedSymbol[item].color).reverse();
+        let gradientStops = colors.map((color, index, array) => {
+            let start = (index / array.length) * 100;
+            let end = ((index + 1) / array.length) * 100;
+            return `${color} ${start}%, ${color} ${end}%`;
+        }).join(', ');
+        style = { background: `linear-gradient(-45deg, ${gradientStops})` };
     }
     else if (j !== -1) {
         classNames += " mark_symbol";
@@ -38,7 +45,7 @@ export function Symbol(props) {
     if (reasons !== undefined && reasons.length !== 0 && isHovered) {
         style1 = { backgroundColor: colorPalette.success };
     }
-    if (isClicked) {
+    if (reasons !== undefined && reasons.length !== 0 && isClicked) {
         style1 = { backgroundColor: colorPalette.info };
     }
 
