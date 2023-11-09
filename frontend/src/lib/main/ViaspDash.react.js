@@ -1,6 +1,6 @@
 import React, {Suspense} from 'react';
 import PropTypes from 'prop-types';
-import {Row, Boxrow} from "../components/Row.react";
+import { RowTemplate, Row, Boxrow} from "../components/Row.react";
 import "../components/main.css";
 import {Detail} from "../components/Detail.react";
 import {Search} from "../components/Search.react";
@@ -21,6 +21,7 @@ import { HighlightedSymbolProvider } from '../contexts/HighlightedSymbol';
 import { useHighlightedSymbol } from '../contexts/HighlightedSymbol';
 import { ShownRecursionProvider } from '../contexts/ShownRecursion';
 import { AnimationUpdaterProvider } from '../contexts/AnimationUpdater';
+import DraggableList from 'react-draggable-list';
 
 
 
@@ -37,19 +38,22 @@ function GraphContainer(props) {
     const {notifyDash, usingClingraph} = props;
     const {state: {transformations}} = useTransformations()
     const lastNodeInGraph = transformations.length - 1;
-    const colorPalette = useColorPalette();
-    const background = Object.values(colorPalette.twenty);
 
-    
     return <div className="graph_container">
         <Facts /><Suspense fallback={<div>Loading...</div>}><Settings /></Suspense>
-        {transformations.map(({transformation}, i) => {
+        <DraggableList
+            itemKey="id"
+            template={RowTemplate}
+            list={transformations}
+            onMoveEnd={() => {}}
+            container={() => document.body}
+          />
+        {/* {transformations.map(({transformation}, i) => {
             if (i === lastNodeInGraph && usingClingraph) {
                 return <div>
                         <Row
                             key={transformation.id}
                             transformation={transformation}
-                            color={background[i % background.length]}
                         />
                         <Boxrow
                             key={transformation.id}
@@ -60,10 +64,9 @@ function GraphContainer(props) {
                 return <Row
                     key={transformation.id}
                     transformation={transformation}
-                    color={background[i % background.length]}
                     />
             }
-        })}
+        })} */}
         </div>
 }
 

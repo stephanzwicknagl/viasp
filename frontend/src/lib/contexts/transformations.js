@@ -33,7 +33,7 @@ const transformationReducer = (state = initialState, action) => {
     if (action.type === ADD_TRANSFORMATION) {
         return {
             ...state,
-            transformations: state.transformations.concat({transformation: action.t, shown: true})
+            transformations: state.transformations.concat({transformation: action.t, shown: true, id: action.t.id})
         }
     }
     if (action.type === SHOW_ONLY_TRANSFORMATION) {

@@ -19,29 +19,42 @@ function loadClingraphChildren(id, backendURL) {
 }
 
 export function RowTemplate(props) {
-    const { RowItem, itemSelected, anySelected, dragHandleProps, commonProps } = props;
-    const { transformation, color, isClingraph } = RowItem || {};
+    const { item, itemSelected, anySelected, dragHandleProps, commonProps } = props;
+    const transformation = item.transformation;
+    const scale = itemSelected * 0.02 + 1;
+    const shadow = itemSelected * 15 + 1;
+    const dragged = itemSelected !== 0;
+    const colorPalette = useColorPalette();
+    const background = Object.values(colorPalette.twenty);
 
     if (transformation === undefined) {
-        return <div></div>
+        return <div>teste</div>
     };
-    const d = !isClingraph ?
-        <Row key={transformation.id} transformation={transformation} color={color} /> :
-        <Boxrow key={`clingraph_${transformation.id}`} transformation={transformation} />
+    // const d = !isClingraph ?
+        // <Row key={transformation.id} transformation={transformation} /> :
+        // <Boxrow key={`clingraph_${transformation.id}`} transformation={transformation} />    
 
-    return d
+    return (<div 
+            className="row_container"
+            style={{
+            transform: `scale(${scale})`,
+            boxShadow: `rgba(0, 0, 0, 0.3) 0px ${shadow}px ${2 * shadow}px 0px`,
+            background: background[transformation.id % background.length]
+        }}><div class="dragHandleContainer"><div className="dragHandle" {...dragHandleProps}/></div>
+        <Row key={transformation.id} transformation={transformation} />
+    </div>)
 };
 
 
 
 export function Row(props) {
-    const {transformation, color} = props;
+    const {transformation} = props;
 
     const [nodes, setNodes] = React.useState(null);
     const [isOverflowH, setIsOverflowH] = React.useState(false);
     const [overflowBreakingPoint, setOverflowBreakingPoint] = React.useState(null);
     const ref = React.useRef(null);
-    const {state: {transformations}, dispatch} = useTransformations();
+    const {state: {transformations}} = useTransformations();
     const {backendURL} = useSettings();
     const [shownRecursion, ,] = useShownRecursion();
 
@@ -87,7 +100,7 @@ export function Row(props) {
     })
     if (nodes === null) {
         return (
-            <div className="row_container">
+            <div >
                 <RowHeader transformation={transformation.rules}/>
                 <div>Loading Transformations..</div>
             </div>
@@ -96,9 +109,9 @@ export function Row(props) {
     const showNodes = transformations.find(({transformation: t,
                                              shown
                                             }) => transformation.id === t.id && shown) !== undefined
-    const style1 = { "backgroundColor": color};
+    // const style1 = { "backgroundColor": background[transformation.id % background.length] };
 
-    return <div className="row_container" style={style1}>
+    return <div>
         <RowHeader transformation={transformation.rules} />
         {!showNodes ? null :
             <div ref={ref} className="row_row" >{nodes.map((child) => { 
@@ -118,16 +131,6 @@ Row.propTypes = {
      * The Transformation object to be displayed
      */
     transformation: TRANSFORMATION,
-
-    /**
-     * A callback function when the user clicks on the RuleHeader
-     */
-    notifyClick: PropTypes.func,
-
-    /**
-     * The backgroundcolor of the row
-     */
-    color: PropTypes.string
 };
 
 

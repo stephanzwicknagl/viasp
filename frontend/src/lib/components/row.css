@@ -65,3 +65,33 @@
     align-content: center;
     background: transparent;
 }
+/* .row_container::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    background: white;
+    z-index: 1;
+} */
+.dragHandleContainer {
+    display: flex;
+    align-items: center;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+}
+.dragHandle {
+    visibility: hidden;
+    cursor: move;
+    width: 20px;
+    height: 16px;
+    background: url('grippy.png') 30% 50% no-repeat no-repeat;
+    z-index: 20;
+}
+.row_container:hover .dragHandle{
+    visibility: visible;
+}

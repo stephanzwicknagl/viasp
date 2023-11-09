@@ -46,6 +46,7 @@
     "polished": "^4.2.2",
     "prop-types": "^15.8.1",
     "react-docgen": "^5.4.3",
+    "react-draggable-list": "^4.1.0",
     "react-lineto": "^3.3.0",
     "style-loader": "^3.3.3",
     "styled-jsx": "^5.1.2",
