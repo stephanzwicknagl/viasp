@@ -18,8 +18,24 @@ function loadClingraphChildren(id, backendURL) {
     return fetch(`${backendURL("clingraph/children")}/${id}`).then(r => r.json());
 }
 
+export function RowTemplate(props) {
+    const { RowItem, itemSelected, anySelected, dragHandleProps, commonProps } = props;
+    const { transformation, color, isClingraph } = RowItem || {};
+
+    if (transformation === undefined) {
+        return <div></div>
+    };
+    const d = !isClingraph ?
+        <Row key={transformation.id} transformation={transformation} color={color} /> :
+        <Boxrow key={`clingraph_${transformation.id}`} transformation={transformation} />
+
+    return d
+};
+
+
+
 export function Row(props) {
-    const {transformation, notifyClick, color} = props;
+    const {transformation, color} = props;
 
     const [nodes, setNodes] = React.useState(null);
     const [isOverflowH, setIsOverflowH] = React.useState(false);
@@ -77,9 +93,8 @@ export function Row(props) {
             </div>
         )
     }
-    const showNodes = transformations.find(({
-                                                transformation: t,
-                                                shown
+    const showNodes = transformations.find(({transformation: t,
+                                             shown
                                             }) => transformation.id === t.id && shown) !== undefined
     const style1 = { "backgroundColor": color};
 
@@ -89,13 +104,11 @@ export function Row(props) {
             <div ref={ref} className="row_row" >{nodes.map((child) => { 
                 if (child.recursive && shownRecursion.indexOf(child.uuid) !== -1) {
                     return <RecursiveSuperNode key={child.uuid} node={child}
-                    showMini={isOverflowH}
-                    notifyClick={notifyClick}/>
+                    showMini={isOverflowH}/>
                 }
                 else{
                     return <Node key={child.uuid} node={child}
-                    showMini={isOverflowH}
-                    notifyClick={notifyClick} isSubnode = {false}/>}})}</div>
+                    showMini={isOverflowH} isSubnode = {false}/>}})}</div>
         }</div>
 }
 

@@ -12,6 +12,7 @@ import {TransformationProvider, useTransformations} from "../contexts/transforma
 import { ColorPaletteProvider, useColorPalette } from "../contexts/ColorPalette"; 
 import {HighlightedNodeProvider} from "../contexts/HighlightedNode";
 import {showError, useMessages, UserMessagesProvider} from "../contexts/UserMessages";
+import { ShownDetailProvider } from '../contexts/ShownDetail';
 import { Settings } from '../LazyLoader';
 import {UserMessages} from "../components/messages";
 import {DEFAULT_BACKEND_URL, SettingsProvider, useSettings} from "../contexts/Settings";
@@ -33,29 +34,21 @@ function loadClingraphUsed(backendURL) {
 }
 
 function GraphContainer(props) {
-    const {setDetail, notifyDash, usingClingraph} = props;
+    const {notifyDash, usingClingraph} = props;
     const {state: {transformations}} = useTransformations()
     const lastNodeInGraph = transformations.length - 1;
     const colorPalette = useColorPalette();
     const background = Object.values(colorPalette.twenty);
 
-
+    
     return <div className="graph_container">
-        <Facts notifyClick={(clickedOn) => {
-            notifyDash(clickedOn)
-            setDetail(clickedOn.uuid)
-            }}
-        /><Suspense fallback={<div>Loading...</div>}><Settings /></Suspense>
+        <Facts /><Suspense fallback={<div>Loading...</div>}><Settings /></Suspense>
         {transformations.map(({transformation}, i) => {
             if (i === lastNodeInGraph && usingClingraph) {
                 return <div>
                         <Row
                             key={transformation.id}
                             transformation={transformation}
-                            notifyClick={(clickedOn) => {
-                                notifyDash(clickedOn)
-                                setDetail(clickedOn.uuid)
-                            }}
                             color={background[i % background.length]}
                         />
                         <Boxrow
@@ -67,10 +60,6 @@ function GraphContainer(props) {
                 return <Row
                     key={transformation.id}
                     transformation={transformation}
-                    notifyClick={(clickedOn) => {
-                        notifyDash(clickedOn)
-                        setDetail(clickedOn.uuid)
-                    }}
                     color={background[i % background.length]}
                     />
             }
@@ -84,10 +73,6 @@ GraphContainer.propTypes = {
      */
     notifyDash: PropTypes.func,
     /**
-     * If the detail component should be opened, set use this function to set the uuid
-     */
-    setDetail: PropTypes.func,
-    /**
      * UsingClingraph is a boolean that is set to true if the backend is using clingraph
      */
     usingClingraph: PropTypes.bool
@@ -95,7 +80,6 @@ GraphContainer.propTypes = {
 
 function MainWindow(props) {
     const {notifyDash} = props;
-    const [detail, setDetail] = React.useState(null)
     const {backendURL} = useSettings();
     const {state: {transformations}} = useTransformations()
     const [usingClingraph, setUsingClingraph] = React.useState(false)
@@ -119,11 +103,11 @@ function MainWindow(props) {
         })
     }, [])
 
-    return <div><Detail shows={detail} clearDetail={() => setDetail(null)}/>
+    return <div><Detail />
         <div className="content">
             <ShownNodesProvider initialState={initialState} reducer={nodeReducer}>
-                <Search setDetail={setDetail}/>
-                <GraphContainer setDetail={setDetail} notifyDash={notifyDash} usingClingraph={usingClingraph}/>
+                <Search />
+                <GraphContainer notifyDash={notifyDash} usingClingraph={usingClingraph}/>
                 {
                     transformations.length === 0 ? null : <Edges usingClingraph={usingClingraph}/>
                 }
@@ -157,20 +141,22 @@ export default function ViaspDash(props) {
             <HighlightedNodeProvider>
                 <HighlightedSymbolProvider>
                     <ShownRecursionProvider>
-                        <FilterProvider>
-                            <AnimationUpdaterProvider>
-                                <SettingsProvider backendURL={backendURL}>
-                                    <UserMessagesProvider>
-                                        <TransformationProvider>
-                                            <div>
-                                                <UserMessages/>
-                                                <MainWindow notifyDash={notifyDash}/>
-                                            </div>
-                                        </TransformationProvider>
-                                    </UserMessagesProvider>
-                                </SettingsProvider>
-                            </AnimationUpdaterProvider>
-                        </FilterProvider>
+                        <ShownDetailProvider>
+                            <FilterProvider>
+                                <AnimationUpdaterProvider>
+                                    <SettingsProvider backendURL={backendURL}>
+                                        <UserMessagesProvider>
+                                            <TransformationProvider>
+                                                <div>
+                                                    <UserMessages/>
+                                                    <MainWindow notifyDash={notifyDash}/>
+                                                </div>
+                                            </TransformationProvider>
+                                        </UserMessagesProvider>
+                                    </SettingsProvider>
+                                </AnimationUpdaterProvider>
+                            </FilterProvider>
+                        </ShownDetailProvider>
                     </ShownRecursionProvider>
                 </HighlightedSymbolProvider>
             </HighlightedNodeProvider>

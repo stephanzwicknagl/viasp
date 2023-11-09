@@ -9,6 +9,7 @@ import { useHighlightedNode } from "../contexts/HighlightedNode";
 import { useHighlightedSymbol } from "../contexts/HighlightedSymbol";
 import { useShownRecursion } from "../contexts/ShownRecursion";
 import { useSettings } from "../contexts/Settings";
+import { useShownDetail } from "../contexts/ShownDetail";
 import { NODE } from "../types/propTypes";
 import { useFilters } from "../contexts/Filters";
 import AnimateHeight from 'react-animate-height';
@@ -216,7 +217,7 @@ function useHighlightedNodeToCreateClassName(node) {
 }
 
 export function Node(props) {
-    const { node, notifyClick, showMini, isSubnode } = props;
+    const { node, showMini, isSubnode } = props;
     const [isOverflowV, setIsOverflowV] = React.useState(false);
     const colorPalette = useColorPalette();
     const [, dispatch] = useShownNodes();
@@ -225,7 +226,11 @@ export function Node(props) {
     const [expandNode, setExpandNode] = React.useState(false);
     // state updater to force other components to update
     const [, , startAnimationUpdater, stopAnimationUpdater] = useAnimationUpdater();
+    const { setShownDetail } = useShownDetail();
 
+    const notifyClick = (node) => {
+        setShownDetail(node.uuid);
+    }
     React.useEffect(() => {
         dispatch(showNode(node.uuid))
         return () => {
@@ -274,10 +279,6 @@ Node.propTypes = {
      */
     node: NODE,
     /**
-     * The function to be called if the facts are clicked on
-     */
-    notifyClick: PropTypes.func,
-    /**
      * If true, shows the minified node without displaying its symbols
      */
     showMini: PropTypes.bool,
@@ -285,11 +286,15 @@ Node.propTypes = {
 
 
 export function RecursiveSuperNode(props) {
-    const { node, notifyClick, showMini } = props;
+    const { node, showMini } = props;
     const colorPalette = useColorPalette();
     const [, dispatch] = useShownNodes();
     const classNames = useHighlightedNodeToCreateClassName(node);
-    // state updater to force other components to update
+    const { setShownDetail } = useShownDetail();
+
+    const notifyClick = (node) => {
+        setShownDetail(node.uuid);
+    }
 
     React.useEffect(() => {
         dispatch(showNode(node.uuid))
@@ -325,10 +330,6 @@ RecursiveSuperNode.propTypes = {
      * object containing the node data to be displayed
      */
     node: NODE,
-    /**
-     * The function to be called if the facts are clicked on
-     */
-    notifyClick: PropTypes.func,
     /**
      * If true, shows the minified node without displaying its symbols
      */

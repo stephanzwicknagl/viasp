@@ -11,8 +11,7 @@ function loadFacts(backendURL) {
     return fetch(`${backendURL("graph/facts")}`).then(r => r.json());
 }
 
-export function Facts(props) {
-    const {notifyClick} = props;
+export function Facts() {
     const {state, backendURL} = useSettings();
     const [fact, setFact] = React.useState(null);
     React.useEffect(() => {
@@ -32,9 +31,10 @@ export function Facts(props) {
         )
     }
     return fact === null ? null :
-        <div className="row_row"><Node key={fact.uuid} node={fact}
-                                       showMini={false}
-                                       notifyClick={notifyClick}/></div>
+        <div className="row_row"><Node 
+                key={fact.uuid} 
+                node={fact}
+                showMini={false}/></div>
 
 }
 

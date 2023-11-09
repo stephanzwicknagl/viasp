@@ -3,6 +3,7 @@ import {make_atoms_string} from "../utils/index";
 import './detail.css';
 import PropTypes from "prop-types";
 import {useColorPalette} from "../contexts/ColorPalette";
+import { useShownDetail } from "../contexts/ShownDetail";
 import {useSettings} from "../contexts/Settings";
 import {SIGNATURE, SYMBOL} from "../types/propTypes";
 import {IoChevronDown, IoChevronForward, IoCloseSharp} from "react-icons/io5";
@@ -71,12 +72,14 @@ CloseButton.propTypes =
         onClick: PropTypes.func
     }
 
-export function Detail(props) {
+export function Detail() {
     const [data, setData] = React.useState(null);
     const [type, setType] = React.useState("Model");
-    const {shows, clearDetail} = props;
     const {backendURL} = useSettings();
     const colorPalette = useColorPalette();
+    const { shownDetail: shows, setShownDetail } = useShownDetail();
+    const clearDetail = () => setShownDetail(null);
+
     React.useEffect(() => {
         let mounted = true;
         if (shows !== null) {
@@ -103,16 +106,4 @@ export function Detail(props) {
     </div>
 }
 
-
-Detail.propTypes =
-    {
-        /**
-         * The node to show
-         */
-        shows: PropTypes.string,
-
-        /**
-         * The function that should be called to close the detail again.
-         */
-        clearDetail: PropTypes.func
-    }
+Detail.propTypes = {}
