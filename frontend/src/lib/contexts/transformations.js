@@ -22,11 +22,13 @@ const SHOW_TRANSFORMATION = 'APP/TRANSFORMATIONS/SHOW';
 const TOGGLE_TRANSFORMATION = 'APP/TRANSFORMATIONS/TOGGLE';
 const SHOW_ONLY_TRANSFORMATION = 'APP/TRANSFORMATIONS/ONLY';
 const ADD_TRANSFORMATION = 'APP/TRANSFORMATIONS/ADD';
+const REORDER_TRANSFORMATION = 'APP/TRANSFORMATIONS/REORDER';
 const hideTransformation = (t) => ({type: HIDE_TRANSFORMATION, t})
 const showTransformation = (t) => ({type: SHOW_TRANSFORMATION, t})
 const toggleTransformation = (t) => ({type: TOGGLE_TRANSFORMATION, t})
 const showOnlyTransformation = (t) => ({type: SHOW_ONLY_TRANSFORMATION, t})
 const addTransformation = (t) => ({type: ADD_TRANSFORMATION, t})
+const reorderTransformation = (oldIndex, newIndex) => ({type: REORDER_TRANSFORMATION, oldIndex, newIndex})
 const TransformationContext = React.createContext();
 
 const transformationReducer = (state = initialState, action) => {
@@ -75,6 +77,15 @@ const transformationReducer = (state = initialState, action) => {
             } : container)
         }
     }
+    if (action.type === REORDER_TRANSFORMATION) {
+        const transformations = [...state.transformations];
+        const [removed] = transformations.splice(action.oldIndex, 1);
+        transformations.splice(action.newIndex, 0, removed);
+        return {
+            ...state,
+            transformations
+        }
+    }
     return {...state}
 }
 
@@ -109,4 +120,4 @@ TransformationProvider.propTypes = {
      */
     children: PropTypes.element,
 }
-export {TransformationProvider, TransformationContext, useTransformations, toggleTransformation, showOnlyTransformation}
+export {TransformationProvider, TransformationContext, useTransformations, toggleTransformation, showOnlyTransformation, reorderTransformation}

@@ -173,7 +173,7 @@ export function Row(props) {
 
     return <div>
         <RowHeader transformation={transformation.rules} ref={headerRef} />
-        <DragHandle dragHandleProps={dragHandleProps} ref={handleRef} />
+        {dragHandleProps === null ? null : <DragHandle dragHandleProps={dragHandleProps} ref={handleRef} />}
         {!showNodes ? null :
             <div ref={rowbodyRef} className="row_row" >{nodes.map((child) => { 
                 if (child.recursive && shownRecursion.indexOf(child.uuid) !== -1) {

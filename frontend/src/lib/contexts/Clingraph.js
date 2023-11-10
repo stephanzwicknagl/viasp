@@ -36,8 +36,6 @@ export const ClingraphProvider = ({ children }) => {
         }) 
         return () => { mounted = false };
     }, []);
-    console.log("Within context:", clingraphUsed)
-
 
     return <ClingraphContext.Provider
         value={{clingraphUsed, setClingraphUsed}}>{children}</ClingraphContext.Provider>

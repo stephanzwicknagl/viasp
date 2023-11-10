@@ -9,7 +9,7 @@ import {Facts} from "../components/Facts.react";
 import { Edges } from "../components/Edges.react";
 import { Arrows } from "../components/Arrows.react";
 import {initialState, nodeReducer, ShownNodesProvider} from "../contexts/ShownNodes";
-import {TransformationProvider, useTransformations} from "../contexts/transformations";
+import { TransformationProvider, useTransformations, reorderTransformation } from "../contexts/transformations";
 import { ClingraphProvider, useClingraph } from '../contexts/Clingraph';
 import { ColorPaletteProvider } from "../contexts/ColorPalette"; 
 import {HighlightedNodeProvider} from "../contexts/HighlightedNode";
@@ -27,9 +27,12 @@ import DraggableList from 'react-draggable-list';
 
 function GraphContainer(props) {
     const {notifyDash} = props;
-    const {state: {transformations}} = useTransformations()
-    const lastNodeInGraph = transformations.length - 1;
+    const {state: {transformations}, dispatch} = useTransformations()
     const { clingraphUsed } = useClingraph();
+
+    function onMoveEnd(newList, movedItem, oldIndex, newIndex) {
+        dispatch(reorderTransformation(oldIndex, newIndex));
+    }
 
     return <div className="graph_container">
         <Facts /><Suspense fallback={<div>Loading...</div>}><Settings /></Suspense>
@@ -37,7 +40,7 @@ function GraphContainer(props) {
             itemKey="id"
             template={RowTemplate}
             list={transformations}
-            onMoveEnd={() => {}}
+            onMoveEnd={onMoveEnd}
             container={() => document.body}
             padding = {0}
             // unsetZIndex = {true} 
@@ -58,12 +61,14 @@ function MainWindow(props) {
     const {backendURL} = useSettings();
     const {state: {transformations}} = useTransformations()
     const [highlightedSymbol,,] = useHighlightedSymbol();
-
-
     const [, dispatch] = useMessages()
+    const backendURLRef = React.useRef(backendURL)
+    const dispatchRef = React.useRef(dispatch)
+
+
     React.useEffect(() => {
-        fetch(backendURL("graph/transformations")).catch(() => {
-            dispatch(showError(`Couldn't connect to server at ${backendURL("")}`))
+        fetch(backendURLRef.current("graph/transformations")).catch(() => {
+            dispatchRef.current(showError(`Couldn't connect to server at ${backendURLRef.current("")}`))
         })
     }, [])
 
