@@ -23,6 +23,11 @@ export const TRANSFORMATION = PropTypes.exact({
     id: PropTypes.number,
     rules: PropTypes.array
 })
+export const TRANSFORMATIONWRAPPER = PropTypes.exact({
+    transformation: TRANSFORMATION,
+    shown: PropTypes.bool,
+    id: PropTypes.number
+})
 export const GRAPH = PropTypes.exact({
     _type: PropTypes.oneOf(['Graph']),
     _graph: PropTypes.object

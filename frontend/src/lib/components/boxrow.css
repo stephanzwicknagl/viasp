@@ -1,0 +1,11 @@
+.boxrow_container {
+    justify-content: space-around;
+    background: transparent;
+}
+
+.boxrow_row {
+    display: flex;
+    justify-content: space-around;
+    align-content: center;
+    background: transparent;
+}

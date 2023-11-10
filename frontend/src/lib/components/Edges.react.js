@@ -8,6 +8,7 @@ import {useColorPalette} from "../contexts/ColorPalette";
 import {useFilters} from "../contexts/Filters";
 import { useShownRecursion } from "../contexts/ShownRecursion";
 import { useAnimationUpdater } from "../contexts/AnimationUpdater";
+import { useClingraph } from "../contexts/Clingraph";
 
 function loadEdges(nodeInfo, backendURL) {
     return fetch(`${backendURL("graph/edges")}`, {
@@ -40,8 +41,7 @@ const useResize = (target) => {
     return size
 }
 
-export function Edges(props) {
-    const { usingClingraph } = props;
+export function Edges() {
     const colorPalete = useColorPalette();
     const [edges, setEdges] = React.useState([]);
     const [clingraphEdges, setClingraphEdges] = React.useState([]);
@@ -50,9 +50,12 @@ export function Edges(props) {
     const [{shownNodes},] = useShownNodes();
     const [shownRecursion, ,] = useShownRecursion();
     const {state, backendURL} = useSettings();
+    const backendUrlRef = React.useRef(backendURL);
     const [{activeFilters},] = useFilters();
     // state to update Edges after height animation of node
     const [value, , , ] = useAnimationUpdater();
+    const {clingraphUsed} = useClingraph();
+
     
     React.useEffect(() => {
         let mounted = true;
@@ -61,39 +64,38 @@ export function Edges(props) {
             shownNodes: shownNodes,
             shownRecursion: shownRecursion
         }
-        loadEdges(nodeInfo, backendURL)
+        loadEdges(nodeInfo, backendUrlRef.current)
         .then(items => {
             if (mounted) {
                 setEdges(items)
             }
         })
-        return () => mounted = false;
+        return () => { mounted = false };
     }, [shownNodes, shownRecursion, state, activeFilters]);
 
-    if (usingClingraph) {
-        React.useEffect(() => {
-            let mounted = true;
-
-            loadClingraphEdges(shownNodes, backendURL)
+    React.useEffect(() => {
+        let mounted = true;
+        if (clingraphUsed) {
+            loadClingraphEdges(shownNodes, backendUrlRef.current)
                 .then(items => {
                     if (mounted) {
                         setClingraphEdges(items)
                         // setEdges(edges.concat(items))
                     }
                 })
-            return () => mounted = false;
-        }, [shownNodes, state, activeFilters]);
-    };
+            }
+        return () => { mounted = false };
+    }, [shownNodes, state, activeFilters, clingraphUsed]);
 
     
     return <div ref={target} className="edge_container" >
             {edges.map(link => <LineTo
                 key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"top center"}
-                to={link.tgt} zIndex={1} borderColor={colorPalete.seventy.dark} borderStyle={"solid"} borderWidth={1} />)}
-            {!usingClingraph ? null:
+                to={link.tgt} zIndex={5} borderColor={colorPalete.seventy.dark} borderStyle={"solid"} borderWidth={1} />)}
+            {!clingraphUsed ? null:
             clingraphEdges.map(link => <LineTo
                 key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"top center"}
-                to={link.tgt} zIndex={1} borderColor={colorPalete.seventy.bright} borderStyle={"dashed"} borderWidth={2} />)}
+                to={link.tgt} zIndex={5} borderColor={colorPalete.seventy.bright} borderStyle={"dashed"} borderWidth={2} />)}
         </div>
 
         
@@ -104,9 +106,4 @@ Edges.propTypes = {
      * The ID used to identify this component in Dash callbacks.
      */
     id: PropTypes.string,
-
-    /**
-     * The using Clingraph boolean
-     * */
-    usingClingraph: PropTypes.bool
 }

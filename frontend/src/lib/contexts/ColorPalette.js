@@ -21,7 +21,7 @@ export const defaultPalette = {
     // node border colors
     ten: { dark: "#0052CC", bright: "#0052CC"}, 
     // row background (arbitrary number and names)
-    twenty: { dark: "#a9a9a94a", bright: "#ffffff" },
+    twenty: { dark: "#e6e6e6", bright: "#ffffff" },
     // text color of node, detail sidebar, row header (dark) and detail sidebar atoms (bright)
     thirty: { dark: "#444", bright: "#FFFFFF"},
     // recursive node supernode background (dark) and border (bright)
@@ -39,7 +39,7 @@ export const defaultPalette = {
     warn:      {ten: "#FF9800", thirty: "#653300", sixty: "#FFF1DF"}
 };
 
-const ColorPaletteContext = React.createContext([]);
+export const ColorPaletteContext = React.createContext([]);
 export const updateColorPalette = (custom_colors) => {
     if ("ten" in custom_colors) {
         defaultPalette.ten = custom_colors.ten;
@@ -71,7 +71,7 @@ export const updateColorPalette = (custom_colors) => {
     if ("warn" in custom_colors) {
         defaultPalette.warn = custom_colors.warn;
     }
-    React.useContext(ColorPaletteContext)
+    // React.useContext(ColorPaletteContext) ?? TODO: what's this for?
     return defaultPalette;
 };
 

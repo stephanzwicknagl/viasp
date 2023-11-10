@@ -1,4 +1,4 @@
-import React, {lazy, Suspense} from "react";
+import React, {Suspense} from "react";
 import { make_atoms_string } from "../utils/index";
 import './node.css';
 import PropTypes from "prop-types";
@@ -16,7 +16,7 @@ import AnimateHeight from 'react-animate-height';
 import { useAnimationUpdater } from "../contexts/AnimationUpdater";
 import clockwiseVerticalArrows from '@iconify/icons-emojione-monotone/clockwise-vertical-arrows';
 import arrowDownDoubleFill from '@iconify/icons-ri/arrow-down-double-fill';
-import { IconWrapper as RealComponent } from '../LazyLoader';
+import { IconWrapper } from '../LazyLoader';
 
 function any(iterable) {
     for (let index = 0; index < iterable.length; index++) {
@@ -179,7 +179,7 @@ function RecursionButton(props) {
         {!node.recursive ? null :
             <div className={"recursion_button_text"} style={{ "backgroundColor": colorPalette.primary, "color": colorPalette.sixty.dark }}>
                 <Suspense fallback={<div>R</div>}>
-                    <RealComponent icon={clockwiseVerticalArrows} width="9" height="9" />
+                    <IconWrapper icon={clockwiseVerticalArrows} width="9" height="9" />
                 </Suspense>
             </div>
         }
@@ -199,7 +199,7 @@ function OverflowButton(props) {
                 className={"bauchbinde"} onClick={handleClick}>
         <div className={"bauchbinde_text"}>
             <Suspense fallback={<div>...</div>}>
-                <RealComponent icon={arrowDownDoubleFill} width="12" height="12" />
+                <IconWrapper icon={arrowDownDoubleFill} width="12" height="12" />
             </Suspense>
         </div>
     </div>
@@ -256,7 +256,8 @@ export function Node(props) {
                     duration={500}
                     height={height}
                     onHeightAnimationStart={startAnimationUpdater}
-                    onHeightAnimationEnd={stopAnimationUpdater}>
+                    onHeightAnimationEnd={stopAnimationUpdater}
+                    >
                     <NodeContent
                         node={node}
                         setHeight={setHeight}

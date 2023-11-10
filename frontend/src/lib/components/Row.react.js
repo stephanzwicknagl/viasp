@@ -1,77 +1,137 @@
-import React from "react";
+import React, {useRef, useEffect, useCallback, Suspense} from "react";
 import {Node, RecursiveSuperNode} from "./Node.react";
-import {Box} from "./Box.react";
 import './row.css';
-import PropTypes, { any } from "prop-types";
+import PropTypes from "prop-types";
 import {RowHeader} from "./RowHeader.react";
 import {toggleTransformation, useTransformations} from "../contexts/transformations";
 import {useSettings} from "../contexts/Settings";
-import {TRANSFORMATION} from "../types/propTypes";
-import { useColorPalette } from "../contexts/ColorPalette";
+import { TRANSFORMATION, TRANSFORMATIONWRAPPER } from "../types/propTypes";
+import { ColorPaletteContext } from "../contexts/ColorPalette";
 import { useShownRecursion } from "../contexts/ShownRecursion";
+import { IconWrapper } from '../LazyLoader';
+import dragHandleRounded from '@iconify/icons-material-symbols/drag-handle-rounded';
+
 
 function loadMyAsyncData(id, backendURL) {
     return fetch(`${backendURL("graph/children")}/${id}`).then(r => r.json());
 }
 
-function loadClingraphChildren(id, backendURL) {
-    return fetch(`${backendURL("clingraph/children")}/${id}`).then(r => r.json());
+
+
+export class DragHandle extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+    render() {
+        const {dragHandleProps} = this.props;
+        return <div className="dragHandle" {...dragHandleProps}>
+                <Suspense fallback={<div>=</div>}>
+                    <IconWrapper icon={dragHandleRounded} width="24" />
+                </Suspense>
+            </div>
+        }
 }
 
-export function RowTemplate(props) {
-    const { item, itemSelected, anySelected, dragHandleProps, commonProps } = props;
-    const transformation = item.transformation;
-    const scale = itemSelected * 0.02 + 1;
-    const shadow = itemSelected * 15 + 1;
-    const dragged = itemSelected !== 0;
-    const colorPalette = useColorPalette();
-    const background = Object.values(colorPalette.twenty);
-
-    if (transformation === undefined) {
-        return <div>teste</div>
-    };
-    // const d = !isClingraph ?
-        // <Row key={transformation.id} transformation={transformation} /> :
-        // <Boxrow key={`clingraph_${transformation.id}`} transformation={transformation} />    
-
-    return (<div 
-            className="row_container"
-            style={{
-            transform: `scale(${scale})`,
-            boxShadow: `rgba(0, 0, 0, 0.3) 0px ${shadow}px ${2 * shadow}px 0px`,
-            background: background[transformation.id % background.length]
-        }}><div class="dragHandleContainer"><div className="dragHandle" {...dragHandleProps}/></div>
-        <Row key={transformation.id} transformation={transformation} />
-    </div>)
+DragHandle.propTypes = {
+    /**
+     * an object which should be spread as props on the HTML element to be used as the drag handle.
+     * The whole item will be draggable by the wrapped element.
+     **/
+    dragHandleProps: PropTypes.object
 };
 
+export class RowTemplate extends React.Component {
+    static contextType = ColorPaletteContext;
+    constructor(props) {
+        super(props);
+    }
+
+    // getDragHeight() {
+    //     return 20;
+    // }
+
+    render () {
+        const { item, itemSelected, anySelected, dragHandleProps } = this.props;
+        const transformation = item.transformation;
+        const scaleConstant = 0.02;
+        const shadowConstant = 15;
+        const scale = itemSelected * scaleConstant + 1;
+        const shadow = itemSelected * shadowConstant + 0;
+        const dragged = itemSelected !== 0;
+        const background = Object.values(this.context.twenty)
+
+        return ((<div
+                className="row_container"
+                style={{transform: `scale(${scale})`,
+                        zIndex: dragged ? 1 : 0,
+                        transformOrigin: 'left',
+                        boxShadow: `rgba(0, 0, 0, 0.3) 0px ${shadow}px ${2 * shadow}px 0px`,
+                        background: background[transformation.id % background.length]}}
+                >
+            {transformation === null ? null :
+                    <Row key={transformation.id} transformation={transformation} dragHandleProps={dragHandleProps} />}
+                </div>)
+        );
+    }
+}
+
+RowTemplate.propTypes = {
+    /**
+     * The Transformation object to be displayed
+     **/
+    item: TRANSFORMATIONWRAPPER,
+    /**
+     * It starts at 0, and quickly increases to 1 when the item is picked up by the user. 
+     */
+    itemSelected: PropTypes.number,
+    /**
+     * It starts at 0, and quickly increases to 1 when any item is picked up by the user.
+     */
+    anySelected: PropTypes.number,
+    /**
+     * an object which should be spread as props on the HTML element to be used as the drag handle. 
+     * The whole item will be draggable by the wrapped element.
+     **/
+    dragHandleProps: PropTypes.object
+};  
 
 
 export function Row(props) {
-    const {transformation} = props;
+    const {transformation, dragHandleProps} = props;
 
+    const {backendURL} = useSettings();
     const [nodes, setNodes] = React.useState(null);
     const [isOverflowH, setIsOverflowH] = React.useState(false);
     const [overflowBreakingPoint, setOverflowBreakingPoint] = React.useState(null);
-    const ref = React.useRef(null);
+    const rowbodyRef = useRef(null);
+    const headerRef = useRef(null);
+    const handleRef = useRef(null);
+    const transformationIdRef = React.useRef(transformation.id);
+    const backendURLRef = React.useRef(backendURL);
     const {state: {transformations}} = useTransformations();
-    const {backendURL} = useSettings();
     const [shownRecursion, ,] = useShownRecursion();
+
+    useEffect(() => {
+        if (headerRef.current && handleRef.current) {
+            const headerHeight = headerRef.current.offsetHeight;
+            handleRef.current.style.top = `${headerHeight}px`;
+        }
+    }, []);
 
     React.useEffect(() => {
         let mounted = true;
-        loadMyAsyncData(transformation.id, backendURL)
+        loadMyAsyncData(transformationIdRef.current, backendURLRef.current)
             .then(items => {
                 if (mounted) {
                     setNodes(items)
                 }
             })
-        return () => mounted = false;
+        return () => { mounted = false };
     }, []);
 
-    function checkForOverflow() {
-        if (ref !== null && ref.current) {
-            const e = ref.current
+    const checkForOverflow = useCallback(() => {
+        if (rowbodyRef !== null && rowbodyRef.current) {
+            const e = rowbodyRef.current
             const wouldOverflowNow = e.offsetWidth < e.scrollWidth;
             // We overflowed previously but not anymore
             if (overflowBreakingPoint <= e.offsetWidth) {
@@ -88,11 +148,11 @@ export function Row(props) {
                 setIsOverflowH(false);
             }
         }
-    }
+    }, [rowbodyRef, isOverflowH, overflowBreakingPoint]);
 
     React.useEffect(() => {
         checkForOverflow()
-    }, [nodes])
+    }, [checkForOverflow, nodes])
 
     React.useEffect(() => {
         window.addEventListener('resize', checkForOverflow)
@@ -108,20 +168,20 @@ export function Row(props) {
     }
     const showNodes = transformations.find(({transformation: t,
                                              shown
-                                            }) => transformation.id === t.id && shown) !== undefined
+                                            }) => transformation.id === t.id && shown) !== null;
     // const style1 = { "backgroundColor": background[transformation.id % background.length] };
 
     return <div>
-        <RowHeader transformation={transformation.rules} />
+        <RowHeader transformation={transformation.rules} ref={headerRef} />
+        <DragHandle dragHandleProps={dragHandleProps} ref={handleRef} />
         {!showNodes ? null :
-            <div ref={ref} className="row_row" >{nodes.map((child) => { 
+            <div ref={rowbodyRef} className="row_row" >{nodes.map((child) => { 
                 if (child.recursive && shownRecursion.indexOf(child.uuid) !== -1) {
                     return <RecursiveSuperNode key={child.uuid} node={child}
                     showMini={isOverflowH}/>
                 }
-                else{
-                    return <Node key={child.uuid} node={child}
-                    showMini={isOverflowH} isSubnode = {false}/>}})}</div>
+                return <Node key={child.uuid} node={child}
+                showMini={isOverflowH} isSubnode = {false}/>})}</div>
         }</div>
 }
 
@@ -131,82 +191,11 @@ Row.propTypes = {
      * The Transformation object to be displayed
      */
     transformation: TRANSFORMATION,
+    /**
+     * an object which should be spread as props on the HTML element to be used as the drag handle. 
+     * The whole item will be draggable by the wrapped element.
+     **/
+    dragHandleProps: PropTypes.object
 };
 
 
-export function Boxrow(props) {
-    const { transformation } = props;
-
-    const [nodes, setNodes] = React.useState(null);
-    const [isOverflowH, setIsOverflowH] = React.useState(false);
-    const [overflowBreakingPoint, setOverflowBreakingPoint] = React.useState(null);
-    const ref = React.useRef(null);
-    const { backendURL } = useSettings();
-
-    React.useEffect(() => {
-        let mounted = true;
-        loadClingraphChildren(transformation.id, backendURL)
-            .then(items => {
-                if (mounted) {
-                    setNodes(items)
-                }
-            })
-        return () => mounted = false;
-    }, []);
-
-    function checkForOverflow() {
-        if (ref !== null && ref.current) {
-            const e = ref.current
-            const wouldOverflowNow = e.offsetWidth < e.scrollWidth;
-            // We overflowed previously but not anymore
-            if (overflowBreakingPoint <= e.offsetWidth) {
-                setIsOverflowH(false);
-            }
-            if (!isOverflowH && wouldOverflowNow) {
-                // We have to react to overflow now but want to remember when we'll not overflow anymore
-                // on a resize
-                setOverflowBreakingPoint(e.offsetWidth)
-                setIsOverflowH(true)
-            }
-            // We never overflowed and also don't now
-            if (overflowBreakingPoint === null && !wouldOverflowNow) {
-                setIsOverflowH(false);
-            }
-        }
-    }
-
-    React.useEffect(() => {
-        checkForOverflow()
-    }, [nodes])
-
-    React.useEffect(() => {
-        window.addEventListener('resize', checkForOverflow)
-        return _ => window.removeEventListener('resize', checkForOverflow)
-    })
-    if (nodes === null) {
-        return (
-            <div className="row_container">
-                <RowHeader transformation={transformation.rules} />
-                <div>Loading Transformations..</div>
-            </div>
-        )
-    }
-    return <div className="boxrow_container">
-        {/* TODO: make boxrow_header to toggle showing of visualization */}
-            <div ref={ref} className="boxrow_row">  
-                {nodes.map((child) => <Box  node={child}/>)}</div>
-        </div>
-}
-
-
-Boxrow.propTypes = {
-    /**
-     * The Transformation object to be displayed
-     */
-    transformation: TRANSFORMATION,
-
-    /**
-     * A callback function when the user clicks on the RuleHeader
-     */
-    notifyClick: PropTypes.func
-};

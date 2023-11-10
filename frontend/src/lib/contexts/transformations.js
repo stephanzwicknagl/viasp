@@ -82,19 +82,22 @@ const TransformationProvider = ({children}) => {
     const [, message_dispatch] = useMessages()
     const {state: settingsState, backendURL} = useSettings();
     const [state, dispatch] = React.useReducer(transformationReducer, initialState);
+    const backendUrlRef = React.useRef(backendURL);
+    const messageDispatchRef = React.useRef(message_dispatch);
 
     React.useEffect(() => {
         let mounted = true;
-        fetchTransformations(backendURL).catch(error => {
-            message_dispatch(showError(`Failed to get transformations: ${error}`))
+        fetchTransformations(backendUrlRef.current).catch(error => {
+            messageDispatchRef.current(showError(`Failed to get transformations: ${error}`))
         })
             .then(items => {
                 if (mounted) {
                     items.map((t) => (dispatch(addTransformation(t))))
                 }
             })
-        return () => mounted = false;
-    }, [settingsState.backend_url]);
+        return () => { mounted = false };
+    }, []);
+
     return <TransformationContext.Provider value={{state, dispatch}}>{children}</TransformationContext.Provider>
 }
 
