@@ -70,7 +70,7 @@ def test_load_from_stdin(client):
     res = client.get("/control/clingraph")
     assert res.status_code == 200
     assert res.data == b'{"using_clingraph":true}\n'
-    res = client.get("/clingraph/children/0")
+    res = client.get("/clingraph/children")
     assert res.status_code == 200
     clingraph_uuids = json.loads(res.data)
     assert len(clingraph_uuids) == 2

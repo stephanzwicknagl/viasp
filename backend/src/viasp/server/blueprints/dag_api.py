@@ -333,9 +333,9 @@ def get_image(uuid):
 def last_nodes_in_graph(graph):
     return [n.uuid for n in graph.nodes() if graph.out_degree(n) == 0]
 
-@bp.route("/clingraph/children/<transformation_id>", methods=["GET"])
+@bp.route("/clingraph/children", methods=["POST", "GET"])
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
-def get_clingraph_children(transformation_id):
+def get_clingraph_children():
     if request.method == "GET":
         from .api import using_clingraph
         to_be_returned = using_clingraph[::-1]
