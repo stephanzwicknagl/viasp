@@ -1,5 +1,6 @@
 import React from "react";
 import './box.css'
+import PropTypes from 'prop-types';
 import {useColorPalette} from "../contexts/ColorPalette";
 import {useSettings} from "../contexts/Settings";
 import {BOX} from "../types/propTypes";
@@ -19,16 +20,16 @@ function useHighlightedNodeToCreateClassName(node) {
 
 
 export function Box(props) {
-    const {node} = props;
+    const {uuid} = props;
     const colorPalette = useColorPalette();
     const { backendURL } = useSettings();
-    const classNames = useHighlightedNodeToCreateClassName(node)
+    const classNames = useHighlightedNodeToCreateClassName(uuid)
 
     return <div className={classNames}
                 style={{"backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark}}
-                id={node}>
+                id={uuid}>
         <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}>
-            <img src={`${backendURL("graph/clingraph")}/${node}`} alt="Clingraph" /> 
+            <img src={`${backendURL("graph/clingraph")}/${uuid}`} alt="Clingraph" /> 
         </div> 
     </div>
 }
@@ -37,6 +38,6 @@ Box.propTypes = {
     /**
      * object containing the node data to be displayed
      */
-    box: BOX,
+    uuid: PropTypes.string,
 }
 
