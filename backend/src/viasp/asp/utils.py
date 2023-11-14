@@ -1,15 +1,15 @@
 """Mostly graph utility functions."""
 import networkx as nx
 from clingo import Symbol
-from clingo.ast import Rule, ASTType
-from typing import List, Sequence
+from clingo.ast import ASTType, AST
+from typing import List, Sequence, Tuple, Dict, Set, FrozenSet, Union
 from ..shared.simple_logging import warn
 from ..shared.model import Node, SymbolIdentifier
 from ..shared.util import pairwise, get_root_node_from_graph
 
 
-def is_constraint(rule: Rule):
-    return rule.ast_type == ASTType.Rule and "atom" in rule.head.child_keys and rule.head.atom.ast_type == ASTType.BooleanConstant
+def is_constraint(rule: AST) -> bool:
+    return rule.ast_type == ASTType.Rule and "atom" in rule.head.child_keys and rule.head.atom.ast_type == ASTType.BooleanConstant # type: ignore
 
 
 def merge_constraints(g: nx.Graph) -> nx.Graph:
@@ -21,8 +21,9 @@ def merge_constraints(g: nx.Graph) -> nx.Graph:
     return nx.relabel_nodes(g, mapping)
 
 
-def merge_cycles(g: nx.Graph) -> nx.Graph:
-    mapping = {}
+def merge_cycles(g: nx.Graph) -> Tuple[nx.Graph, FrozenSet[Node]]:
+    mapping: Dict[Node, Node] = {}
+    merge_node: Set[Node] = set()
     for cycle in nx.algorithms.components.strongly_connected_components(g):
         merge_node = merge_nodes(cycle)
         mapping.update({old_node: merge_node for old_node in cycle})
@@ -34,16 +35,16 @@ def merge_cycles(g: nx.Graph) -> nx.Graph:
     return nx.relabel_nodes(g, mapping), frozenset(where_recursion_happens)
 
 
-def merge_nodes(nodes: frozenset) -> frozenset:
+def merge_nodes(nodes: frozenset) -> Set[Node]:
     old = set()
     for x in nodes:
         old.update(x)
-    return frozenset(old)
+    return old
 
 
-def remove_loops(g: nx.Graph) -> nx.Graph:
-    remove_edges = []
-    where_recursion_happens = set()
+def remove_loops(g: nx.Graph) -> Tuple[nx.Graph, FrozenSet[Node]]:
+    remove_edges: List[Tuple[Node, Node]] = []
+    where_recursion_happens: Set[Node] = set()
     for edge in g.edges:
         u, v = edge
         if u == v:
@@ -56,42 +57,23 @@ def remove_loops(g: nx.Graph) -> nx.Graph:
     return g, frozenset(where_recursion_happens)
 
 
-def topological_sort(g: nx.DiGraph, rules: Sequence[Rule]) -> List:
-    """ Topological sort of the graph.
-        If the order is ambiguous, prefer the order of the rules.
-        Note: Rule = Node
+def rank_topological_sorts(all_sorts: List, rules: Sequence[AST]) -> List:
+    """ 
+    Ranks all topological sorts by the number of rules that are in the same order as in the rules list.
+    The highest rank is the first element in the list.
 
-        :param g: Graph
-        :param rules: List of Rules
+    :param all_sorts: List of all topological sorts
+    :param rules: List of rules
     """
-    sorted: List = []        # L list of the sorted elements
-    no_incoming_edge = set() # set of all nodes with no incoming edges
-
-    no_incoming_edge.update([node for node in g.nodes if g.in_degree(node) == 0])
-    while len(no_incoming_edge):
-        earliest_node_index = len(rules)
-        earliest_node = None
-        for node in no_incoming_edge:
-            for rule in node:
-                node_index = rules.index(rule)
-                if node_index<earliest_node_index:
-                    earliest_node_index=node_index
-                    earliest_node = node
-
-        no_incoming_edge.remove(earliest_node)
-        sorted.append(earliest_node)
-
-        # update graph
-        for node in list(g.successors(earliest_node)):
-            g.remove_edge(earliest_node, node)
-            if g.in_degree(node)==0:
-                no_incoming_edge.add(node)
-
-    if len(g.edges):
-        warn("Could not sort the graph.")
-        raise Exception("Could not sort the graph.")
-    return sorted
-
+    ranked_sorts = []
+    for sort in all_sorts:
+        rank = 0
+        sort_rules = [rule for frznst in sort for rule in frznst]
+        for i in range(len(sort_rules)):
+            rank -= (rules.index(sort_rules[i])+1)*(i+1)
+        ranked_sorts.append((sort, rank))
+    ranked_sorts.sort(key=lambda x: x[1])
+    return [x[0] for x in ranked_sorts]
 
 def insert_atoms_into_nodes(path: List[Node]) -> None:
     facts = path[0]
@@ -145,7 +127,7 @@ def identify_reasons(g: nx.DiGraph) -> nx.DiGraph:
 
 
 def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol,
-                    super_graph=None, super_node=None) -> SymbolIdentifier:
+                    super_graph=None, super_node=None) -> Union[SymbolIdentifier, None]:
     """
     Returns the SymbolIdentifier that is the reason for the given Symbol r.
     If the reason is not in the node, it returns recursively calls itself with the predecessor.

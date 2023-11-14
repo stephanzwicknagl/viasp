@@ -6,7 +6,7 @@ import networkx as nx
 from clingo import ast, Symbol
 from clingo.ast import Transformer, parse_string, Rule, ASTType, AST, Literal, Minimize, Disjunction
 
-from .utils import is_constraint, merge_constraints, topological_sort
+from .utils import is_constraint, merge_constraints, rank_topological_sorts
 from ..asp.utils import merge_cycles, remove_loops
 from viasp.asp.ast_types import SUPPORTED_TYPES, ARITH_TYPES, UNSUPPORTED_TYPES, UNKNOWN_TYPES
 from ..shared.model import Transformation, TransformationError, FailedReason
@@ -378,8 +378,8 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         deps = merge_constraints(deps)
         deps, _ = merge_cycles(deps)
         deps, _ = remove_loops(deps)
-        program = topological_sort(deps, self.rules)
-        return program
+        program = rank_topological_sorts(nx.all_topological_sorts(deps), self.rules)
+        return program[0]
 
     def check_positive_recursion(self):
         deps1 = self.make_dependency_graph(self.dependants, self.positive_conditions)
