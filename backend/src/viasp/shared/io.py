@@ -2,7 +2,7 @@ import json
 from enum import IntEnum
 from json import JSONEncoder, JSONDecoder
 from dataclasses import is_dataclass
-from typing import Any, Union, Collection, Iterable, Dict, Sequence
+from typing import Any, Union, Collection, Iterable, Sequence
 from pathlib import PosixPath
 from uuid import UUID
 import os

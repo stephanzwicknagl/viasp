@@ -21,30 +21,30 @@ def merge_constraints(g: nx.Graph) -> nx.Graph:
     return nx.relabel_nodes(g, mapping)
 
 
-def merge_cycles(g: nx.Graph) -> Tuple[nx.Graph, FrozenSet[Node]]:
-    mapping: Dict[Node, Node] = {}
-    merge_node: Set[Node] = set()
+def merge_cycles(g: nx.Graph) -> Tuple[nx.Graph, FrozenSet[AST]]:
+    mapping: Dict[AST, AST] = {}
+    merge_node: FrozenSet[AST] = frozenset()
+    where_recursion_happens = set()
     for cycle in nx.algorithms.components.strongly_connected_components(g):
         merge_node = merge_nodes(cycle)
         mapping.update({old_node: merge_node for old_node in cycle})
     # which nodes were merged
-    where_recursion_happens = set()
     for k,v in mapping.items():
         if k != v:
             where_recursion_happens.add(merge_node)
     return nx.relabel_nodes(g, mapping), frozenset(where_recursion_happens)
 
 
-def merge_nodes(nodes: frozenset) -> Set[Node]:
+def merge_nodes(nodes: frozenset) -> FrozenSet[AST]:
     old = set()
     for x in nodes:
         old.update(x)
-    return old
+    return frozenset(old)
 
 
-def remove_loops(g: nx.Graph) -> Tuple[nx.Graph, FrozenSet[Node]]:
-    remove_edges: List[Tuple[Node, Node]] = []
-    where_recursion_happens: Set[Node] = set()
+def remove_loops(g: nx.Graph) -> Tuple[nx.Graph, FrozenSet[AST]]:
+    remove_edges: List[Tuple[AST, AST]] = []
+    where_recursion_happens: Set[AST] = set()
     for edge in g.edges:
         u, v = edge
         if u == v:

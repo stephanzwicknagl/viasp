@@ -22,7 +22,7 @@ def sort_program_and_get_graph(program: str):
     saved_models = get_stable_models_for_program(program)
     reified = reify_list(sorted_program)
 
-    g = build_graph(saved_models, reified, analyzer, set())
+    g = build_graph(saved_models, reified, analyzer, frozenset())
     return g
 
 
@@ -52,7 +52,7 @@ def test_graph_merges_facts_together():
     saved_models = get_stable_models_for_program(orig_program)
     reified = reify_list(sorted_program)
 
-    g = build_graph(saved_models, reified, analyzer, set())
+    g = build_graph(saved_models, reified, analyzer, frozenset())
     assert len(g.nodes()) == 1
     assert len(g.edges()) == 0
 
@@ -64,7 +64,7 @@ def test_facts_get_merged_in_one_node():
     saved_models = get_stable_models_for_program(orig_program)
     reified = reify_list(sorted_program)
 
-    g = build_graph(saved_models, reified, analyzer, set())
+    g = build_graph(saved_models, reified, analyzer, frozenset())
     assert len(g.nodes) == 3
     assert len(g.edges) == 2
 
@@ -76,7 +76,7 @@ def test_rules_are_transferred_to_transformations():
     saved_models = get_stable_models_for_program(orig_program)
     reified = reify_list(sorted_program)
 
-    g = build_graph(saved_models, reified, analyzer, set())
+    g = build_graph(saved_models, reified, analyzer, frozenset())
     for _, _, t in g.edges(data=True):
         tr = t["transformation"]
         assert isinstance(tr, Transformation)
@@ -93,7 +93,7 @@ wet :- sprinkler."""
     sorted_program = analyzer.sort_program(program)
     saved_models = get_stable_models_for_program(program)
     reified = reify_list(sorted_program)
-    g = build_graph(saved_models, reified, analyzer, set())
+    g = build_graph(saved_models, reified, analyzer, frozenset())
     assert len(list(g.nodes)) == 10
 
 
@@ -148,7 +148,7 @@ def test_conditional_literals():
     saved_models = get_stable_models_for_program(program)
     reified = reify_list(sorted_program)
 
-    g = build_graph(saved_models, reified, analyzer, set())
+    g = build_graph(saved_models, reified, analyzer, frozenset())
     assert len(g.nodes) == 9
     assert len(g.edges) == 8
 
@@ -160,7 +160,7 @@ def test_negative_recursion_gets_treated_correctly():
     saved_models = get_stable_models_for_program(orig_program)
     reified = reify_list(sorted_program)
 
-    g = build_graph(saved_models, reified, analyzer, set())
+    g = build_graph(saved_models, reified, analyzer, frozenset())
     assert len(g.nodes) == 3
     assert len(g.edges) == 2
 
@@ -174,7 +174,7 @@ def test_path_creation():
     rule_mapping = {1: Transformation(1, parse_program_to_ast("fact(1).")), 2: Transformation(2, parse_program_to_ast("result(X) :- fact(X)."))}
     path = make_reason_path_from_facts_to_stable_model(single_saved_model,
                                                        rule_mapping, Node(frozenset(), 0),
-                                                       h_symbols, set())
+                                                       h_symbols, frozenset())
     nodes, edges = list(path.nodes), list(t for _, _, t in path.edges.data(True))
     assert len(edges) == 2
     assert len(nodes) == 3
@@ -188,7 +188,7 @@ def test_atoms_are_propagated_correctly_through_diffs():
     single_saved_model = get_stable_models_for_program(program).pop()
     facts, constants = [], []
     h_symbols = get_h_symbols_from_model(single_saved_model, transformed, facts, constants)
-    rule_mapping = {1: Transformation(1, parse_program_to_ast("b :- a.")), 2: Transformation(2, parse_program_to_ast("c :- b.")), 3: Transformation(3, parse_program_to_ast("d :- c."))}
+    rule_mapping = {1: Transformation(1, (parse_program_to_ast("b :- a."),)), 2: Transformation(2, (parse_program_to_ast("c :- b."),)), 3: Transformation(3, (parse_program_to_ast("d :- c."),))}
     path = make_reason_path_from_facts_to_stable_model(single_saved_model,
                                                         rule_mapping,
                                                        Node(frozenset([SymbolIdentifier(Function(loc,"a",[], False))]), 0, frozenset([Function(loc,"a", [], False)])),
@@ -200,7 +200,44 @@ def test_atoms_are_propagated_correctly_through_diffs():
         assert src.diff.issubset(tgt.atoms)
         assert len(src.atoms) == len(tgt.atoms) - len(tgt.diff)
 
+def test_multiple_sortings():
+    program= """
+    e. f. g.
+    1 {a; b} 1.
+    c :- a.
+    c :- b.
+    h. i.
+    """
+    analyzer = ProgramAnalyzer()
+    analyzer.add_program(program)
+    sorted_programs = list(analyzer.get_sorted_program())
+    assert len(sorted_programs) == 2
+    # assert first sorting is closest to the original program
+    assert sorted_programs[0][1] == Transformation(1, (parse_program_to_ast("c :- a."),))
+    assert sorted_programs[0][2] == Transformation(2, (parse_program_to_ast("c :- b."),))
+    assert sorted_programs[1][1] == Transformation(1, (parse_program_to_ast("c :- b."),))
+    assert sorted_programs[1][2] == Transformation(2, (parse_program_to_ast("c :- a."),))
+    program= """
+    e. f. g.
+    1 {a; b} 1.
+    c :- b.
+    c :- a.
+    h. i.
+    """
+    analyzer = ProgramAnalyzer()
+    analyzer.add_program(program)
+    sorted_programs = list(analyzer.get_sorted_program())
+    assert len(sorted_programs) == 2
+    # assert first sorting is closest to the original program
+    assert sorted_programs[0][1] == Transformation(1, (parse_program_to_ast("c :- b."),))
+    assert sorted_programs[0][2] == Transformation(2, (parse_program_to_ast("c :- a."),))
+    assert sorted_programs[1][1] == Transformation(1, (parse_program_to_ast("c :- a."),))
+    assert sorted_programs[1][2] == Transformation(2, (parse_program_to_ast("c :- b."),))
+
 def parse_program_to_ast(prg: str) -> AST:
+    program_base = "#program base."
     parsed = []
     parse_string(prg, lambda rule: parsed.append(rule))
+    if str(parsed[0]) == program_base:
+        return parsed[1]
     return parsed[0]

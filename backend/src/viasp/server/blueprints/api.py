@@ -1,4 +1,4 @@
-from typing import Tuple, Any, Dict, Iterable
+from typing import Tuple, Any, Dict, Iterable, Collection, List
 from unittest.mock import NonCallableMagicMock
 
 from flask import request, Blueprint, jsonify, abort, Response
@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from clingo import Control
 from clingraph.orm import Factbase
+from clingo.ast import AST
 from clingraph.graphviz import compute_graphs, render
 from ...shared.defaults import CLINGRAPH_PATH
 
@@ -122,7 +123,7 @@ def set_transformer():
     return "ok"
 
 
-def wrap_marked_models(marked_models: Iterable[StableModel]):
+def wrap_marked_models(marked_models: Iterable[StableModel]) -> List[List[str]]:
     result = []
     for model in marked_models:
         wrapped = []
@@ -161,8 +162,8 @@ def get_warnings():
 @bp.route("/control/show", methods=["POST"])
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def show_selected_models():
-    marked_models = dc.models
-    marked_models = wrap_marked_models(marked_models)
+    marked_models: List[List[str]] = wrap_marked_models(dc.models)
+    print(f"Got marked models: {marked_models}", flush=True)
 
     db = ProgramDatabase()
     analyzer = ProgramAnalyzer()
@@ -170,12 +171,18 @@ def show_selected_models():
     _set_warnings(analyzer.get_filtered())
     if analyzer.will_work():
         recursion_rules = analyzer.check_positive_recursion()
-        reified = reify_list(analyzer.get_sorted_program(), h=analyzer.get_conflict_free_h(),
-                             model=analyzer.get_conflict_free_model(),
-                             get_conflict_free_variable=analyzer.get_conflict_free_variable)
-        g = build_graph(marked_models, reified, analyzer, recursion_rules)
-
-        set_graph(g)
+        reified: List[Collection[AST]] = []
+        for i,sorted_program in enumerate(analyzer.get_sorted_program()):
+            print(f"\n  {i}. Sorted: {sorted_program}", flush=True)
+            reified.append(reify_list(sorted_program, h=analyzer.get_conflict_free_h(),
+                                model=analyzer.get_conflict_free_model(),
+                                get_conflict_free_variable=analyzer.get_conflict_free_variable)) 
+            # TODO: allow multiple graphs
+            # print(f"Got marked models: {marked_models}", flush=True)
+            g = build_graph(marked_models, reified[i], analyzer, recursion_rules) #TODO: fix?
+            # s = '\n    '.join(list(map(str,g.nodes)))
+            # print(f"Nodes: {s}", flush=True)
+            set_graph(g) 
     return "ok", 200
 
 @bp.route("/control/relax", methods=["POST"])
@@ -220,3 +227,8 @@ def clingraph_generate():
             return jsonify({"using_clingraph": True}), 200
         return jsonify({"using_clingraph": False}), 200
     return "ok", 200
+
+def stringify_reified(reified: List[Collection[AST]]) -> str:
+    ab = [", ".join(list(map(str,r))) for r in reified]
+    st = '\n    '.join(ab)
+    return st

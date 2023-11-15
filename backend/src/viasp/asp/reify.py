@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, Tuple, Iterable, Set, Collection, Any, Union, Sequence
+from typing import Dict, List, Tuple, Iterable, Set, Collection, Any, Union, Sequence, Generator
 
 import clingo
 import networkx as nx
@@ -210,7 +210,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         self.rules: List[Rule] = []
         self.names: Set[str] = set()
 
-    def _get_conflict_free_version_of_name(self, name: str) -> Collection[str]:
+    def _get_conflict_free_version_of_name(self, name: str) -> str:
         candidates = [name for name, _ in self.dependants.keys()]
         candidates.extend([name for name, _ in self.conditions.keys()])
         candidates.extend([getattr(getattr(getattr(fact,"atom"), "symbol"), "name", "") for fact in self.facts])
@@ -251,7 +251,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         return extract_symbols(self.facts, self.constants)
 
     def get_constants(self):
-        return self.constants
+        return list(self.constants)
 
     def register_symbolic_dependencies(self, deps: Dict[Literal, List[Literal]]):
         for u, conditions in deps.items():
@@ -320,9 +320,9 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         self.constants.add(definition)
         return definition
 
-    def add_program(self, program: str, registered_transformer: Transformer = None) -> None:
-        if registered_transformer is not None:
-            registered_visitor = registered_transformer()
+    def add_program(self, program: str, RegisteredTransformer: Union[Transformer,None] = None) -> None:
+        if RegisteredTransformer is not None:
+            registered_visitor = RegisteredTransformer() # type: ignore
             new_program: List[AST] = []
 
             def add(statement):
@@ -339,12 +339,13 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
     def sort_program(self, program) -> List[Transformation]:
         parse_string(program, lambda rule: self.visit(rule))
-        sorted_program = self.sort_program_by_dependencies()
-        return [Transformation(i, prg) for i, prg in enumerate(sorted_program)]
+        sorted_programs = self.sort_program_by_dependencies()
+        return [Transformation(i, prg) for i, prg in enumerate(sorted_programs[0])]
 
-    def get_sorted_program(self) -> List[Transformation]:
-        sorted_program = self.sort_program_by_dependencies()
-        return [Transformation(i, prg) for i, prg in enumerate(sorted_program)]
+    def get_sorted_program(self) -> Generator[List[Transformation], None, None]:
+        sorted_programs = self.sort_program_by_dependencies()
+        for program in sorted_programs:
+            yield [Transformation(i, (prg)) for i, prg in enumerate(program)]
 
     def make_dependency_graph(self, head_dependencies: Dict[Tuple[str, int], Iterable[clingo.ast.AST]],
                               body_dependencies: Dict[Tuple[str, int], Iterable[clingo.ast.AST]]) -> nx.DiGraph:
@@ -378,8 +379,8 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         deps = merge_constraints(deps)
         deps, _ = merge_cycles(deps)
         deps, _ = remove_loops(deps)
-        program = rank_topological_sorts(nx.all_topological_sorts(deps), self.rules)
-        return program[0]
+        programs = rank_topological_sorts(nx.all_topological_sorts(deps), self.rules)
+        return programs
 
     def check_positive_recursion(self):
         deps1 = self.make_dependency_graph(self.dependants, self.positive_conditions)
@@ -514,7 +515,7 @@ def reify(transformation: Transformation, **kwargs):
     return result
 
 
-def reify_list(transformations: Iterable[Transformation], **kwargs) -> List[AST]:
+def reify_list(transformations: Iterable[Transformation], **kwargs) -> Collection[AST]:
     reified = []
     for part in transformations:
         reified.extend(reify(part, **kwargs))

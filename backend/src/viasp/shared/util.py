@@ -1,7 +1,8 @@
 from itertools import tee
-from typing import Any, TypeVar, Iterable, Tuple
+from typing import Any, TypeVar, Iterable, Tuple, List
 from collections import defaultdict
 from types import MappingProxyType
+from clingo import Symbol
 
 import networkx as nx
 
@@ -41,8 +42,8 @@ def pairwise(iterable: Iterable[T]) -> Iterable[Tuple[T, T]]:
     next(b, None)
     return zip(a, b)
 
-def DefaultMappingProxyType():
-    return MappingProxyType(defaultdict(list))
+def DefaultMappingProxyType() -> MappingProxyType[Symbol, List]:
+    return MappingProxyType(defaultdict())
 
 def is_recursive(node, graph):
     """

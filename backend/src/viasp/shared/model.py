@@ -2,7 +2,7 @@ from copy import copy
 from dataclasses import dataclass, field
 from enum import Enum
 from inspect import Signature as inspect_Signature
-from typing import Any, Sequence, Dict, Union, FrozenSet, Collection, List
+from typing import Any, Sequence, Dict, Union, FrozenSet, Collection, List, Tuple
 from types import MappingProxyType
 from collections import defaultdict
 from uuid import UUID, uuid4
@@ -27,7 +27,8 @@ class SymbolIdentifier:
         return hash(self.symbol)
 
     def __repr__(self):
-        return f"{{symbol: {str(self.symbol)}, uuid: {self.uuid}}}"
+        # return f"{{symbol: {str(self.symbol)}, uuid: {self.uuid}}}"
+        return str(self.symbol)
 
 
 @dataclass()
@@ -35,7 +36,7 @@ class Node:
     diff: FrozenSet[SymbolIdentifier] = field(hash=True)
     rule_nr: int = field(hash=True)
     atoms: FrozenSet[SymbolIdentifier] = field(default_factory=frozenset, hash=True)
-    reason: MappingProxyType = field(default_factory=DefaultMappingProxyType, hash=True) # type: MappingProxyType[str, List[SymbolIdentifier]]
+    reason: MappingProxyType[Symbol, List[SymbolIdentifier]] = field(default_factory=DefaultMappingProxyType, hash=True)
     recursive: Union[bool, nx.DiGraph] = field(default=False, hash=False)
     uuid: UUID = field(default_factory=uuid4, hash=False)
 
@@ -46,22 +47,39 @@ class Node:
         return isinstance(o, type(self)) and (self.atoms, self.rule_nr, self.diff, self.reason) == (o.atoms, o.rule_nr, o.diff, o.reason)
 
     def __repr__(self):
-        repr_reasons = []
-        if isinstance(self.reason, list):
-            repr_reasons = [str(reason) for reason in self.reason]
-        else:
-            for key, val in self.reason.items():
-                repr_reasons.append(f"{key}: [{', '.join(map(str,val))}]")
-        return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{', '.join(map(str,self.atoms))}}}, reasons={{{', '.join(repr_reasons)}}}, recursive={self.recursive}, uuid={self.uuid})"
+        # repr_reasons = []
+        # if isinstance(self.reason, list):
+        #     repr_reasons = [str(reason) for reason in self.reason]
+        # else:
+        #     for key, val in self.reason.items():
+        #         repr_reasons.append(f"{key}: [{', '.join(map(str,val))}]")
+        # return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{', '.join(map(str,self.atoms))}}}, reasons={{{', '.join(repr_reasons)}}}, recursive={self.recursive}, uuid={self.uuid})"
+        return f"Node({{{'. '.join(map(str, self.diff))}}})"
 
 
 @dataclass(frozen=False)
 class Transformation:
-    id: int
-    rules: Sequence[str]
+    id: int = field(hash=True)
+    rules: Tuple[AST] = field(default_factory=tuple, hash=True)
+
+    def __post_init__(self):
+        if isinstance(self.rules, AST):
+            self.rules = (self.rules,)
 
     def __hash__(self):
         return hash(tuple(self.rules))
+    
+    def __eq__(self, o):
+        if not isinstance(o, type(self)):
+            return False
+        if self.id != o.id:
+            return False
+        if len(self.rules) != len(o.rules):
+            return False
+        for r in o.rules:
+            if r not in self.rules:
+                return False
+        return True
     
     def __repr__(self):
         return f"Transformation(id={self.id}, rules={list(map(str,self.rules))})"

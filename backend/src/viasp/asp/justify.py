@@ -21,7 +21,7 @@ def stringify_fact(fact: Function) -> str:
     return f"{str(fact)}."
 
 
-def get_h_symbols_from_model(wrapped_stable_model: Iterable[Symbol],
+def get_h_symbols_from_model(wrapped_stable_model: Iterable[str],
                              transformed_prg: Collection[Union[str, AST]],
                              facts: List[Symbol],
                              constants: List[Symbol],
@@ -57,39 +57,40 @@ def get_facts(original_program) -> Collection[Symbol]:
 
 
 def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_indices, pad: bool, supernode_symbols: frozenset = frozenset([])) -> List[Node]:
-    tmp_symbol: Dict[int, List[SymbolIdentifier]] = defaultdict(list)
+    tmp_symbol: Dict[int, List[Union[SymbolIdentifier, Symbol]]] = defaultdict(list)
     tmp_reason: Dict[int, Dict[Symbol, List[Symbol]]] = defaultdict(dict)
     for sym in h_symbols:
         rule_nr, symbol, reasons = sym.arguments
         tmp_symbol[rule_nr.number].append(symbol)
-        tmp_reason[rule_nr.number][str(symbol)] = reasons.arguments
+        tmp_reason[rule_nr.number][str(symbol)] = reasons.arguments # type: ignore
     for rule_nr in tmp_symbol.keys():
-        tmp_symbol[rule_nr] = set(tmp_symbol[rule_nr])
-        tmp_symbol[rule_nr] = map(lambda symbol: next(filter(
+        tmp_symbol[rule_nr] = list(tmp_symbol[rule_nr])
+        tmp_symbol[rule_nr] = list(map(lambda symbol: next(filter(
         lambda supernode_symbol: supernode_symbol==symbol, supernode_symbols)) if
         symbol in supernode_symbols else
-        SymbolIdentifier(symbol),tmp_symbol[rule_nr])
+        SymbolIdentifier(symbol),tmp_symbol[rule_nr]))
     if pad:
-        h_symbols = [
+        h_nodes: List[Node] = [
             Node(frozenset(tmp_symbol[rule_nr]), rule_nr, reason=tmp_reason[rule_nr]) if rule_nr in tmp_symbol else Node(frozenset(), rule_nr) for 
             rule_nr in relevant_indices]
     else:
-        h_symbols = [
+        h_nodes: List[Node] = [
             Node(frozenset(tmp_symbol[rule_nr]), rule_nr, reason=tmp_reason[rule_nr]) if rule_nr in tmp_symbol else Node(frozenset(), rule_nr)
             for rule_nr in range(1, max(tmp_symbol.keys(), default=-1) + 1)]
 
-    return h_symbols
+    return h_nodes
 
 
 def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
-                                            rule_mapping: Dict[int, Union[AST, str]],
-                                            fact_node: Node, h_syms,
-                                            recursive_transformations:frozenset, 
-                                            h="h", 
-                                            analyzer: ProgramAnalyzer = None,
+                                            rule_mapping: Dict[int, Transformation],
+                                            fact_node: Node, 
+                                            h_symbols: List[Symbol],
+                                            recursive_transformations: Collection[AST], 
+                                            h: str = "h", 
+                                            analyzer: Union[ProgramAnalyzer, None] = None,
                                             pad=True) \
                                             -> nx.DiGraph:
-    h_syms = collect_h_symbols_and_create_nodes(h_syms, rule_mapping.keys(), pad)
+    h_syms: List[Node] = collect_h_symbols_and_create_nodes(h_symbols, rule_mapping.keys(), pad)
     h_syms.sort(key=lambda node: node.rule_nr)
     h_syms.insert(0, fact_node)
 
@@ -129,7 +130,7 @@ def make_transformation_mapping(transformations: Iterable[Transformation]):
 
 
 def append_noops(result_graph: DiGraph, analyzer: ProgramAnalyzer):
-    next_transformation_id = max(t.id for t in analyzer.get_sorted_program()) + 1
+    next_transformation_id = max(t.id for t in next(analyzer.get_sorted_program())) + 1
     leaves = list(get_leafs_from_graph(result_graph))
     leaf: Node
     for leaf in leaves:
@@ -139,13 +140,14 @@ def append_noops(result_graph: DiGraph, analyzer: ProgramAnalyzer):
                                                             [str(pt) for pt in analyzer.pass_through]))
 
 
-def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collection[AST],
-                analyzer: ProgramAnalyzer, recursion_transformations: frozenset) -> nx.DiGraph:
+def build_graph(wrapped_stable_models: List[List[str]], transformed_prg: Collection[AST],
+                analyzer: ProgramAnalyzer, recursion_transformations: set) -> nx.DiGraph:
     paths: List[nx.DiGraph] = []
     facts = analyzer.get_facts()
     conflict_free_h = analyzer.get_conflict_free_h()
     identifiable_facts = map(SymbolIdentifier,facts)
-    sorted_program = analyzer.get_sorted_program()
+    # TODO: allow multiple sorts
+    sorted_program = next(analyzer.get_sorted_program())
     mapping = make_transformation_mapping(sorted_program)
     fact_node = Node(frozenset(identifiable_facts), -1, frozenset(identifiable_facts))
     if not len(mapping):
@@ -181,8 +183,8 @@ def filter_body_aggregates(element: AST):
 
 
 def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
-                           transformation: Union[AST, str], conflict_free_h: str,
-                           analyzer: ProgramAnalyzer) -> Union[bool, nx.DiGraph]:
+                           transformation: Transformation, conflict_free_h: str,
+                           analyzer: Union[ProgramAnalyzer, None]) -> Union[bool, nx.DiGraph]:
     """
     Get a recursion explanation for the given facts and the recursive transformation.
     Generate graph from explanation, sorted by the iteration step number.
