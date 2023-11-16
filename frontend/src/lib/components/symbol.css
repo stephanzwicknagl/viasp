@@ -1,0 +1,17 @@
+.symbol {
+    margin: 1px 1px;
+    display: flex;
+    border-radius: 7px;
+    translate: 1px -3px;
+}
+
+.mark_symbol {
+    min-width: 0;
+    min-height: 0;
+    width: fit-content;
+    ;
+    width: -moz-fit-content;
+    display: flex;
+    border-radius: 7px;
+    font-style: bold, italic;
+}

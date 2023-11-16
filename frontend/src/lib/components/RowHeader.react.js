@@ -7,9 +7,9 @@ export function RowHeader(props) {
     const { transformation } = props;
     const colorPalette = useColorPalette();
     return <div style={{
-        "backgroundColor": colorPalette.sixty.dark,
-        "color": colorPalette.thirty.dark,
-        "borderColor": colorPalette.sixty.dark
+        "backgroundColor": colorPalette.secondary,
+        "color": colorPalette.light,
+        "borderColor": colorPalette.secondary
     }}
         className="row_header">{transformation.map(rule =>
             <div key={rule}

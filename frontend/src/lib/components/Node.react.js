@@ -1,18 +1,21 @@
-import React from "react";
+import React, {lazy, Suspense} from "react";
 import { make_atoms_string } from "../utils/index";
-import './node.css'
-import PropTypes, { symbol } from "prop-types";
+import './node.css';
+import PropTypes from "prop-types";
+import { Symbol } from "./Symbol.react";
 import { hideNode, showNode, useShownNodes } from "../contexts/ShownNodes";
 import { useColorPalette } from "../contexts/ColorPalette";
 import { useHighlightedNode } from "../contexts/HighlightedNode";
 import { useHighlightedSymbol } from "../contexts/HighlightedSymbol";
 import { useShownRecursion } from "../contexts/ShownRecursion";
 import { useSettings } from "../contexts/Settings";
-import { NODE, SYMBOLIDENTIFIER } from "../types/propTypes";
+import { NODE } from "../types/propTypes";
 import { useFilters } from "../contexts/Filters";
 import AnimateHeight from 'react-animate-height';
 import { useAnimationUpdater } from "../contexts/AnimationUpdater";
-
+import clockwiseVerticalArrows from '@iconify/icons-emojione-monotone/clockwise-vertical-arrows';
+import arrowDownDoubleFill from '@iconify/icons-ri/arrow-down-double-fill';
+import { IconWrapper as RealComponent } from '../LazyLoader';
 
 function any(iterable) {
     for (let index = 0; index < iterable.length; index++) {
@@ -21,37 +24,6 @@ function any(iterable) {
         }
     }
     return false;
-}
-
-function Symbol(props) {
-    const { symbolId, isSubnode } = props;
-    let atomString = make_atoms_string(symbolId.symbol)
-    let suffix = `_${isSubnode ? "sub" : "main"}`
-    atomString = atomString.length === 0 ? "" : atomString;
-    return <div className={"symbol"} id={symbolId.uuid+suffix}>{atomString}</div>
-}
-
-Symbol.propTypes = {
-    /**
-     * The symbolidentifier of the symbol to display
-     */
-    symbolId: SYMBOLIDENTIFIER
-}
-
-function useHighlightedSymbolToCreateClassName(compareHighlightedSymbol, symbol) {
-    let classNames = `mouse_over_symbol`;
-    let style = null;
-
-    const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol);
-    const j = compareHighlightedSymbol.map(item => item.src).indexOf(symbol);
-    if (i !== -1) {
-        classNames = `mouse_over_symbol mark_symbol`;
-        style = { "backgroundColor": compareHighlightedSymbol[i].color };
-    }
-    else if (j !== -1) {
-        classNames = `mouse_over_symbol mark_symbol`;
-    }
-    return [classNames, style]
 }
 
 function NodeContent(props) {
@@ -80,6 +52,9 @@ function NodeContent(props) {
     function handleClick(e, src) {
         e.stopPropagation();
 
+        if (!node.reason[make_atoms_string(src.symbol)]) {
+            return;
+        }
         let reasons = node.reason[make_atoms_string(src.symbol)];
         if (reasons.every(tgt => tgt !== null)) {
             toggleHighlightedSymbol(reasons.map(tgt => { return { "src": src.uuid, "tgt": tgt.uuid } }), highlightedSymbol);
@@ -95,9 +70,17 @@ function NodeContent(props) {
     function symbolVisibilityManager(compareHighlightedSymbol, symbol) {
         const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol.uuid);
         const j = compareHighlightedSymbol.map(item => item.src).indexOf(symbol.uuid);
-        const childRect = document.getElementById(symbol.uuid+`_${isSubnode?"sub":"main"}`).getBoundingClientRect();
-        const parentRect = document.getElementById(parentID).getBoundingClientRect();
-        return { "fittingHeight": childRect.bottom - parentRect.top, "isMarked": i !== -1 || j !== -1 };
+        const childElement = document.getElementById(symbol.uuid + `_${isSubnode ? "sub" : "main"}`);
+        const parentElement = document.getElementById(parentID);
+
+        if (!childElement || !parentElement) {
+            return { "fittingHeight": 0, "isMarked": i !== -1 || j !== -1 };
+        }
+        else {
+            const childRect = childElement.getBoundingClientRect();
+            const parentRect = parentElement.getBoundingClientRect();
+            return { "fittingHeight": childRect.bottom - parentRect.top, "isMarked": i !== -1 || j !== -1 };
+        }
     }
 
     function visibilityManager() {
@@ -144,13 +127,11 @@ function NodeContent(props) {
     const containerNames = `set_container`
     let renderedSymbols = contentToShow.filter(symbol =>
         symbolShouldBeShown(symbol)).map(s => {
-            const [classNames1, style1] = useHighlightedSymbolToCreateClassName(highlightedSymbol, s.uuid);
-            return <div className={classNames1} style={style1} onClick={(e) => handleClick(e, s)}>
-                <Symbol key={JSON.stringify(s)} symbolId={s} isSubnode={isSubnode} />
-            </div>
+            // const [classNames1, style1] = useHighlightedSymbolAndReasonToCreateClassName(highlightedSymbol, s.uuid, node.reason[make_atoms_string(s)]);
+            return <Symbol key={JSON.stringify(s)} symbolIdentifier={s} isSubnode={isSubnode} reasons={node.reason[make_atoms_string(s)]} handleClick={handleClick}/>
         })
 
-    return <div className={containerNames} style={{ "color": colorPalette.thirty.dark }}>
+    return <div className={containerNames} style={{ "color": colorPalette.dark }}>
         <span className={classNames2}>{renderedSymbols.length > 0 ? renderedSymbols : ""}</span>
     </div>
 }
@@ -161,9 +142,25 @@ NodeContent.propTypes = {
      */
     node: NODE,
     /**
-     * If the Node will overflow vertically
+     * The function to be called to set the node height
      */
-    overflowV: PropTypes.bool
+    setHeight: PropTypes.func,
+    /**
+     * The id of the parent node
+     */
+    parentID: PropTypes.string,
+    /**
+     * Set the vertical overflow state of the Node
+     */
+    setIsdOverflowV: PropTypes.func,
+    /**
+     * If the node is expanded
+     */
+    expandNode: PropTypes.bool,
+    /**
+     * If the node is a subnode
+     */
+    isSubnode: PropTypes.bool
 }
 
 function RecursionButton(props) {
@@ -179,8 +176,10 @@ function RecursionButton(props) {
 
     return <div className={"recursion_button"} onClick={handleClick}>
         {!node.recursive ? null :
-            <div className={"recursion_button_text"} style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 64 64"><path fill="#4d5357" d="m39.5 61.1l-6.4-8.7h-.8c-5.6 0-10.2-3.6-10.2-8V25h8l-14-19.2L2 25h8v19.4c0 4.7 2.3 9.1 6.6 12.4c4.2 3.3 9.8 5.2 15.8 5.2c2.4 0 4.8-.3 7.1-.9m-7.8-49.5c5.6 0 10.2 3.6 10.2 8v19.5h-8L48 58.3l14-19.2h-8V19.6c0-4.7-2.3-9.1-6.5-12.4C43.3 3.8 37.7 2 31.7 2c-2.5 0-4.9.3-7.2.9l6.4 8.7h.8" /></svg>
+            <div className={"recursion_button_text"} style={{ "backgroundColor": colorPalette.primary, "color": colorPalette.sixty.dark }}>
+                <Suspense fallback={<div>R</div>}>
+                    <RealComponent icon={clockwiseVerticalArrows} width="9" height="9" />
+                </Suspense>
             </div>
         }
     </div>
@@ -195,10 +194,12 @@ function OverflowButton(props) {
         setExpandNode(true);
     }
 
-    return <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}
+    return <div style={{ "backgroundColor": colorPalette.primary, "color": colorPalette.sixty.dark }}
                 className={"bauchbinde"} onClick={handleClick}>
         <div className={"bauchbinde_text"}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24"><path fill="currentColor" d="M18 6.41L16.59 5L12 9.58L7.41 5L6 6.41l6 6z" /><path fill="currentColor" d="m18 13l-1.41-1.41L12 16.17l-4.59-4.58L6 13l6 6z" /></svg>
+            <Suspense fallback={<div>...</div>}>
+                <RealComponent icon={arrowDownDoubleFill} width="12" height="12" />
+            </Suspense>
         </div>
     </div>
 }
@@ -238,11 +239,11 @@ export function Node(props) {
     const divID = `${node.uuid}_animate_height`;
 
     return <div className={classNames}
-        style={{ "backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark }}
+        style={{ "backgroundColor": colorPalette.light, "color": colorPalette.secondary }}
         id={node.uuid}
         onClick={(e) => { e.stopPropagation(); notifyClick(node) }}>
         {showMini ?
-            <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.ten.dark }}
+            <div style={{ "backgroundColor": colorPalette.primary, "color": colorPalette.primary }}
                 className={"mini"} /> :
             <div className={"set_too_high"}  >
                 <AnimateHeight

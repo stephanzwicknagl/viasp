@@ -23,20 +23,20 @@ export const TRANSFORMATION = PropTypes.exact({
     id: PropTypes.number,
     rules: PropTypes.array
 })
+export const GRAPH = PropTypes.exact({
+    _type: PropTypes.oneOf(['Graph']),
+    _graph: PropTypes.object
+})
 export const NODE = PropTypes.exact({
     _type: PropTypes.oneOf(['Node']),
     atoms: PropTypes.array,
     diff: PropTypes.array,
     rule_nr: PropTypes.number,
-    reason: PropTypes.array, 
-    recursive: PropTypes.oneOf([PropTypes.bool, GRAPH]),
+    reason: PropTypes.object, 
+    recursive: PropTypes.oneOfType([PropTypes.bool, GRAPH]),
     uuid: PropTypes.string
 })
 export const BOX = PropTypes.exact({
     _type: PropTypes.oneOf(['Box']),
     uuid: PropTypes.string
-})
-export const GRAPH = PropTypes.exact({
-    _type: PropTypes.oneOf(['Graph']),
-    _graph: PropTypes.object
 })
