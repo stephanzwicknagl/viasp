@@ -9,6 +9,7 @@ import {NODE, SIGNATURE, TRANSFORMATION} from "../types/propTypes";
 import {showOnlyTransformation, useTransformations} from "../contexts/transformations";
 import {useColorPalette} from "../contexts/ColorPalette";
 import { useShownDetail } from "../contexts/ShownDetail";
+import { useSorts } from "../contexts/ProgramSorts";
 
 
 const KEY_DOWN = 40;
@@ -72,23 +73,25 @@ export function Search() {
     const [showSuggestions, setShowSuggestions] = React.useState(false);
     const [userInput, setUserInput] = React.useState("");
     const [, setHighlightedNode] = useHighlightedNode();
+    const setHighlightedNodeRef = React.useRef(setHighlightedNode)
     const [, dispatch] = useFilters();
     const {dispatch: dispatchT} = useTransformations()
     const {backendURL} = useSettings();
     const { sixty } = useColorPalette();
     const { setShownDetail } = useShownDetail();
+    const { state: {currentSort} } = useSorts();
     let suggestionsListComponent;
     React.useEffect(() => {
         const highlighted = filteredSuggestions[activeSuggestion]
 
         if (highlighted && highlighted._type === "Node") {
-            setHighlightedNode(highlighted.uuid);
+            setHighlightedNodeRef.current(highlighted.uuid);
         }
-    }, [activeSuggestion])
+    }, [activeSuggestion, filteredSuggestions])
 
     function onChange(e) {
         const userInput = e.currentTarget.value;
-        fetch(`${backendURL("query")}?q=` + userInput)
+        fetch(`${backendURL("query")}?q=${userInput}&hash=${currentSort}`)
             .then(r => r.json())
             .then(data => {
                 setActiveSuggestion(0)

@@ -4,6 +4,7 @@ import './row.css';
 import PropTypes from "prop-types";
 import {RowHeader} from "./RowHeader.react";
 import {toggleTransformation, useTransformations} from "../contexts/transformations";
+import {useSorts} from "../contexts/ProgramSorts";
 import {useSettings} from "../contexts/Settings";
 import { TRANSFORMATION, TRANSFORMATIONWRAPPER } from "../types/propTypes";
 import { ColorPaletteContext } from "../contexts/ColorPalette";
@@ -12,8 +13,8 @@ import { IconWrapper } from '../LazyLoader';
 import dragHandleRounded from '@iconify/icons-material-symbols/drag-handle-rounded';
 
 
-function loadMyAsyncData(id, backendURL) {
-    return fetch(`${backendURL("graph/children")}/${id}`).then(r => r.json());
+function loadMyAsyncData(id, backendURL, hash) {
+    return fetch(`${backendURL("graph/children")}/${id}?hash=${hash}`).then(r => r.json());
 }
 
 
@@ -110,6 +111,7 @@ export function Row(props) {
     const backendURLRef = React.useRef(backendURL);
     const {state: {transformations}} = useTransformations();
     const [shownRecursion, ,] = useShownRecursion();
+    const { state: {currentSort}} = useSorts();
 
     useEffect(() => {
         if (headerRef.current && handleRef.current) {
@@ -120,14 +122,14 @@ export function Row(props) {
 
     React.useEffect(() => {
         let mounted = true;
-        loadMyAsyncData(transformationIdRef.current, backendURLRef.current)
+        loadMyAsyncData(transformationIdRef.current, backendURLRef.current, currentSort)
             .then(items => {
                 if (mounted) {
                     setNodes(items)
                 }
             })
         return () => { mounted = false };
-    }, []);
+    }, [currentSort]);
 
     const checkForOverflow = useCallback(() => {
         if (rowbodyRef !== null && rowbodyRef.current) {

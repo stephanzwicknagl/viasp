@@ -5,6 +5,7 @@ import PropTypes from "prop-types";
 import {useColorPalette} from "../contexts/ColorPalette";
 import { useShownDetail } from "../contexts/ShownDetail";
 import {useSettings} from "../contexts/Settings";
+import { useSorts } from '../contexts/ProgramSorts';
 import {SIGNATURE, SYMBOL} from "../types/propTypes";
 import {IoChevronDown, IoChevronForward, IoCloseSharp} from "react-icons/io5";
 
@@ -55,8 +56,8 @@ DetailForSignature.propTypes =
         symbols: PropTypes.arrayOf(SYMBOL)
     }
 
-function loadDataForDetail(uuid, url_provider) {
-    return fetch(`${url_provider("detail")}/${uuid}`).then(r => r.json())
+function loadDataForDetail(backendURL, uuid, hash) {
+    return fetch(`${backendURL("detail")}/${uuid}?hash=${hash}`).then(r => r.json())
 }
 
 function CloseButton(props) {
@@ -76,14 +77,16 @@ export function Detail() {
     const [data, setData] = React.useState(null);
     const [type, setType] = React.useState("Model");
     const {backendURL} = useSettings();
+    const backendURLRef = React.useRef(backendURL);
     const colorPalette = useColorPalette();
     const { shownDetail: shows, setShownDetail } = useShownDetail();
     const clearDetail = () => setShownDetail(null);
+    const { state: {currentSort} } = useSorts();
 
     React.useEffect(() => {
         let mounted = true;
         if (shows !== null) {
-            loadDataForDetail(shows, backendURL)
+            loadDataForDetail(backendURLRef.current, shows, currentSort)
                 .then(items => {
                     if (mounted) {
                         setData(items[1])
@@ -92,8 +95,8 @@ export function Detail() {
                     }
                 })
         }
-        return () => mounted = false;
-    }, [shows])
+        return () => { mounted = false };
+    }, [shows, currentSort])
 
     return <div id="detailSidebar" style={{ backgroundColor: colorPalette.info, color: colorPalette.dark}}
                 className={shows === null ? `detail`:`detail detail-open`}>

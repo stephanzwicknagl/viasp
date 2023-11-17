@@ -23,15 +23,19 @@ import { HighlightedSymbolProvider, useHighlightedSymbol } from '../contexts/Hig
 import { ShownRecursionProvider } from '../contexts/ShownRecursion';
 import { AnimationUpdaterProvider } from '../contexts/AnimationUpdater';
 import DraggableList from 'react-draggable-list';
+import { SortsProvider, useSorts } from '../contexts/ProgramSorts';
 
 
 function GraphContainer(props) {
     const {notifyDash} = props;
     const {state: {transformations}, dispatch} = useTransformations()
     const { clingraphUsed } = useClingraph();
+    const { state: sorts } = useSorts();
 
     function onMoveEnd(newList, movedItem, oldIndex, newIndex) {
+        console.log("onMoveEnd", newList)
         dispatch(reorderTransformation(oldIndex, newIndex));
+        console.log("moved transformations:", transformations)
     }
 
     return <div className="graph_container">
@@ -67,7 +71,7 @@ function MainWindow(props) {
 
 
     React.useEffect(() => {
-        fetch(backendURLRef.current("graph/transformations")).catch(() => {
+        fetch(backendURLRef.current("graph/sorts")).catch(() => {
             dispatchRef.current(showError(`Couldn't connect to server at ${backendURLRef.current("")}`))
         })
     }, [])
@@ -115,14 +119,16 @@ export default function ViaspDash(props) {
                                 <AnimationUpdaterProvider>
                                     <SettingsProvider backendURL={backendURL}>
                                         <UserMessagesProvider>
-                                            <TransformationProvider>
-                                                <ClingraphProvider>
-                                                    <div>
-                                                        <UserMessages/>
-                                                        <MainWindow notifyDash={notifyDash}/>
-                                                    </div>
-                                                </ClingraphProvider>
-                                            </TransformationProvider>
+                                            <SortsProvider>
+                                                <TransformationProvider>
+                                                    <ClingraphProvider>
+                                                        <div>
+                                                            <UserMessages/>
+                                                            <MainWindow notifyDash={notifyDash}/>
+                                                        </div>
+                                                    </ClingraphProvider>
+                                                </TransformationProvider>
+                                            </SortsProvider>
                                         </UserMessagesProvider>
                                     </SettingsProvider>
                                 </AnimationUpdaterProvider>

@@ -13,17 +13,47 @@ function fetchSorts(backendURL) {
     });
 }
 
-const defaultSorts = [];
+const initialState = {
+    sorts: [],
+    currentSort: 0,
+};
 
-const SortsContext = React.createContext(defaultSorts);
+const ADD_SORT = 'APP/SORTS/ADD';
+const SET_CURRENT_SORT = 'APP/SORTS/SET_CURRENT';
+const addSort = (s) => ({ type: ADD_SORT, s })
+const setCurrentSort = (hash) => ({ type: SET_CURRENT_SORT, hash })
+
+const sortReducer = (state = initialState, action) => {
+    if (action.type === ADD_SORT) {
+        if (state.currentSort === 0) {
+            return {
+                ...state,
+                sorts: state.sorts.concat({transformations: action.s[0], hash: action.s[1]}),
+                currentSort: action.s[1]
+            }
+        }
+        return {
+            ...state,
+            sorts: state.sorts.concat({transformations: action.s[0], hash: action.s[1]})
+        }
+    }
+    if (action.type === SET_CURRENT_SORT) {
+        const s = {
+            ...state,
+            currentSort: action.hash
+        }
+        return s
+    }
+    return state;
+}
+
+const SortsContext = React.createContext();
 const SortsProvider = ({ children }) => {
     const [, message_dispatch] = useMessages()
     const { state: settingsState, backendURL } = useSettings();
-    const [sorts, setSorts] = React.useState(defaultSorts);
+    const [ state, dispatch ] = React.useReducer(sortReducer, initialState);
     const backendUrlRef = React.useRef(backendURL);
     const messageDispatchRef = React.useRef(message_dispatch);
-
-    const hash = ""
 
     React.useEffect(() => {
         let mounted = true;
@@ -32,13 +62,13 @@ const SortsProvider = ({ children }) => {
         })
             .then(items => {
                 if (mounted) {
-                    setSorts(items)
+                    items.map((s) => dispatch(addSort(s)))
                 }
             })
         return () => { mounted = false };
     }, []);
 
-    return <SortsContext.Provider value={{ sorts }}>{children}</SortsContext.Provider>
+    return <SortsContext.Provider value={{ state, dispatch }}>{children}</SortsContext.Provider>
 }
 
 const useSorts = () => React.useContext(SortsContext);

@@ -9,8 +9,11 @@ import {useFilters} from "../contexts/Filters";
 import { useShownRecursion } from "../contexts/ShownRecursion";
 import { useAnimationUpdater } from "../contexts/AnimationUpdater";
 import { useClingraph } from "../contexts/Clingraph";
+import { computeSortHash } from "../utils";
+// import { useTransformations } from "../contexts/transformations";
+import { useSorts } from "../contexts/ProgramSorts";
 
-function loadEdges(nodeInfo, backendURL) {
+function loadEdges(nodeInfo, backendURL,hash) {
     return fetch(`${backendURL("graph/edges")}`, {
         method: "POST",
         headers: {
@@ -20,13 +23,13 @@ function loadEdges(nodeInfo, backendURL) {
     }).then(r => r.json());
 }
 
-function loadClingraphEdges(shownNodes, backendURL) {
+function loadClingraphEdges(nodeInfo, backendURL) {
     return fetch(`${backendURL("clingraph/edges")}`, {
         method: "POST",
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(shownNodes)
+        body: JSON.stringify(nodeInfo)
     }).then(r => r.json());
 }
 
@@ -55,12 +58,15 @@ export function Edges() {
     // state to update Edges after height animation of node
     const [value, , , ] = useAnimationUpdater();
     const {clingraphUsed} = useClingraph();
+    // const {state: {transformations}} = useTransformations()
+    const {state: {currentSort}} = useSorts();
 
     
     React.useEffect(() => {
         let mounted = true;
-        
+
         const nodeInfo = {
+            hash: currentSort,
             shownNodes: shownNodes,
             shownRecursion: shownRecursion
         }
@@ -71,12 +77,16 @@ export function Edges() {
             }
         })
         return () => { mounted = false };
-    }, [shownNodes, shownRecursion, state, activeFilters]);
+    }, [currentSort, shownNodes, shownRecursion, state, activeFilters]);
 
     React.useEffect(() => {
         let mounted = true;
         if (clingraphUsed) {
-            loadClingraphEdges(shownNodes, backendUrlRef.current)
+            const nodeInfo = {
+                hash: currentSort,
+                shownNodes: shownNodes,
+            }
+            loadClingraphEdges(nodeInfo, backendUrlRef.current)
                 .then(items => {
                     if (mounted) {
                         setClingraphEdges(items)
@@ -85,7 +95,7 @@ export function Edges() {
                 })
             }
         return () => { mounted = false };
-    }, [shownNodes, state, activeFilters, clingraphUsed]);
+    }, [currentSort, shownNodes, state, activeFilters, clingraphUsed]);
 
     
     return <div ref={target} className="edge_container" >

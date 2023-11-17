@@ -3,6 +3,8 @@ from typing import Any, TypeVar, Iterable, Tuple, List
 from collections import defaultdict
 from types import MappingProxyType
 from clingo import Symbol
+from hashlib import sha256
+from flask import current_app
 
 import networkx as nx
 
@@ -59,3 +61,16 @@ def is_recursive(node, graph):
         for n in nn:
             if n.recursive != False and node in set(n.recursive.nodes):
                 return True
+            
+
+def hash_sorted_program(sorted_program: List[Any]) -> str:
+    hash_object = sha256()
+    for transformation in sorted_program:
+        # Convert transformation to a string
+        transformation_str = current_app.json.dumps(transformation.rules).replace(" ", "")
+        # Hash the string and get the hexadecimal representation
+        transformation_hash = sha256(transformation_str.encode()).hexdigest()
+        # Update the main hash object with the transformation hash
+        hash_object.update(transformation_hash.encode())
+    # Return the hexadecimal representation of the final hash
+    return hash_object.hexdigest()

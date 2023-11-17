@@ -1,7 +1,7 @@
 from typing import Tuple, Any, Dict, Iterable, Collection, List
 from unittest.mock import NonCallableMagicMock
 
-from flask import request, Blueprint, jsonify, abort, Response
+from flask import request, Blueprint, jsonify, abort, Response, current_app
 from flask_cors import cross_origin
 from uuid import uuid4
 
@@ -11,12 +11,13 @@ from clingo.ast import AST
 from clingraph.graphviz import compute_graphs, render
 from ...shared.defaults import CLINGRAPH_PATH
 
-from .dag_api import set_graph, last_nodes_in_graph, get_graph
+from .dag_api import save_graph, last_nodes_in_graph, get_graph
 from ..database import CallCenter, ProgramDatabase
 from ...asp.justify import build_graph
 from ...asp.reify import ProgramAnalyzer, reify_list
 from ...asp.relax import ProgramRelaxer, relax_constraints
-from ...shared.model import ClingoMethodCall, StableModel
+from ...shared.model import ClingoMethodCall, StableModel, Transformation
+from ...shared.util import hash_sorted_program
 from ...asp.replayer import apply_multiple
 
 bp = Blueprint("api", __name__, template_folder='../templates/')
@@ -163,7 +164,6 @@ def get_warnings():
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def show_selected_models():
     marked_models: List[List[str]] = wrap_marked_models(dc.models)
-    print(f"Got marked models: {marked_models}", flush=True)
 
     db = ProgramDatabase()
     analyzer = ProgramAnalyzer()
@@ -171,18 +171,13 @@ def show_selected_models():
     _set_warnings(analyzer.get_filtered())
     if analyzer.will_work():
         recursion_rules = analyzer.check_positive_recursion()
-        reified: List[Collection[AST]] = []
-        for i,sorted_program in enumerate(analyzer.get_sorted_program()):
-            print(f"\n  {i}. Sorted: {sorted_program}", flush=True)
-            reified.append(reify_list(sorted_program, h=analyzer.get_conflict_free_h(),
+        for sorted_program in analyzer.get_sorted_program():
+            reified: Collection[AST] = reify_list(sorted_program, 
+                                h=analyzer.get_conflict_free_h(),
                                 model=analyzer.get_conflict_free_model(),
-                                get_conflict_free_variable=analyzer.get_conflict_free_variable)) 
-            # TODO: allow multiple graphs
-            # print(f"Got marked models: {marked_models}", flush=True)
-            g = build_graph(marked_models, reified[i], analyzer, recursion_rules) #TODO: fix?
-            # s = '\n    '.join(list(map(str,g.nodes)))
-            # print(f"Nodes: {s}", flush=True)
-            set_graph(g) 
+                                get_conflict_free_variable=analyzer.get_conflict_free_variable)
+            g = build_graph(marked_models, reified, analyzer, recursion_rules)
+            save_graph(g, hash_sorted_program(sorted_program), current_app.json.dumps(sorted_program))
     return "ok", 200
 
 @bp.route("/control/relax", methods=["POST"])
@@ -232,3 +227,4 @@ def stringify_reified(reified: List[Collection[AST]]) -> str:
     ab = [", ".join(list(map(str,r))) for r in reified]
     st = '\n    '.join(ab)
     return st
+

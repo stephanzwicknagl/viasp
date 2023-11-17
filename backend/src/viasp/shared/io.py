@@ -1,6 +1,8 @@
 import json
+
+from json import JSONDecoder, JSONEncoder
 from enum import IntEnum
-from json import JSONEncoder, JSONDecoder
+from flask.json.provider import JSONProvider
 from dataclasses import is_dataclass
 from typing import Any, Union, Collection, Iterable, Sequence
 from pathlib import PosixPath
@@ -19,12 +21,18 @@ import networkx as nx
 from _clingo.lib import clingo_model_type_brave_consequences, clingo_model_type_cautious_consequences, \
     clingo_model_type_stable_model
 from clingo import Model as clingo_Model, ModelType, Symbol, Application
-from clingo.ast import AST, Transformer
+from clingo.ast import AST
 
 from .interfaces import ViaspClient
 from .model import Node, Transformation, Signature, StableModel, ClingoMethodCall, TransformationError, FailedReason, SymbolIdentifier, TransformerTransport
 from ..server.database import ProgramDatabase
 
+class DataclassJSONProvider(JSONProvider):
+    def dumps(self, obj, **kwargs):
+        return json.dumps(obj, cls=DataclassJSONEncoder, **kwargs)
+
+    def loads(self, s, **kwargs):
+        return json.loads(s, cls=DataclassJSONDecoder, **kwargs)
 
 def model_to_json(model: Union[clingo_Model, Collection[clingo_Model]], *args, **kwargs) -> str:
     return json.dumps(model, *args, cls=DataclassJSONEncoder, **kwargs)
@@ -239,10 +247,6 @@ class ClingoModelEncoder(JSONEncoder):
             x = symbol_to_dict(o)
             return x
         return super().default(o)
-
-
-def deserialize(data: str, *args, **kwargs):
-    return json.loads(data, *args, cls=DataclassJSONDecoder, **kwargs)
 
 
 def get_rules_from_input_program(rules) -> Sequence[str]:

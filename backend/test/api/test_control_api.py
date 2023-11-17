@@ -1,9 +1,3 @@
-import json
-import time
-
-from viasp.shared.io import DataclassJSONEncoder, DataclassJSONDecoder
-from viasp.shared.model import ClingoMethodCall
-
 
 def test_add_call_endpoint(client, clingo_call_run_sample):
     bad_value = {"foo": "bar"}
@@ -43,10 +37,8 @@ def test_model_endpoint(client, clingo_stable_models):
 
 def test_show_endpoint(client, clingo_stable_models):
     client.delete("/graph")
-    res = client.get("/graph")
-    assert len(list(res.json.nodes)) == 0
     client.post("/control/models", json=clingo_stable_models)
     res = client.post("/control/show")
     assert res.status_code == 200
     res = client.get("/graph")
-    assert len(list(res.json.nodes)) > 0
+    assert len(list(res.json['graphs'])) > 0

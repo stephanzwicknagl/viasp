@@ -146,7 +146,6 @@ def build_graph(wrapped_stable_models: List[List[str]], transformed_prg: Collect
     facts = analyzer.get_facts()
     conflict_free_h = analyzer.get_conflict_free_h()
     identifiable_facts = map(SymbolIdentifier,facts)
-    # TODO: allow multiple sorts
     sorted_program = next(analyzer.get_sorted_program())
     mapping = make_transformation_mapping(sorted_program)
     fact_node = Node(frozenset(identifiable_facts), -1, frozenset(identifiable_facts))

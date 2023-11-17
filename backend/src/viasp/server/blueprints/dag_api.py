@@ -1,46 +1,65 @@
 import json
 import os
 from collections import defaultdict
-from typing import Union, Collection, Dict, List
+from typing import Union, Collection, Dict, List, Tuple
 
 import igraph
 import networkx as nx
+import sqlite3
 import numpy as np
-from flask import Blueprint, request, jsonify, abort, Response, send_file
+from flask import Blueprint, request, jsonify, abort, Response, send_file, current_app
 from flask_cors import cross_origin
 from networkx import DiGraph
 
 from ...shared.defaults import GRAPH_PATH, STATIC_PATH
-from ...shared.io import DataclassJSONDecoder, DataclassJSONEncoder
 from ...shared.model import Transformation, Node, Signature
 from ...shared.util import get_start_node_from_graph, is_recursive
 
 bp = Blueprint("dag_api", __name__, template_folder='../templates', static_folder='../static/',
                static_url_path='/static')
 
-GRAPH = None
+GRAPH: Union[DiGraph, Dict] = {}
 
 
 class GraphAccessor:
 
     def __init__(self):
-        self.path = os.path.join(os.path.dirname(os.path.abspath(__file__)), GRAPH_PATH)
+        self.dbpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), GRAPH_PATH)
+        self.conn = sqlite3.connect(self.dbpath)
+        self.cursor = self.conn.cursor()
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS graphs (
+                hash TEXT PRIMARY KEY,
+                data TEXT NOT NULL,
+                sort BLOB NOT NULL
+            )
+        """)
 
-    def save(self, graph: Union[nx.Graph, dict]):
+    def save(self, graph: Union[nx.Graph, dict], hash: str, sort: str = ""):
         if isinstance(graph, nx.Graph):
             serializable_graph = nx.node_link_data(graph)
         else:
             serializable_graph = graph
-        with open(self.path, "w", encoding="utf-8") as f:
-            json.dump(serializable_graph, f, cls=DataclassJSONEncoder, ensure_ascii=False, indent=2)
+        self.cursor.execute("""
+            INSERT OR REPLACE INTO graphs (hash, data, sort) VALUES (?, ?, ?)
+        """, (hash,  current_app.json.dumps(serializable_graph), sort))
+        self.conn.commit()
 
     def clear(self):
-        self.save(nx.Graph())
+        self.cursor.execute("""
+            DELETE FROM graphs
+        """)
+        self.conn.commit()
 
-    def load(self, as_json=True) -> Union[nx.DiGraph, dict]:
+    def load(self, hash: str, as_json=True) -> Union[nx.DiGraph, dict]:
         try:
-            with open(self.path, encoding="utf-8") as f:
-                result = json.load(f, cls=DataclassJSONDecoder)
+            self.cursor.execute("""
+                SELECT data FROM graphs WHERE hash = ?
+            """, (hash,))
+            result = self.cursor.fetchone()
+            if result is None:
+                return nx.DiGraph()
+            result = current_app.json.loads(result[0])
             if as_json:
                 return result
             loaded_graph = nx.node_link_graph(result) if result is not None else nx.DiGraph()
@@ -48,17 +67,31 @@ class GraphAccessor:
         except FileNotFoundError:
             return nx.DiGraph()
 
+    def load_all_sorts(self) -> List[Tuple[List[Transformation], str]]:
+        self.cursor.execute("""
+            SELECT sort, hash FROM graphs
+        """)
+        result: List[Tuple[str, str]] = self.cursor.fetchall()
+        loaded_sorts: List[Tuple[List[Transformation], str]] = [(current_app.json.loads(r[0]), r[1]) for r in result]
+        print(f"Valid hashes {[s[1] for s in loaded_sorts]}", flush=True)
+        return loaded_sorts
+
 
 def get_database():
     return GraphAccessor()
 
 
-def get_graph():
+def get_graph(hash: str) -> Union[DiGraph,Dict]:
     global GRAPH
     if GRAPH is None:
-        GRAPH = GraphAccessor().load(False)
+        GRAPH = GraphAccessor().load(hash, False)
     return GRAPH
 
+def get_all_sorts() -> List[Tuple[List[Transformation], str]]:
+    return GraphAccessor().load_all_sorts()
+
+def clear_graph():
+    GraphAccessor().clear()
 
 def nx_to_igraph(nx_graph: DiGraph):
     return igraph.Graph.Adjacency((np.array(nx.to_numpy_array(nx_graph)) > 0).tolist()) # was nx.to_numpy_matrix(nx_graph) but will be deprecated in future
@@ -85,8 +118,8 @@ def get_sort(nx_graph: DiGraph):
     return pos
 
 
-def handle_request_for_children(transformation_id, ids_only) -> Collection[Union[Node, int]]:
-    graph = get_graph()
+def handle_request_for_children(transformation_id: str, ids_only: bool, hash: str) -> Collection[Union[Node, int]]:
+    graph = get_graph(hash)
     children = list()
     for u, v, d in graph.edges(data=True):
         edge: Transformation = d['transformation']
@@ -100,8 +133,9 @@ def handle_request_for_children(transformation_id, ids_only) -> Collection[Union
 
 
 @bp.route("/graph/clear", methods=["DELETE"])
-def clear_graph():
-    graph = get_graph()
+def clear_all():
+    hash = request.args.get('hash', default="", type=str)
+    graph = get_graph(hash)
     graph.clear()
     return "ok", 200
 
@@ -110,16 +144,19 @@ def clear_graph():
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def get_children(transformation_id):
     if request.method == "GET":
-        ids_only = request.args["ids_only"] if "ids_only" in request.args else False
-        to_be_returned = handle_request_for_children(transformation_id, ids_only)
+        ids_only = request.args.get("ids_only", default=False, type=bool)
+        hash = request.args.get('hash', default="", type=str)
+        if not hash:
+            return jsonify({'error': 'Missing hash parameter'}), 400
+        to_be_returned = handle_request_for_children(transformation_id, ids_only, hash)
         return jsonify(to_be_returned)
     raise NotImplementedError
 
 
-def get_src_tgt_mapping_from_graph(shown_nodes_ids=None, shown_recursive_ids=[]):
+def get_src_tgt_mapping_from_graph(shown_nodes_ids=None, shown_recursive_ids=[], hash: str = ""):
     shown_nodes_ids = set(shown_nodes_ids) if shown_nodes_ids is not None else None
 
-    graph = get_database().load(as_json=False)
+    graph = get_database().load(hash, as_json=False)
     nodes = set(graph.nodes)
     to_be_deleted = set(existing for existing in nodes if shown_nodes_ids is not None and existing.uuid not in shown_nodes_ids)
 
@@ -138,17 +175,24 @@ def get_src_tgt_mapping_from_graph(shown_nodes_ids=None, shown_recursive_ids=[])
         graph.remove_node(node)
     return [{"src": src.uuid, "tgt": tgt.uuid} for src, tgt in graph.edges()]
 
-def get_src_tgt_mapping_from_clingraph(ids=None):
+def get_src_tgt_mapping_from_clingraph(ids=None, hash: str = ""):
     from .api import using_clingraph, last_nodes_in_graph
-    last = last_nodes_in_graph(get_graph())
+    last = last_nodes_in_graph(get_graph(hash))
     imgs = using_clingraph
     return [{"src": src, "tgt": tgt} for src, tgt in list(zip(last, imgs))]
+
+@bp.route("/graph/sorts", methods=["GET"])
+@cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
+def get_possible_transformation_orders():
+    sorts = get_all_sorts()
+    return jsonify(sorts)
 
 
 @bp.route("/graph/transformations", methods=["GET"])
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def get_all_transformations():
-    graph = get_graph()
+    hash = request.args.get('hash', default="", type=str)
+    graph = get_graph(hash)
     returning = []
     for u, v in graph.edges:
         transformation = graph[u][v]["transformation"]
@@ -164,10 +208,14 @@ def get_all_transformations():
 def get_edges():
     to_be_returned = []
     if request.method == "POST":
+        if request.json is None:
+            return jsonify({'error': 'Missing JSON in request'}), 400
         shown_recursive_ids = request.json["shownRecursion"] if "shownRecursion" in request.json else []
-        to_be_returned = get_src_tgt_mapping_from_graph(request.json["shownNodes"], shown_recursive_ids)
+        hash = request.json["hash"]
+        to_be_returned = get_src_tgt_mapping_from_graph(request.json["shownNodes"], shown_recursive_ids, hash)
     elif request.method == "GET":
-        to_be_returned = get_src_tgt_mapping_from_graph()
+        hash = request.args.get('hash', default="", type=str)
+        to_be_returned = get_src_tgt_mapping_from_graph(hash=hash)
 
     jsonified = jsonify(to_be_returned)
     return jsonified
@@ -177,9 +225,13 @@ def get_edges():
 def get_clingraph_edges():
     to_be_returned = []
     if request.method == "POST":
-        to_be_returned = get_src_tgt_mapping_from_clingraph(request.json)
+        if request.json is None:
+            return jsonify({'error': 'Missing JSON in request'}), 400
+        hash = request.json["hash"]
+        to_be_returned = get_src_tgt_mapping_from_clingraph(request.json, hash)
     elif request.method == "GET":
-        to_be_returned = get_src_tgt_mapping_from_clingraph()
+        hash = request.args.get('hash', default="", type=str)
+        to_be_returned = get_src_tgt_mapping_from_clingraph(hash)
     jsonified = jsonify(to_be_returned)
     return jsonified
 
@@ -187,7 +239,8 @@ def get_clingraph_edges():
 @bp.route("/graph/transformation/<uuid>", methods=["GET"])
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def get_rule(uuid):
-    graph = get_graph()
+    hash = request.args.get('hash', default="", type=str)
+    graph = get_graph(hash)
     for _, _, edge in graph.edges(data=True):
         transformation: Transformation = edge["transformation"]
         if str(transformation.id) == str(uuid):
@@ -198,7 +251,8 @@ def get_rule(uuid):
 @bp.route("/graph/model/<uuid>", methods=["GET"])
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def get_node(uuid):
-    graph = get_graph()
+    hash = request.args.get('hash', default="", type=str)
+    graph = get_graph(hash)
     for node in graph.nodes():
         if node.uuid == uuid:
             return jsonify(node)
@@ -208,7 +262,14 @@ def get_node(uuid):
 @bp.route("/graph/facts", methods=["GET"])
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def get_facts():
-    graph = get_graph()
+    # Get the hash from the query parameters
+    hash = request.args.get('hash')
+    print(f"Received the hash in /graph/facts {hash}", flush=True)
+    if not hash:
+        return jsonify({'error': 'Missing hash parameter'}), 400
+
+    # Use the hash to get the graph
+    graph = get_graph(hash)
     facts = get_start_node_from_graph(graph)
     r = jsonify(facts)
     return r
@@ -218,26 +279,37 @@ def get_facts():
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def entire_graph():
     if request.method == "POST":
-        data = request.json
-        set_graph(data)
+        if request.json is None:
+            return jsonify({'error': 'Missing JSON in request'}), 400
+        data = request.json['data']
+        hash = request.json['hash']
+        sort = request.json['sort']
+        save_graph(data, hash, sort)
         return "ok"
     elif request.method == "GET":
-        result = get_graph()
+        hash = request.args.get('hash', default="", type=str)
+        if not hash:
+            hashes = [s[1] for s in get_all_sorts()]
+            result = []
+            for h in hashes:
+                result.append(get_graph(h))
+            return jsonify({"graphs": result})
+        result = get_graph(hash)
         return jsonify(result)
     elif request.method == "DELETE":
         clear_graph()
 
 
-def set_graph(data: DiGraph):
+def save_graph(data: DiGraph, hash: str, sort: str):
     database = get_database()
-    database.save(data)
+    database.save(data, hash, sort)
     global GRAPH
     GRAPH = None
 
 
-def get_atoms_in_path_by_signature(uuid: str):
+def get_atoms_in_path_by_signature(uuid: str, hash: str):
     signature_to_atom_mapping = defaultdict(set)
-    node = find_node_by_uuid(uuid)
+    node = find_node_by_uuid(uuid, hash)
     for s in node.atoms:
         signature = Signature(s.symbol.name, len(s.symbol.arguments))
         signature_to_atom_mapping[signature].add(s.symbol)
@@ -245,8 +317,8 @@ def get_atoms_in_path_by_signature(uuid: str):
             for s in signature_to_atom_mapping.keys()]
 
 
-def find_node_by_uuid(uuid: str) -> Node:
-    graph = get_graph()
+def find_node_by_uuid(uuid: str, hash: str) -> Node:
+    graph = get_graph(hash)
     matching_nodes = [x for x, y in graph.nodes(data=True) if x.uuid == uuid]
 
     if len(matching_nodes) != 1:
@@ -259,9 +331,9 @@ def find_node_by_uuid(uuid: str) -> Node:
     return matching_nodes[0]
 
 
-def get_kind(uuid: str) -> str:
-    graph = get_graph()
-    node = find_node_by_uuid(uuid)
+def get_kind(uuid: str, hash: str) -> str:
+    graph = get_graph(hash)
+    node = find_node_by_uuid(uuid, hash)
     recursive = is_recursive(node, graph)
     facts = get_start_node_from_graph(graph)
     if recursive:
@@ -279,8 +351,9 @@ def get_kind(uuid: str) -> str:
 def model(uuid):
     if uuid is None:
         abort(Response("Parameter 'key' required.", 400))
-    kind = get_kind(uuid)
-    path = get_atoms_in_path_by_signature(uuid)
+    hash = request.args.get('hash', default="", type=str)
+    kind = get_kind(uuid, hash)
+    path = get_atoms_in_path_by_signature(uuid, hash)
     return jsonify((kind, path))
 
 @bp.route("/detail/explain/<uuid>")
@@ -306,7 +379,10 @@ def get_all_signatures(graph: nx.Graph):
 def search():
     if "q" in request.args.keys():
         query = request.args["q"]
-        graph = get_graph()
+        hash = request.args.get('hash')
+        if not hash:
+            return jsonify({'error': 'Missing hash parameter'}), 400
+        graph = get_graph(hash)
         result = []
         signatures = get_all_signatures(graph)
         result.extend(signatures)

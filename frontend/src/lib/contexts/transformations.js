@@ -2,9 +2,11 @@ import React from "react";
 import {showError, useMessages} from "./UserMessages";
 import {useSettings} from "./Settings";
 import PropTypes from "prop-types";
+import { useSorts } from "./ProgramSorts";
+import { computeSortHash } from "../utils/index";
 
-function fetchTransformations(backendURL) {
-    return fetch(`${backendURL("graph/transformations")}`).then(r => {
+function fetchTransformations(backendURL, hash) {
+    return fetch(`${backendURL("graph/transformations")}?hash=${hash}`).then(r => {
         if (r.ok) {
             return r.json()
         }
@@ -93,12 +95,17 @@ const TransformationProvider = ({children}) => {
     const [, message_dispatch] = useMessages()
     const {state: settingsState, backendURL} = useSettings();
     const [state, dispatch] = React.useReducer(transformationReducer, initialState);
+    const { state: sort } = useSorts()
     const backendUrlRef = React.useRef(backendURL);
     const messageDispatchRef = React.useRef(message_dispatch);
 
+
     React.useEffect(() => {
         let mounted = true;
-        fetchTransformations(backendUrlRef.current).catch(error => {
+        if (sort.sorts.length === 0) {
+            return () => { mounted = false };
+        }
+        fetchTransformations(backendUrlRef.current, sort.currentSort).catch(error => {
             messageDispatchRef.current(showError(`Failed to get transformations: ${error}`))
         })
             .then(items => {
@@ -107,7 +114,7 @@ const TransformationProvider = ({children}) => {
                 }
             })
         return () => { mounted = false };
-    }, []);
+    }, [sort]);
 
     return <TransformationContext.Provider value={{state, dispatch}}>{children}</TransformationContext.Provider>
 }

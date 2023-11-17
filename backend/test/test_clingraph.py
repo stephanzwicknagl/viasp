@@ -1,15 +1,14 @@
 import io
 import sys
-import json
 from inspect import Signature
 from typing import Sequence, Any, Dict, Collection
 
+from flask import json
 from flask.testing import FlaskClient
 
 from viasp import wrapper
 from viasp.shared.model import ClingoMethodCall, StableModel
 from viasp.shared.interfaces import ViaspClient
-from viasp.shared.io import DataclassJSONEncoder
 
 
 
@@ -61,15 +60,15 @@ def test_load_from_stdin(client):
     # Assert clingraph calls are posted correctly
     res = client.get("/control/clingraph")
     assert res.status_code == 200
-    assert res.data == b'{"using_clingraph":false}\n'
+    assert res.data == b'{"using_clingraph": false}'
     prg = "node(X):-person(X).attr(node,a,color,blue):-node(a).attr(node,b,color,red):-node(b).attr(node,c,color,blue):-node(c).attr(node,d,color,red):-node(d)."
-    serialized = json.dumps({"viz-encoding":prg, "engine":"dot", "graphviz-type": "graph"}, cls=DataclassJSONEncoder)
+    serialized = json.dumps({"viz-encoding":prg, "engine":"dot", "graphviz-type": "graph"})
     res = client.post("/control/clingraph", data=serialized, headers={'Content-Type': 'application/json'})
     assert res.status_code == 200
     assert res.data == b'ok'
     res = client.get("/control/clingraph")
     assert res.status_code == 200
-    assert res.data == b'{"using_clingraph":true}\n'
+    assert res.data == b'{"using_clingraph": true}'
     res = client.get("/clingraph/children")
     assert res.status_code == 200
     clingraph_uuids = json.loads(res.data)

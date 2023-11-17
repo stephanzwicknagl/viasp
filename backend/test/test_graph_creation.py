@@ -165,7 +165,7 @@ def test_negative_recursion_gets_treated_correctly():
     assert len(g.edges) == 2
 
 
-def test_path_creation():
+def test_path_creation(parse_program_to_ast):
     program = "fact(1). result(X) :- fact(X). next(X) :- fact(X)."
     transformed = transform(program)
     single_saved_model = get_stable_models_for_program(program).pop()
@@ -181,7 +181,7 @@ def test_path_creation():
     assert all([isinstance(node, Node) for node in nodes])
 
 
-def test_atoms_are_propagated_correctly_through_diffs():
+def test_atoms_are_propagated_correctly_through_diffs(parse_program_to_ast):
     program = "a. b :- a. c :- b. d :- c."
     loc = Location(Position("str",1,1), Position("str",1,1))
     transformed = transform(program)
@@ -200,7 +200,7 @@ def test_atoms_are_propagated_correctly_through_diffs():
         assert src.diff.issubset(tgt.atoms)
         assert len(src.atoms) == len(tgt.atoms) - len(tgt.diff)
 
-def test_multiple_sortings():
+def test_multiple_sortings(parse_program_to_ast):
     program= """
     e. f. g.
     1 {a; b} 1.
@@ -234,10 +234,3 @@ def test_multiple_sortings():
     assert sorted_programs[1][1] == Transformation(1, (parse_program_to_ast("c :- a."),))
     assert sorted_programs[1][2] == Transformation(2, (parse_program_to_ast("c :- b."),))
 
-def parse_program_to_ast(prg: str) -> AST:
-    program_base = "#program base."
-    parsed = []
-    parse_string(prg, lambda rule: parsed.append(rule))
-    if str(parsed[0]) == program_base:
-        return parsed[1]
-    return parsed[0]

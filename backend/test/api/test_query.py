@@ -20,24 +20,27 @@ def test_query_endpoints_methods(client_with_a_graph):
     assert res.status_code == 405
 
 
-def test_query_for_symbol(client_with_a_graph):
-    q = "a(1)"
-    res = client_with_a_graph.get(f"query?q={q}")
-    assert res.status_code == 200
-    assert any(any(str(atom.symbol) == q for atom in result.atoms) for result in res.json if isinstance(result, Node))
+def test_query_for_symbol(client_with_a_graph, serializable_graphs):
+    for _, hash, _ in serializable_graphs:
+        q = "a(1)"
+        res = client_with_a_graph.get(f"query?q={q}&hash={hash}")
+        assert res.status_code == 200
+        assert any(any(str(atom.symbol) == q for atom in result.atoms) for result in res.json if isinstance(result, Node))
 
 
-def test_query_for_signature(client_with_a_graph):
-    q = "a/1"
-    res = client_with_a_graph.get(f"query?q={q}")
-    assert res.status_code == 200
-    assert any(result.args == 1 and result.name == "a" for result in res.json if isinstance(result, Signature))
+def test_query_for_signature(client_with_a_graph, serializable_graphs):
+    for _, hash, _ in serializable_graphs:
+        q = "a/1"
+        res = client_with_a_graph.get(f"query?q={q}&hash={hash}")
+        assert res.status_code == 200
+        assert any(result.args == 1 and result.name == "a" for result in res.json if isinstance(result, Signature))
 
 
-def test_query_for_rule(client_with_a_graph):
-    searched_rule = "c(X) :- b(X)."
-    q = "c(X)"
-    res = client_with_a_graph.get(f"query?q={q}")
-    assert res.status_code == 200
-    assert any(any(rule == searched_rule for rule in result.rules) for result in res.json if
-               isinstance(result, Transformation))
+def test_query_for_rule(client_with_a_graph, serializable_graphs):
+    for _, hash, _ in serializable_graphs:
+        searched_rule = "c(X) :- b(X)."
+        q = "c(X)"
+        res = client_with_a_graph.get(f"query?q={q}&hash={hash}")
+        assert res.status_code == 200
+        assert any(any(rule == searched_rule for rule in result.rules) for result in res.json if
+                isinstance(result, Transformation))
