@@ -1,5 +1,6 @@
 from clingo import Control
 from viasp.asp.justify import save_model
+from clingo.ast import parse_string, AST
 
 
 def traveling_salesperson():
@@ -33,7 +34,15 @@ def get_stable_models_for_program(program):
     ctl.ground([("base", [])])
 
     saved_models = []
-    with ctl.solve(yield_=True) as handle:
+    with ctl.solve(yield_=True) as handle: # type: ignore
         for model in handle:
             saved_models.append(save_model(model))
     return saved_models
+
+def parse_program_to_ast(prg: str) -> AST:
+    program_base = "#program base."
+    parsed = []
+    parse_string(prg, lambda rule: parsed.append(rule))
+    if str(parsed[0]) == program_base:
+        return parsed[1]
+    return parsed[0]

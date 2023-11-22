@@ -41,4 +41,4 @@ def test_show_endpoint(client, clingo_stable_models):
     res = client.post("/control/show")
     assert res.status_code == 200
     res = client.get("/graph")
-    assert len(list(res.json['graphs'])) > 0
+    assert len(list(res.json.nodes)) > 0
