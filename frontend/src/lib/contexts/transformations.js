@@ -5,8 +5,8 @@ import PropTypes from "prop-types";
 import { useSorts } from "./ProgramSorts";
 import { computeSortHash } from "../utils/index";
 
-function fetchTransformations(backendURL, hash) {
-    return fetch(`${backendURL("graph/transformations")}?hash=${hash}`).then(r => {
+function fetchTransformations(backendURL) {
+    return fetch(`${backendURL("graph/transformations")}`).then(r => {
         if (r.ok) {
             return r.json()
         }
@@ -15,8 +15,20 @@ function fetchTransformations(backendURL, hash) {
     });
 }
 
+function fetchSorts(backendURL) {
+    return fetch(`${backendURL("graph/sorts")}`).then(r => {
+        if (r.ok) {
+            return r.json()
+        }
+        throw new Error(r.statusText);
+
+    });
+}
+
+
 const initialState = {
     transformations: [],
+    sorts: []
 };
 
 const HIDE_TRANSFORMATION = 'APP/TRANSFORMATIONS/HIDE';
@@ -24,12 +36,14 @@ const SHOW_TRANSFORMATION = 'APP/TRANSFORMATIONS/SHOW';
 const TOGGLE_TRANSFORMATION = 'APP/TRANSFORMATIONS/TOGGLE';
 const SHOW_ONLY_TRANSFORMATION = 'APP/TRANSFORMATIONS/ONLY';
 const ADD_TRANSFORMATION = 'APP/TRANSFORMATIONS/ADD';
+const ADD_SORT = 'APP/TRANSFORMATIONS/ADDSORT';
 const REORDER_TRANSFORMATION = 'APP/TRANSFORMATIONS/REORDER';
 const hideTransformation = (t) => ({type: HIDE_TRANSFORMATION, t})
 const showTransformation = (t) => ({type: SHOW_TRANSFORMATION, t})
 const toggleTransformation = (t) => ({type: TOGGLE_TRANSFORMATION, t})
 const showOnlyTransformation = (t) => ({type: SHOW_ONLY_TRANSFORMATION, t})
 const addTransformation = (t) => ({type: ADD_TRANSFORMATION, t})
+const addSort = (s) => ({type: ADD_SORT, s})
 const reorderTransformation = (oldIndex, newIndex) => ({type: REORDER_TRANSFORMATION, oldIndex, newIndex})
 const TransformationContext = React.createContext();
 
@@ -37,7 +51,7 @@ const transformationReducer = (state = initialState, action) => {
     if (action.type === ADD_TRANSFORMATION) {
         return {
             ...state,
-            transformations: state.transformations.concat({transformation: action.t, shown: true, id: action.t.id})
+            transformations: state.transformations.concat({transformation: action.t, shown: true, hash: action.t.hash})
         }
     }
     if (action.type === SHOW_ONLY_TRANSFORMATION) {
@@ -80,12 +94,21 @@ const transformationReducer = (state = initialState, action) => {
         }
     }
     if (action.type === REORDER_TRANSFORMATION) {
-        const transformations = [...state.transformations];
+        let transformations = [...state.transformations];
         const [removed] = transformations.splice(action.oldIndex, 1);
         transformations.splice(action.newIndex, 0, removed);
+        transformations = transformations.map((t,i) => {
+            return {transformation: {...t.transformation, id: i}, shown: t.shown, hash: t.hash}
+        })
         return {
             ...state,
             transformations
+        }
+    }
+    if (action.type === ADD_SORT) {
+        return {
+            ...state,
+            sorts: state.sorts.concat([action.s[1]])
         }
     }
     return {...state}
@@ -96,16 +119,25 @@ const TransformationProvider = ({children}) => {
     const {state: settingsState, backendURL} = useSettings();
     const [state, dispatch] = React.useReducer(transformationReducer, initialState);
     const { state: sort } = useSorts()
+    const sortRef = React.useRef(sort);
     const backendUrlRef = React.useRef(backendURL);
     const messageDispatchRef = React.useRef(message_dispatch);
 
 
     React.useEffect(() => {
         let mounted = true;
-        if (sort.sorts.length === 0) {
-            return () => { mounted = false };
-        }
-        fetchTransformations(backendUrlRef.current, sort.currentSort).catch(error => {
+        fetchSorts(backendUrlRef.current).catch(error => {
+            messageDispatchRef.current(showError(`Failed to get dependency sorts: ${error}`))
+        })
+            .then(items => {
+                if (mounted) {
+                    items.map((s) => dispatch(addSort(s)))
+                }
+            })
+        // if (sortRef.current.sorts.length === 0) {
+        //     return () => { mounted = false };
+        // }
+        fetchTransformations(backendUrlRef.current).catch(error => {
             messageDispatchRef.current(showError(`Failed to get transformations: ${error}`))
         })
             .then(items => {
@@ -114,7 +146,7 @@ const TransformationProvider = ({children}) => {
                 }
             })
         return () => { mounted = false };
-    }, [sort]);
+    }, []);
 
     return <TransformationContext.Provider value={{state, dispatch}}>{children}</TransformationContext.Provider>
 }

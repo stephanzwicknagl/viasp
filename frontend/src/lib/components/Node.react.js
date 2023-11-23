@@ -206,6 +206,7 @@ function OverflowButton(props) {
 }
 
 function useHighlightedNodeToCreateClassName(node) {
+    // TODO: rewrite this as a function inside a useEffect
     const [highlightedNode,] = useHighlightedNode()
     let classNames = `node_border mouse_over_shadow ${node.uuid} ${highlightedNode === node.uuid ? "highlighted_node" : null}`
 
@@ -220,26 +221,28 @@ export function Node(props) {
     const { node, showMini, isSubnode } = props;
     const [isOverflowV, setIsOverflowV] = React.useState(false);
     const colorPalette = useColorPalette();
-    const [, dispatch] = useShownNodes();
+    const { dispatch: dispatchShownNodes } = useShownNodes();
     const classNames = useHighlightedNodeToCreateClassName(node);
     const [height, setHeight] = React.useState(0);
     const [expandNode, setExpandNode] = React.useState(false);
     // state updater to force other components to update
     const [, , startAnimationUpdater, stopAnimationUpdater] = useAnimationUpdater();
     const { setShownDetail } = useShownDetail();
+    
+    const dispatchShownNodesRef = React.useRef(dispatchShownNodes);
+    const nodeuuidRef = React.useRef(node.uuid);
 
     const notifyClick = (node) => {
         setShownDetail(node.uuid);
     }
     React.useEffect(() => {
-        dispatch(showNode(node.uuid))
+        const dispatch = dispatchShownNodesRef.current;
+        const nodeuuid = nodeuuidRef.current
+        dispatch(showNode(nodeuuid))
         return () => {
-            dispatch(hideNode(node.uuid))
+            dispatch(hideNode(nodeuuid))
         }
     }, [])
-    React.useEffect(() => {
-
-    })
 
     const divID = `${node.uuid}_animate_height`;
 
@@ -283,6 +286,10 @@ Node.propTypes = {
      * If true, shows the minified node without displaying its symbols
      */
     showMini: PropTypes.bool,
+    /**
+     * If the node is a subnode of a recursive node
+     */
+    isSubnode: PropTypes.bool
 }
 
 

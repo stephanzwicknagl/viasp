@@ -24,36 +24,8 @@ export function make_rules_string(rule) {
     return rule.join(" ")
 }
 
-export async function computeSortHash(transformations) {
-    if (transformations.length === 0) {
-        return ""
-    }
-    const encoder = new TextEncoder();
-
-    // Create an array of promises
-    const hashPromises = transformations.map(transformation => {
-        // Convert transformation.rules to a string
-        const transformationStr = JSON.stringify(transformation.transformation).replace(/\s+/g, '');
-        // Return a promise that resolves to the hash of the transformation
-        return window.crypto.subtle.digest('SHA-256', encoder.encode(transformationStr));
-    });
-    
-    // Wait for all promises to resolve
-    const hashes = await Promise.all(hashPromises);
-
-    // Concatenate all hashes
-    const concatenated = new Uint8Array(hashes.reduce((acc, hash) => acc + hash.byteLength, 0));
-    let offset = 0;
-    for (const hash of hashes) {
-        concatenated.set(new Uint8Array(hash), offset);
-        offset += hash.byteLength;
-    }
-
-    // Compute the final hash
-    const finalHash = await window.crypto.subtle.digest('SHA-256', concatenated);
-
-    // Convert the final hash to a hexadecimal string
-    const hashHex = Array.from(new Uint8Array(finalHash)).map(b => b.toString(16).padStart(2, '0')).join('');
-    console.log("Calculated Hash:", hashHex);
-    return hashHex;
+export async function computeSortHash(hashes) {
+    const hash_str = hashes.join("");
+    const hash = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(hash_str));
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }

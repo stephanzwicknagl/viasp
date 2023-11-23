@@ -8,12 +8,13 @@ import {Search} from "../components/Search.react";
 import {Facts} from "../components/Facts.react";
 import { Edges } from "../components/Edges.react";
 import { Arrows } from "../components/Arrows.react";
-import {initialState, nodeReducer, ShownNodesProvider} from "../contexts/ShownNodes";
+import { ShownNodesProvider } from "../contexts/ShownNodes";
 import { TransformationProvider, useTransformations, reorderTransformation } from "../contexts/transformations";
 import { ClingraphProvider, useClingraph } from '../contexts/Clingraph';
 import { ColorPaletteProvider } from "../contexts/ColorPalette"; 
 import {HighlightedNodeProvider} from "../contexts/HighlightedNode";
 import {showError, useMessages, UserMessagesProvider} from "../contexts/UserMessages";
+import { EdgeProvider, useEdges } from '../contexts/Edges';
 import { ShownDetailProvider } from '../contexts/ShownDetail';
 import { Settings } from '../LazyLoader';
 import {UserMessages} from "../components/messages";
@@ -23,29 +24,61 @@ import { HighlightedSymbolProvider, useHighlightedSymbol } from '../contexts/Hig
 import { ShownRecursionProvider } from '../contexts/ShownRecursion';
 import { AnimationUpdaterProvider } from '../contexts/AnimationUpdater';
 import DraggableList from 'react-draggable-list';
-import { SortsProvider, useSorts } from '../contexts/ProgramSorts';
+import { SortsProvider, useSorts, setCurrentSort } from '../contexts/ProgramSorts';
+import { computeSortHash } from '../utils';
+
+
+function postCurrentSort(backendURL, hash) {
+    return fetch(`${backendURL("graph/sorts")}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ hash: hash })
+    }).then(r => {
+        if (r.ok) {
+            return r
+        }
+        throw new Error(r.statusText);
+    });
+}
 
 
 function GraphContainer(props) {
     const {notifyDash} = props;
-    const {state: {transformations}, dispatch} = useTransformations()
+    const {state: {transformations, sorts}, dispatch: dispatchTransformation} = useTransformations()
     const { clingraphUsed } = useClingraph();
-    const { state: sorts } = useSorts();
+    // const { state: sorts, dispatch: dispatchSorts } = useSorts();
+    const [, message_dispatch] = useMessages()
+    const { backendURL } = useSettings();
+    const backendUrlRef = React.useRef(backendURL);
+    const messageDispatchRef = React.useRef(message_dispatch);
+    const graphContainerRef = React.useRef(null);
+    const { reloadEdges } = useEdges();
+
 
     function onMoveEnd(newList, movedItem, oldIndex, newIndex) {
-        console.log("onMoveEnd", newList)
-        dispatch(reorderTransformation(oldIndex, newIndex));
-        console.log("moved transformations:", transformations)
+        computeSortHash(newList.map(t => t.transformation.hash)).then((newHash) => {
+            if (sorts.includes(newHash)) {
+                postCurrentSort(backendUrlRef.current, newHash).catch(error => {
+                    messageDispatchRef.current(showError(`Failed to set new current graph: ${error}`))
+                })
+                dispatchTransformation(reorderTransformation(oldIndex, newIndex));
+                reloadEdges();
+                // dispatchSorts(setCurrentSort(newHash));
+                return;
+            }
+        });
     }
 
-    return <div className="graph_container">
+    return <div className="graph_container" ref={graphContainerRef}>
         <Facts /><Suspense fallback={<div>Loading...</div>}><Settings /></Suspense>
         <DraggableList
-            itemKey="id"
+            itemKey="hash"
             template={RowTemplate}
             list={transformations}
             onMoveEnd={onMoveEnd}
-            container={() => document.body}
+            container={() => graphContainerRef.current}
             padding = {0}
             // unsetZIndex = {true} 
           />
@@ -78,16 +111,14 @@ function MainWindow(props) {
 
     return <div><Detail />
         <div className="content">
-            <ShownNodesProvider initialState={initialState} reducer={nodeReducer}>
-                <Search />
-                <GraphContainer notifyDash={notifyDash} />
-                {
-                    transformations.length === 0 ? null : <Edges />
-                }
-                {
-                    highlightedSymbol.length === 0 ? null : <Arrows />
-                }
-            </ShownNodesProvider>
+        <Search />
+        <GraphContainer notifyDash={notifyDash} />
+        {
+            transformations.length === 0 ? null : <Edges />
+        }
+        {
+            highlightedSymbol.length === 0 ? null : <Arrows />
+        }
         </div>
     </div>
 }
@@ -120,14 +151,18 @@ export default function ViaspDash(props) {
                                     <SettingsProvider backendURL={backendURL}>
                                         <UserMessagesProvider>
                                             <SortsProvider>
-                                                <TransformationProvider>
-                                                    <ClingraphProvider>
-                                                        <div>
-                                                            <UserMessages/>
-                                                            <MainWindow notifyDash={notifyDash}/>
-                                                        </div>
-                                                    </ClingraphProvider>
-                                                </TransformationProvider>
+                                                <ShownNodesProvider>
+                                                        <TransformationProvider>
+                                                    <EdgeProvider>
+                                                            <ClingraphProvider>
+                                                                <div>
+                                                                    <UserMessages/>
+                                                                    <MainWindow notifyDash={notifyDash}/>
+                                                                </div>
+                                                            </ClingraphProvider>
+                                                    </EdgeProvider>
+                                                        </TransformationProvider>
+                                                </ShownNodesProvider>
                                             </SortsProvider>
                                         </UserMessagesProvider>
                                     </SettingsProvider>

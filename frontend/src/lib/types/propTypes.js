@@ -21,12 +21,13 @@ export const SIGNATURE = PropTypes.exact({
 export const TRANSFORMATION = PropTypes.exact({
     _type: PropTypes.oneOf(['Transformation']),
     id: PropTypes.number,
-    rules: PropTypes.array
+    rules: PropTypes.array,
+    hash: PropTypes.string
 })
 export const TRANSFORMATIONWRAPPER = PropTypes.exact({
     transformation: TRANSFORMATION,
     shown: PropTypes.bool,
-    id: PropTypes.number
+    hash: PropTypes.string
 })
 export const GRAPH = PropTypes.exact({
     _type: PropTypes.oneOf(['Graph']),
