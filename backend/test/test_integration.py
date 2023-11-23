@@ -1,10 +1,13 @@
 import pytest
 from clingo import Control
+import os
+from flask import current_app
 
 from viasp.server.database import CallCenter
 from viasp.asp.replayer import apply_multiple
-from viasp.shared.io import model_to_json
+from viasp.shared.io import model_to_json, TransformerTransport
 
+from helper import Transformer
 
 def test_calls_are_filtered_after_application(clingo_call_run_sample):
     db = CallCenter()
@@ -64,3 +67,14 @@ def test_client_clear_removes_all(client, sample_models):
     r = client.get("control/models")
     assert r.status_code == 200
     assert len(r.json) == 0
+
+# @pytest.mark.skip(reason="Transformer not registered bc of base exception?")
+def test_client_add_transformer(client_with_a_graph):
+    client = client_with_a_graph[0]
+    serializable_transformer = TransformerTransport.merge(Transformer, "", str(os.path.abspath(__file__)))
+    serialized = current_app.json.dumps(serializable_transformer)
+    res = client.post("/control/add_transformer",
+                        data=serialized,
+                        headers={'Content-Type': 'application/json'})
+    assert res.status_code == 200
+

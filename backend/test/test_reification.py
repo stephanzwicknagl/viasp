@@ -168,19 +168,18 @@ def test_disjunctions_in_head():
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
-def test_dependency_graph_creation(app):
+def test_dependency_graph_creation(get_sort_program):
     program = "a. b :- a. c :- a."
 
-    analyzer = ProgramAnalyzer()
-    result = analyzer.sort_program(program)
+    result, analyzer = get_sort_program(program)
     assert len(result) == 2, "Facts should not be in the sorted program."
     assert len(analyzer.dependants) == 2, "Facts should not be in the dependency graph."
 
 
-def test_negative_recursion_gets_grouped(sort_program):
+def test_negative_recursion_gets_grouped(get_sort_program):
     program = "a. b :- not c, a. c :- not b, a."
 
-    result = sort_program(program)
+    result, _ = get_sort_program(program)
     assert len(result) == 1, "Negative recursions should be grouped into one transformation."
 
 
@@ -190,26 +189,26 @@ def multiple_non_recursive_rules_with_same_head_should_not_be_grouped(sort_progr
     assert len(result) == 2, "Multiple rules with same head that are not recursive should not be grouped."
 
 
-def test_sorting_facts_independent(sort_program):
+def test_sorting_facts_independent(get_sort_program):
     program = "c :- b. b :- a. a. "
-    result = sort_program(program)
+    result, _ = get_sort_program(program)
     assert len(result) == 2, "Facts should not be sorted."
     assert str(next(iter(result[0].rules))) == "b :- a."
     assert str(next(iter(result[1].rules))) == "c :- b."
 
 
-def test_sorting_behemoth(sort_program):
+def test_sorting_behemoth(get_sort_program):
     program = "c(1). e(1). f(X,Y) :- b(X,Y). 1 #sum { X,Y : a(X,Y) : b(Y), c(X) ; X,Z : b(X,Z) : e(Z) } :- c(X). e(X) :- c(X)."
-    result = sort_program(program)
+    result, _ = get_sort_program(program)
     assert len(result) == 3
     assert str(next(iter(result[0].rules))) == "e(X) :- c(X)."
     assert str(next(iter(result[1].rules))) == "1 <= #sum { X,Y: a(X,Y): b(Y), c(X); X,Z: b(X,Z): e(Z) } :- c(X)."
     assert str(next(iter(result[2].rules))) == "f(X,Y) :- b(X,Y)."
 
 
-def test_data_type_is_correct(sort_program):
+def test_data_type_is_correct(get_sort_program):
     program = "d :- c. b :- a. a. c :- b."
-    result = sort_program(program)
+    result, _ = get_sort_program(program)
     assert len(result) > 0 and len(
         result[0].rules) > 0, "Transformation should return something and the transformation should contain a rule."
     a_rule = next(iter(result[0].rules))
@@ -228,9 +227,9 @@ def get_reasons(prg, model):
     return set(reasons)
 
 
-def test_aggregate_in_body_of_constraint(sort_program):
+def test_aggregate_in_body_of_constraint(get_sort_program):
     program = ":- 3 { assignedB(P,R) : paper(P) }, reviewer(R)."
-    result = sort_program(program)
+    result, _ = get_sort_program(program)
     assert len(result) == 1
 
 
@@ -268,7 +267,7 @@ def test_ast_types_do_not_intersect():
 
 
 @pytest.mark.skip(reason="Not implemented yet")
-def test_constraints_gets_put_last(sort_program):
+def test_constraints_gets_put_last(get_sort_program):
     program = """
     { assigned(P,R) : reviewer(R) } 3 :-  paper(P).
      :- assigned(P,R), coi(R,P).
@@ -277,8 +276,7 @@ def test_constraints_gets_put_last(sort_program):
      :- 3 { assignedB(P,R) : paper(P) }, reviewer(R).
     #minimize { 1,P,R : assignedB(P,R), paper(P), reviewer(R) }.
     """
-    result = sort_program(program)
-    print(f"Res\n\n{list(map(str, result))}")
+    result, _ = get_sort_program(program)
     assert len(result) == 3
     assert len(result[0].rules) == 1
     assert len(result[1].rules) == 1

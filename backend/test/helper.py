@@ -1,6 +1,6 @@
 from clingo import Control
 from viasp.asp.justify import save_model
-from clingo.ast import parse_string, AST
+from clingo.ast import parse_string, AST, Transformer as ClingoTransformer
 
 
 def traveling_salesperson():
@@ -27,13 +27,11 @@ def traveling_salesperson_without_minimize():
 def traveling_salesperson_without_minimize_and_constraints():
     return "\n".join(traveling_salesperson_without_minimize().split("\n")[:-3])
 
-
 def get_stable_models_for_program(program):
+    saved_models = []
     ctl = Control(["0"])
     ctl.add("base", [], program)
     ctl.ground([("base", [])])
-
-    saved_models = []
     with ctl.solve(yield_=True) as handle: # type: ignore
         for model in handle:
             saved_models.append(save_model(model))
@@ -46,3 +44,10 @@ def parse_program_to_ast(prg: str) -> AST:
     if str(parsed[0]) == program_base:
         return parsed[1]
     return parsed[0]
+
+class Transformer(ClingoTransformer):
+    def __init__(self):
+        super().__init__()
+
+    def visit_Rule(self, rule):
+        return 

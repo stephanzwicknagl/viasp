@@ -9,7 +9,7 @@ def start():
     parser.add_argument('--host', type=str, help='The host for the backend', default=DEFAULT_BACKEND_HOST)
     parser.add_argument('-p', '--port', type=int, help='The port for the backend', default=DEFAULT_BACKEND_PORT)
     app = create_app()
-    use_reloader = True
+    use_reloader = False
     debug = True
     args = parser.parse_args()
     host = args.host
