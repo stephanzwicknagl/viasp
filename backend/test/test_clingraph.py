@@ -16,7 +16,7 @@ def test_using_clingraph(client_with_a_clingraph):
         attr(node,a,color,blue) :- node(a), not b(a).
         attr(node,a,color,red)  :- node(a), b(a).
     """
-    client, _, _, _ = client_with_a_clingraph
+    client, _, _, program = client_with_a_clingraph
 
     serialized = current_app.json.dumps({"viz-encoding":prg, "engine":"dot", "graphviz-type": "graph"})
     res = client.post("/control/clingraph", data=serialized, headers={'Content-Type': 'application/json'})
@@ -25,7 +25,10 @@ def test_using_clingraph(client_with_a_clingraph):
     
     res = client.get("/control/clingraph")
     assert res.status_code == 200
-    assert res.data == b'{"using_clingraph": true}'
+    if "{b(X)}" in program:
+        assert res.data == b'{"using_clingraph": true}'
+    else:
+        assert res.data == b'{"using_clingraph": false}'
 
 
 def test_clingraph_children(client_with_a_clingraph):
