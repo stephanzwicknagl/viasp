@@ -140,13 +140,13 @@ def append_noops(result_graph: DiGraph, analyzer: ProgramAnalyzer):
                                                             [str(pt) for pt in analyzer.pass_through]))
 
 
-def build_graph(wrapped_stable_models: List[List[str]], transformed_prg: Collection[AST],
+def build_graph(wrapped_stable_models: List[List[str]], transformed_prg: Collection[AST], 
+                sorted_program: List[Transformation],
                 analyzer: ProgramAnalyzer, recursion_transformations: set) -> nx.DiGraph:
     paths: List[nx.DiGraph] = []
     facts = analyzer.get_facts()
     conflict_free_h = analyzer.get_conflict_free_h()
-    identifiable_facts = map(SymbolIdentifier,facts)
-    sorted_program = next(analyzer.get_sorted_program())
+    identifiable_facts = list(map(SymbolIdentifier,facts))
     mapping = make_transformation_mapping(sorted_program)
     fact_node = Node(frozenset(identifiable_facts), -1, frozenset(identifiable_facts))
     if not len(mapping):

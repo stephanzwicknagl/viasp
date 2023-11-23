@@ -10,7 +10,7 @@ import networkx as nx
 
 from clingo import Symbol, ModelType
 from clingo.ast import AST, Transformer
-from .util import DefaultMappingProxyType
+from .util import DefaultMappingProxyType, hash_transformation_rules
 
 @dataclass()
 class SymbolIdentifier:
@@ -47,24 +47,26 @@ class Node:
         return isinstance(o, type(self)) and (self.atoms, self.rule_nr, self.diff, self.reason) == (o.atoms, o.rule_nr, o.diff, o.reason)
 
     def __repr__(self):
-        # repr_reasons = []
-        # if isinstance(self.reason, list):
-        #     repr_reasons = [str(reason) for reason in self.reason]
-        # else:
-        #     for key, val in self.reason.items():
-        #         repr_reasons.append(f"{key}: [{', '.join(map(str,val))}]")
-        # return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{', '.join(map(str,self.atoms))}}}, reasons={{{', '.join(repr_reasons)}}}, recursive={self.recursive}, uuid={self.uuid})"
-        return f"Node({{{'. '.join(map(str, self.diff))}}})"
+        repr_reasons = []
+        if isinstance(self.reason, list):
+            repr_reasons = [str(reason) for reason in self.reason]
+        else:
+            for key, val in self.reason.items():
+                repr_reasons.append(f"{key}: [{', '.join(map(str,val))}]")
+        return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{', '.join(map(str,self.atoms))}}}, reasons={{{', '.join(repr_reasons)}}}, recursive={self.recursive}, uuid={self.uuid})"
 
 
 @dataclass(frozen=False)
 class Transformation:
     id: int = field(hash=True)
-    rules: Tuple[AST] = field(default_factory=tuple, hash=True)
+    rules: Tuple[AST, ...] = field(default_factory=tuple, hash=True)
+    hash: str = field(default="", hash=True)
 
     def __post_init__(self):
         if isinstance(self.rules, AST):
             self.rules = (self.rules,)
+        if self.hash == "":
+            self.hash = hash_transformation_rules(self.rules)
 
     def __hash__(self):
         return hash(tuple(self.rules))
@@ -82,7 +84,7 @@ class Transformation:
         return True
     
     def __repr__(self):
-        return f"Transformation(id={self.id}, rules={list(map(str,self.rules))})"
+        return f"Transformation(id={self.id}, rules={list(map(str,self.rules))}, hash={self.hash})"
 
 
 @dataclass(frozen=True)
@@ -162,10 +164,10 @@ class ReasonNode:
 
 @dataclass
 class TransformerTransport:
-    transformer: Transformer
+    transformer: type[Transformer]
     imports: str
     path: str
 
     @classmethod
-    def merge(cls, transformer: Transformer, imports: str, path: str):
+    def merge(cls, transformer: type[Transformer], imports: str, path: str):
         return cls(transformer, imports, path)

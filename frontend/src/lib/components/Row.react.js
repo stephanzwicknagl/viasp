@@ -13,8 +13,8 @@ import { IconWrapper } from '../LazyLoader';
 import dragHandleRounded from '@iconify/icons-material-symbols/drag-handle-rounded';
 
 
-function loadMyAsyncData(id, backendURL, hash) {
-    return fetch(`${backendURL("graph/children")}/${id}?hash=${hash}`).then(r => r.json());
+function loadMyAsyncData(hash, backendURL) {
+    return fetch(`${backendURL("graph/children")}/${hash}`).then(r => r.json());
 }
 
 
@@ -54,6 +54,7 @@ export class RowTemplate extends React.Component {
     render () {
         const { item, itemSelected, anySelected, dragHandleProps } = this.props;
         const transformation = item.transformation;
+
         const scaleConstant = 0.02;
         const shadowConstant = 15;
         const scale = itemSelected * scaleConstant + 1;
@@ -70,7 +71,7 @@ export class RowTemplate extends React.Component {
                         background: background[transformation.id % background.length]}}
                 >
             {transformation === null ? null :
-                    <Row key={transformation.id} transformation={transformation} dragHandleProps={dragHandleProps} />}
+                    <Row key={transformation.hash} transformation={transformation} dragHandleProps={dragHandleProps} />}
                 </div>)
         );
     }
@@ -107,11 +108,10 @@ export function Row(props) {
     const rowbodyRef = useRef(null);
     const headerRef = useRef(null);
     const handleRef = useRef(null);
-    const transformationIdRef = React.useRef(transformation.id);
     const backendURLRef = React.useRef(backendURL);
+    const transformationhashRef = React.useRef(transformation.hash)
     const {state: {transformations}} = useTransformations();
     const [shownRecursion, ,] = useShownRecursion();
-    const { state: {currentSort}} = useSorts();
 
     useEffect(() => {
         if (headerRef.current && handleRef.current) {
@@ -122,14 +122,14 @@ export function Row(props) {
 
     React.useEffect(() => {
         let mounted = true;
-        loadMyAsyncData(transformationIdRef.current, backendURLRef.current, currentSort)
+        loadMyAsyncData(transformationhashRef.current, backendURLRef.current)
             .then(items => {
                 if (mounted) {
                     setNodes(items)
                 }
             })
         return () => { mounted = false };
-    }, [currentSort]);
+    }, [transformation.id]);
 
     const checkForOverflow = useCallback(() => {
         if (rowbodyRef !== null && rowbodyRef.current) {

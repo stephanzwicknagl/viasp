@@ -56,8 +56,8 @@ DetailForSignature.propTypes =
         symbols: PropTypes.arrayOf(SYMBOL)
     }
 
-function loadDataForDetail(backendURL, uuid, hash) {
-    return fetch(`${backendURL("detail")}/${uuid}?hash=${hash}`).then(r => r.json())
+function loadDataForDetail(backendURL, uuid) {
+    return fetch(`${backendURL("detail")}/${uuid}`).then(r => r.json())
 }
 
 function CloseButton(props) {

@@ -347,8 +347,8 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         for program in sorted_programs:
             yield [Transformation(i, (prg)) for i, prg in enumerate(program)]
 
-    def make_dependency_graph(self, head_dependencies: Dict[Tuple[str, int], Iterable[clingo.ast.AST]],
-                              body_dependencies: Dict[Tuple[str, int], Iterable[clingo.ast.AST]]) -> nx.DiGraph:
+    def make_dependency_graph(self, head_dependencies: Dict[Tuple[str, int], Iterable[AST]],
+                              body_dependencies: Dict[Tuple[str, int], Iterable[AST]]) -> nx.DiGraph:
         """
         We draw a dependency graph based on which rule head contains which literals.
         That way we know, that in order to have a rule r with a body containing literal l, all rules that have l in their

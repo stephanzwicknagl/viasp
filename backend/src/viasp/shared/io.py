@@ -114,7 +114,7 @@ def dataclass_to_dict(o):
     elif isinstance(o, Signature):
         return {"_type": "Signature", "name": o.name, "args": o.args}
     elif isinstance(o, Transformation):
-        return {"_type": "Transformation", "id": o.id, "rules": get_rules_from_input_program(o.rules)}
+        return {"_type": "Transformation", "id": o.id, "rules": get_rules_from_input_program(o.rules), "hash": o.hash}
     elif isinstance(o, StableModel):
         return {"_type": "StableModel", "cost": o.cost, "optimality_proven": o.optimality_proven, "type": o.type,
                 "atoms": o.atoms, "terms": o.terms, "shown": o.shown, "theory": o.theory}

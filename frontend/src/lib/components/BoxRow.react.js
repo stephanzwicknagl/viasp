@@ -4,8 +4,8 @@ import './boxrow.css';
 import { useSettings } from "../contexts/Settings";
 import { useSorts } from "../contexts/ProgramSorts";
 
-function loadClingraphChildren(backendURL, hash) {
-    return fetch(`${backendURL("clingraph/children")}?hash=${hash}`).then(r => r.json());
+function loadClingraphChildren(backendURL) {
+    return fetch(`${backendURL("clingraph/children")}`).then(r => r.json());
 }
 
 export function Boxrow() {

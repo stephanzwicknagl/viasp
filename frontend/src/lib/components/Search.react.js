@@ -91,7 +91,7 @@ export function Search() {
 
     function onChange(e) {
         const userInput = e.currentTarget.value;
-        fetch(`${backendURL("query")}?q=${userInput}&hash=${currentSort}`)
+        fetch(`${backendURL("query")}?q=${userInput}`)
             .then(r => r.json())
             .then(data => {
                 setActiveSuggestion(0)

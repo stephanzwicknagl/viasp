@@ -8,8 +8,8 @@ import {NODE} from "../types/propTypes";
 import {Node} from "./Node.react";
 import { useSorts } from "../contexts/ProgramSorts";
 
-function loadFacts(backendURL, hash) {
-    return fetch(`${backendURL("graph/facts")}?hash=${hash}`).then(r => r.json());
+function loadFacts(backendURL) {
+    return fetch(`${backendURL("graph/facts")}`).then(r => r.json());
 }
 
 export function Facts() {
@@ -22,7 +22,6 @@ export function Facts() {
         let mounted = true;
         // wait for transformations to be set
         if (sort.sorts.length === 0) {
-            console.log("Lol empty")
             return () => { mounted = false };
         }
         loadFacts(backendURLRef.current, sort.currentSort)
@@ -57,13 +56,17 @@ Facts.propTypes = {
 
 function FactBanner(props) {
     const {fact} = props;
-    const [, dispatch] = useShownNodes()
+    const [, dispatchShownNodes] = useShownNodes()
     const colorPalette = useColorPalette();
+    const dispatchShownNodesRef = React.useRef(dispatchShownNodes);
+    const nodeuuidRef = React.useRef(fact.uuid);
 
     React.useEffect(() => {
-        dispatch(showNode(fact.uuid))
+        const dispatch = dispatchShownNodesRef.current;
+        const nodeuuid = nodeuuidRef.current
+        dispatch(showNode(nodeuuid))
         return () => {
-            dispatch(hideNode(fact.uuid))
+            dispatch(hideNode(nodeuuid))
         }
     }, [])
     const clazzName = `${fact.uuid} facts_banner noselect`
