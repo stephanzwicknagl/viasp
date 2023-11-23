@@ -13,9 +13,10 @@ function fetchSorts(backendURL) {
     });
 }
 
+
 const initialState = {
     sorts: [],
-    currentSort: 0,
+    currentSort: "",
 };
 
 const ADD_SORT = 'APP/SORTS/ADD';
@@ -25,7 +26,7 @@ const setCurrentSort = (hash) => ({ type: SET_CURRENT_SORT, hash })
 
 const sortReducer = (state = initialState, action) => {
     if (action.type === ADD_SORT) {
-        if (state.currentSort === 0) {
+        if (state.currentSort === "") {
             return {
                 ...state,
                 sorts: state.sorts.concat({transformations: action.s[0], hash: action.s[1]}),
@@ -38,11 +39,10 @@ const sortReducer = (state = initialState, action) => {
         }
     }
     if (action.type === SET_CURRENT_SORT) {
-        const s = {
+        return {
             ...state,
             currentSort: action.hash
         }
-        return s
     }
     return state;
 }
@@ -54,6 +54,17 @@ const SortsProvider = ({ children }) => {
     const [ state, dispatch ] = React.useReducer(sortReducer, initialState);
     const backendUrlRef = React.useRef(backendURL);
     const messageDispatchRef = React.useRef(message_dispatch);
+
+    // React.useEffect(() => {
+    //     let mounted = true; 
+    //     if (mounted && state.currentSort !== "") {
+    //         console.log("Posting new current sort", state.currentSort)
+    //         postCurrentSort(backendUrlRef.current, state.currentSort).catch(error => {
+    //             messageDispatchRef.current(showError(`Failed to set new current graph: ${error}`))
+    //         })
+    //     }
+    //     return () => { mounted = false };
+    // }, [state.currentSort]);
 
     React.useEffect(() => {
         let mounted = true;
@@ -79,4 +90,4 @@ SortsProvider.propTypes = {
      */
     children: PropTypes.element,
 }
-export { SortsProvider, useSorts }
+export { SortsProvider, useSorts, setCurrentSort }
