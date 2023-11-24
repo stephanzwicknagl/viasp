@@ -22,7 +22,7 @@ def create_app():
     app.config['CORS_HEADERS'] = 'Content-Type'
 
     register_blueprints(app)
-    CORS(app, resources={r"/*": {"origins": "*"}})
+    CORS(app, resources={r"/*": {"origins": "*"}}, max_age=3600)
 
     @atexit.register
     def shutdown():

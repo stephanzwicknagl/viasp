@@ -65,13 +65,13 @@ class GraphAccessor:
         self.cursor.execute("""
             SELECT hash FROM current_graph
         """)
-        return self.cursor.fetchone()[0]
+        result = self.cursor.fetchone()
+        return result[0] if result is not None else ""
     
     def set_current_graph(self, hash: str):
         self.cursor.execute("DELETE FROM current_graph")
         self.cursor.execute("INSERT INTO current_graph (hash) VALUES (?)", (hash,))
         self.conn.commit()
-        print(f"Set current graph to {hash}", flush=True)
     
     def load_json(self) -> dict:
         hash = self.get_current_graph()
@@ -166,7 +166,6 @@ def handle_request_for_children(transformation_hash: str, ids_only: bool) -> Col
     pos: Dict[Node, List[float]] = get_sort(graph)
     ordered_children = sorted(children, key=lambda node: pos[node][0])
     if ids_only:
-        print(f"sending ids only {ordered_children}", flush=True)
         ordered_children = [node.uuid for node in ordered_children]
     return ordered_children
 
@@ -248,7 +247,6 @@ def get_edges():
         to_be_returned = get_src_tgt_mapping_from_graph()
 
     jsonified = jsonify(to_be_returned)
-    print(f"Sending edges", flush=True)
     return jsonified
 
 

@@ -6,7 +6,7 @@ from typing import List, Sequence, Tuple, Dict, Set, FrozenSet, Union
 from ..shared.simple_logging import warn
 from ..shared.model import Node, SymbolIdentifier
 from ..shared.util import pairwise, get_root_node_from_graph
-
+from ..server.blueprints.dag_api import get_database
 
 def is_constraint(rule: AST) -> bool:
     return rule.ast_type == ASTType.Rule and "atom" in rule.head.child_keys and rule.head.atom.ast_type == ASTType.BooleanConstant # type: ignore
@@ -147,4 +147,25 @@ def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol,
     # stop criterion: v is the root node and there is no super_graph
     warn(f"An explanation could not be made")
     return None
-    
+
+
+def harmonize_uuids(g: nx.DiGraph) -> nx.DiGraph:
+    """
+    Harmonizes the uuids of the nodes in the graph with those of existing graphs of different sortings.
+    """
+    database = get_database()
+
+    if database.get_current_graph() is not "":
+        pattern_g = database.load()
+
+        pattern_nodes = set(pattern_g.nodes())
+        incoming_nodes = set(g.nodes())
+
+        for incoming in incoming_nodes:
+            for pattern in pattern_nodes:
+                if incoming == pattern:
+                    incoming.uuid = pattern.uuid
+                    incoming.atoms = pattern.atoms
+                    incoming.diff = pattern.diff
+
+    return g

@@ -27,8 +27,7 @@ class SymbolIdentifier:
         return hash(self.symbol)
 
     def __repr__(self):
-        # return f"{{symbol: {str(self.symbol)}, uuid: {self.uuid}}}"
-        return str(self.symbol)
+        return f"{{symbol: {str(self.symbol)}, uuid: {self.uuid}}}"
 
 
 @dataclass()
@@ -36,7 +35,10 @@ class Node:
     diff: FrozenSet[SymbolIdentifier] = field(hash=True)
     rule_nr: int = field(hash=True)
     atoms: FrozenSet[SymbolIdentifier] = field(default_factory=frozenset, hash=True)
-    reason: MappingProxyType[Symbol, List[SymbolIdentifier]] = field(default_factory=DefaultMappingProxyType, hash=True)
+    reason: Union[
+        Dict[str, List[Symbol]], 
+        MappingProxyType[Symbol, List[SymbolIdentifier]]] \
+        = field(default_factory=DefaultMappingProxyType, hash=True)
     recursive: Union[bool, nx.DiGraph] = field(default=False, hash=False)
     uuid: UUID = field(default_factory=uuid4, hash=False)
 

@@ -6,18 +6,18 @@ import networkx as nx
 
 from clingo import Control, Symbol, Model, ast
 
-from clingo.ast import AST, Function
+from clingo.ast import AST
 from networkx import DiGraph
 
 from .reify import ProgramAnalyzer, has_an_interval
 from .recursion import RecursionReasoner
-from .utils import insert_atoms_into_nodes, identify_reasons
+from .utils import insert_atoms_into_nodes, identify_reasons, harmonize_uuids
 from ..shared.model import Node, Transformation, SymbolIdentifier
 from ..shared.simple_logging import info, warn
 from ..shared.util import pairwise, get_leafs_from_graph
 
 
-def stringify_fact(fact: Function) -> str:
+def stringify_fact(fact: Symbol) -> str:
     return f"{str(fact)}."
 
 
@@ -57,25 +57,26 @@ def get_facts(original_program) -> Collection[Symbol]:
 
 
 def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_indices, pad: bool, supernode_symbols: frozenset = frozenset([])) -> List[Node]:
-    tmp_symbol: Dict[int, List[Union[SymbolIdentifier, Symbol]]] = defaultdict(list)
-    tmp_reason: Dict[int, Dict[Symbol, List[Symbol]]] = defaultdict(dict)
+    tmp_symbol: Dict[int, List[Symbol]] = defaultdict(list)
+    tmp_symbol_identifier: Dict[int, List[SymbolIdentifier]] = defaultdict(list)
+    tmp_reason: Dict[int, Dict[str, List[Symbol]]] = defaultdict(dict)
     for sym in h_symbols:
         rule_nr, symbol, reasons = sym.arguments
         tmp_symbol[rule_nr.number].append(symbol)
-        tmp_reason[rule_nr.number][str(symbol)] = reasons.arguments # type: ignore
+        tmp_reason[rule_nr.number][str(symbol)] = reasons.arguments
     for rule_nr in tmp_symbol.keys():
         tmp_symbol[rule_nr] = list(tmp_symbol[rule_nr])
-        tmp_symbol[rule_nr] = list(map(lambda symbol: next(filter(
+        tmp_symbol_identifier[rule_nr] = list(map(lambda symbol: next(filter(
         lambda supernode_symbol: supernode_symbol==symbol, supernode_symbols)) if
         symbol in supernode_symbols else
         SymbolIdentifier(symbol),tmp_symbol[rule_nr]))
     if pad:
         h_nodes: List[Node] = [
-            Node(frozenset(tmp_symbol[rule_nr]), rule_nr, reason=tmp_reason[rule_nr]) if rule_nr in tmp_symbol else Node(frozenset(), rule_nr) for 
+            Node(frozenset(tmp_symbol_identifier[rule_nr]), rule_nr, reason=tmp_reason[rule_nr]) if rule_nr in tmp_symbol else Node(frozenset(), rule_nr) for 
             rule_nr in relevant_indices]
     else:
         h_nodes: List[Node] = [
-            Node(frozenset(tmp_symbol[rule_nr]), rule_nr, reason=tmp_reason[rule_nr]) if rule_nr in tmp_symbol else Node(frozenset(), rule_nr)
+            Node(frozenset(tmp_symbol_identifier[rule_nr]), rule_nr, reason=tmp_reason[rule_nr]) if rule_nr in tmp_symbol else Node(frozenset(), rule_nr)
             for rule_nr in range(1, max(tmp_symbol.keys(), default=-1) + 1)]
 
     return h_nodes
@@ -87,7 +88,7 @@ def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
                                             h_symbols: List[Symbol],
                                             recursive_transformations: Collection[AST], 
                                             h: str = "h", 
-                                            analyzer: Union[ProgramAnalyzer, None] = None,
+                                            analyzer: ProgramAnalyzer = ProgramAnalyzer(),
                                             pad=True) \
                                             -> nx.DiGraph:
     h_syms: List[Node] = collect_h_symbols_and_create_nodes(h_symbols, rule_mapping.keys(), pad)
@@ -159,8 +160,9 @@ def build_graph(wrapped_stable_models: List[List[str]], transformed_prg: Collect
                                             conflict_free_h)
         new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, h_symbols, recursion_transformations, conflict_free_h, analyzer)
         paths.append(new_path)
-
-    result_graph = identify_reasons(join_paths_with_facts(paths))
+    
+    
+    result_graph = identify_reasons(harmonize_uuids(join_paths_with_facts(paths)))
     if analyzer.pass_through:
         append_noops(result_graph, analyzer)
     return result_graph
@@ -183,7 +185,7 @@ def filter_body_aggregates(element: AST):
 
 def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
                            transformation: Transformation, conflict_free_h: str,
-                           analyzer: Union[ProgramAnalyzer, None]) -> Union[bool, nx.DiGraph]:
+                           analyzer: ProgramAnalyzer) -> Union[bool, nx.DiGraph]:
     """
     Get a recursion explanation for the given facts and the recursive transformation.
     Generate graph from explanation, sorted by the iteration step number.
@@ -198,14 +200,14 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
 
     init = [fact.symbol for fact in facts]
     justification_program = ""
-    model_str: str = analyzer.get_conflict_free_model()
-    n_str: str = analyzer.get_conflict_free_iterindex()
+    model_str: str = analyzer.get_conflict_free_model() if analyzer else "model"
+    n_str: str = analyzer.get_conflict_free_iterindex() if analyzer else "n"
 
     for rule in transformation.rules:
         deps = defaultdict(list)
         loc = rule.location
 
-        _ = analyzer.visit(rule.head, deps=deps)
+        _ = analyzer.visit(rule.head, deps=deps) # type: ignore
         if not deps:
             deps[rule.head] = []
         for dependant, conditions in deps.items():
