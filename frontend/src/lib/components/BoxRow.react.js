@@ -2,7 +2,6 @@ import React, { useCallback } from "react";
 import { Box } from "./Box.react";
 import './boxrow.css';
 import { useSettings } from "../contexts/Settings";
-import { useSorts } from "../contexts/ProgramSorts";
 
 function loadClingraphChildren(backendURL) {
     return fetch(`${backendURL("clingraph/children")}`).then(r => r.json());
@@ -15,7 +14,6 @@ export function Boxrow() {
     const boxrowRef = React.useRef(null);
     const { backendURL } = useSettings();
     const backendURLRef = React.useRef(backendURL);
-    const {state: {currentSort}} = useSorts();
 
     React.useEffect(() => {
         let mounted = true;

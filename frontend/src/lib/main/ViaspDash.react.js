@@ -24,7 +24,6 @@ import { HighlightedSymbolProvider, useHighlightedSymbol } from '../contexts/Hig
 import { ShownRecursionProvider } from '../contexts/ShownRecursion';
 import { AnimationUpdaterProvider } from '../contexts/AnimationUpdater';
 import DraggableList from 'react-draggable-list';
-import { SortsProvider, useSorts, setCurrentSort } from '../contexts/ProgramSorts';
 import { computeSortHash } from '../utils';
 
 
@@ -46,9 +45,8 @@ function postCurrentSort(backendURL, hash) {
 
 function GraphContainer(props) {
     const {notifyDash} = props;
-    const {state: {transformations, sorts}, dispatch: dispatchTransformation} = useTransformations()
+    const {state: {transformations, possibleSorts}, dispatch: dispatchTransformation} = useTransformations()
     const { clingraphUsed } = useClingraph();
-    // const { state: sorts, dispatch: dispatchSorts } = useSorts();
     const [, message_dispatch] = useMessages()
     const { backendURL } = useSettings();
     const backendUrlRef = React.useRef(backendURL);
@@ -59,13 +57,12 @@ function GraphContainer(props) {
 
     function onMoveEnd(newList, movedItem, oldIndex, newIndex) {
         computeSortHash(newList.map(t => t.transformation.hash)).then((newHash) => {
-            if (sorts.includes(newHash)) {
+            if (possibleSorts.includes(newHash)) {
                 postCurrentSort(backendUrlRef.current, newHash).catch(error => {
                     messageDispatchRef.current(showError(`Failed to set new current graph: ${error}`))
                 })
                 dispatchTransformation(reorderTransformation(oldIndex, newIndex));
                 reloadEdges();
-                // dispatchSorts(setCurrentSort(newHash));
                 return;
             }
         });
@@ -97,7 +94,7 @@ function MainWindow(props) {
     const {notifyDash} = props;
     const {backendURL} = useSettings();
     const {state: {transformations}} = useTransformations()
-    const [highlightedSymbol,,] = useHighlightedSymbol();
+    const { highlightedSymbol } = useHighlightedSymbol();
     const [, dispatch] = useMessages()
     const backendURLRef = React.useRef(backendURL)
     const dispatchRef = React.useRef(dispatch)
@@ -142,36 +139,34 @@ export default function ViaspDash(props) {
 
     return <div id={id}>
         <ColorPaletteProvider colorPalette={colors}>
-            <HighlightedNodeProvider>
-                <HighlightedSymbolProvider>
-                    <ShownRecursionProvider>
-                        <ShownDetailProvider>
-                            <FilterProvider>
-                                <AnimationUpdaterProvider>
-                                    <SettingsProvider backendURL={backendURL}>
-                                        <UserMessagesProvider>
-                                            <SortsProvider>
+            <SettingsProvider backendURL={backendURL}>
+                <HighlightedNodeProvider>
+                    <HighlightedSymbolProvider>
+                        <ShownRecursionProvider>
+                            <ShownDetailProvider>
+                                <FilterProvider>
+                                    <AnimationUpdaterProvider>
+                                            <UserMessagesProvider>
                                                 <ShownNodesProvider>
                                                         <TransformationProvider>
-                                                    <EdgeProvider>
-                                                            <ClingraphProvider>
-                                                                <div>
-                                                                    <UserMessages/>
-                                                                    <MainWindow notifyDash={notifyDash}/>
-                                                                </div>
-                                                            </ClingraphProvider>
-                                                    </EdgeProvider>
+                                                            <EdgeProvider>
+                                                                <ClingraphProvider>
+                                                                    <div>
+                                                                        <UserMessages/>
+                                                                        <MainWindow notifyDash={notifyDash}/>
+                                                                    </div>
+                                                                </ClingraphProvider>
+                                                            </EdgeProvider>
                                                         </TransformationProvider>
                                                 </ShownNodesProvider>
-                                            </SortsProvider>
-                                        </UserMessagesProvider>
-                                    </SettingsProvider>
-                                </AnimationUpdaterProvider>
-                            </FilterProvider>
-                        </ShownDetailProvider>
-                    </ShownRecursionProvider>
-                </HighlightedSymbolProvider>
-            </HighlightedNodeProvider>
+                                            </UserMessagesProvider>
+                                    </AnimationUpdaterProvider>
+                                </FilterProvider>
+                            </ShownDetailProvider>
+                        </ShownRecursionProvider>
+                    </HighlightedSymbolProvider>
+                </HighlightedNodeProvider>
+            </SettingsProvider>
         </ColorPaletteProvider>
     </div>
 }

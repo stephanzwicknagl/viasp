@@ -2,7 +2,6 @@ import React from "react";
 import {showError, useMessages} from "./UserMessages";
 import {useSettings} from "./Settings";
 import PropTypes from "prop-types";
-import { useSorts } from "./ProgramSorts";
 import { computeSortHash } from "../utils/index";
 
 function fetchTransformations(backendURL) {
@@ -28,7 +27,8 @@ function fetchSorts(backendURL) {
 
 const initialState = {
     transformations: [],
-    sorts: []
+    possibleSorts: [],
+    currentSort: "",
 };
 
 const HIDE_TRANSFORMATION = 'APP/TRANSFORMATIONS/HIDE';
@@ -37,13 +37,15 @@ const TOGGLE_TRANSFORMATION = 'APP/TRANSFORMATIONS/TOGGLE';
 const SHOW_ONLY_TRANSFORMATION = 'APP/TRANSFORMATIONS/ONLY';
 const ADD_TRANSFORMATION = 'APP/TRANSFORMATIONS/ADD';
 const ADD_SORT = 'APP/TRANSFORMATIONS/ADDSORT';
+const SET_CURRENT_SORT = 'APP/TRANSFORMATIONS/SETCURRENTSORT';
 const REORDER_TRANSFORMATION = 'APP/TRANSFORMATIONS/REORDER';
 const hideTransformation = (t) => ({type: HIDE_TRANSFORMATION, t})
 const showTransformation = (t) => ({type: SHOW_TRANSFORMATION, t})
 const toggleTransformation = (t) => ({type: TOGGLE_TRANSFORMATION, t})
 const showOnlyTransformation = (t) => ({type: SHOW_ONLY_TRANSFORMATION, t})
 const addTransformation = (t) => ({type: ADD_TRANSFORMATION, t})
-const addSort = (s) => ({type: ADD_SORT, s})
+const addSort = (s) => ({ type: ADD_SORT, s })
+const setCurrentSort = (s) => ({ type: SET_CURRENT_SORT, s})
 const reorderTransformation = (oldIndex, newIndex) => ({type: REORDER_TRANSFORMATION, oldIndex, newIndex})
 const TransformationContext = React.createContext();
 
@@ -106,9 +108,22 @@ const transformationReducer = (state = initialState, action) => {
         }
     }
     if (action.type === ADD_SORT) {
+        if (state.currentSort === "") {
+            return {
+                ...state,
+                possibleSorts: state.possibleSorts.concat([action.s[1]]),
+                currentSort: action.s[1]
+            }
+        }
         return {
             ...state,
-            sorts: state.sorts.concat([action.s[1]])
+            possibleSorts: state.possibleSorts.concat([action.s[1]])
+        }
+    }
+    if (action.type === SET_CURRENT_SORT) {
+        return {
+            ...state,
+            currentSort: action.s
         }
     }
     return {...state}
@@ -116,10 +131,8 @@ const transformationReducer = (state = initialState, action) => {
 
 const TransformationProvider = ({children}) => {
     const [, message_dispatch] = useMessages()
-    const {state: settingsState, backendURL} = useSettings();
+    const { backendURL} = useSettings();
     const [state, dispatch] = React.useReducer(transformationReducer, initialState);
-    const { state: sort } = useSorts()
-    const sortRef = React.useRef(sort);
     const backendUrlRef = React.useRef(backendURL);
     const messageDispatchRef = React.useRef(message_dispatch);
 
@@ -134,9 +147,6 @@ const TransformationProvider = ({children}) => {
                     items.map((s) => dispatch(addSort(s)))
                 }
             })
-        // if (sortRef.current.sorts.length === 0) {
-        //     return () => { mounted = false };
-        // }
         fetchTransformations(backendUrlRef.current).catch(error => {
             messageDispatchRef.current(showError(`Failed to get transformations: ${error}`))
         })

@@ -5,7 +5,6 @@ import PropTypes from "prop-types";
 import {useColorPalette} from "../contexts/ColorPalette";
 import { useShownDetail } from "../contexts/ShownDetail";
 import {useSettings} from "../contexts/Settings";
-import { useSorts } from '../contexts/ProgramSorts';
 import {SIGNATURE, SYMBOL} from "../types/propTypes";
 import {IoChevronDown, IoChevronForward, IoCloseSharp} from "react-icons/io5";
 
@@ -81,12 +80,11 @@ export function Detail() {
     const colorPalette = useColorPalette();
     const { shownDetail: shows, setShownDetail } = useShownDetail();
     const clearDetail = () => setShownDetail(null);
-    const { state: {currentSort} } = useSorts();
 
     React.useEffect(() => {
         let mounted = true;
         if (shows !== null) {
-            loadDataForDetail(backendURLRef.current, shows, currentSort)
+            loadDataForDetail(backendURLRef.current, shows)
                 .then(items => {
                     if (mounted) {
                         setData(items[1])
@@ -96,7 +94,7 @@ export function Detail() {
                 })
         }
         return () => { mounted = false };
-    }, [shows, currentSort])
+    }, [shows])
 
     return <div id="detailSidebar" style={{ backgroundColor: colorPalette.info, color: colorPalette.dark}}
                 className={shows === null ? `detail`:`detail detail-open`}>

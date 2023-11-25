@@ -4,7 +4,6 @@ import './row.css';
 import PropTypes from "prop-types";
 import {RowHeader} from "./RowHeader.react";
 import {toggleTransformation, useTransformations} from "../contexts/transformations";
-import {useSorts} from "../contexts/ProgramSorts";
 import {useSettings} from "../contexts/Settings";
 import { TRANSFORMATION, TRANSFORMATIONWRAPPER } from "../types/propTypes";
 import { ColorPaletteContext } from "../contexts/ColorPalette";

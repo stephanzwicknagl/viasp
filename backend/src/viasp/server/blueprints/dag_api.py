@@ -207,11 +207,20 @@ def get_src_tgt_mapping_from_graph(shown_nodes_ids=[], shown_recursive_ids=[]):
         graph.remove_node(node)
     return [{"src": src.uuid, "tgt": tgt.uuid} for src, tgt in graph.edges()]
 
+
 def get_src_tgt_mapping_from_clingraph(ids=None):
     from .api import using_clingraph, last_nodes_in_graph
     last = last_nodes_in_graph(get_graph())
     imgs = using_clingraph
     return [{"src": src, "tgt": tgt} for src, tgt in list(zip(last, imgs))]
+
+
+def find_reason_by_uuid(symbolid, nodeid):
+    node = find_node_by_uuid(nodeid)
+
+    symbolstr = str(getattr(next(filter(lambda x: x.uuid == symbolid, node.diff)), "symbol", ""))
+    reasonids = [getattr(r, "uuid", "") for r in node.reason.get(symbolstr, [])]
+    return reasonids
 
 
 @bp.route("/graph/sorts", methods=["GET", "POST"])
@@ -396,6 +405,7 @@ def search():
         return jsonify(result[:10])
     return jsonify([])
 
+
 @bp.route("/graph/clingraph/<uuid>", methods=["GET"])
 def get_image(uuid):
     # check if file with name uuid exists in static folder
@@ -405,8 +415,10 @@ def get_image(uuid):
         return abort(Response(f"No clingraph with uuid {uuid}.",404))
     return send_file(file_path, mimetype='image/png')
 
+
 def last_nodes_in_graph(graph):
     return [n.uuid for n in graph.nodes() if graph.out_degree(n) == 0]
+
 
 @bp.route("/clingraph/children", methods=["POST", "GET"])
 def get_clingraph_children():
@@ -414,4 +426,16 @@ def get_clingraph_children():
         from .api import using_clingraph
         to_be_returned = using_clingraph[::-1]
         return jsonify(to_be_returned)
+    raise NotImplementedError
+
+
+@bp.route("/graph/reason", methods=["POST"])
+def get_reasons_of():
+    if request.method == "POST":
+        if request.json is None:
+            return jsonify({'error': 'Missing JSON in request'}), 400
+        source_uuid = request.json["sourceid"]
+        node_uuid = request.json["nodeid"]
+        reason_uuids = find_reason_by_uuid(source_uuid, node_uuid)
+        return jsonify([{"src": source_uuid, "tgt": reason_uuid} for reason_uuid in reason_uuids])
     raise NotImplementedError

@@ -33,8 +33,7 @@ function NodeContent(props) {
     const { node, setHeight, parentID, setIsOverflowV, expandNode, isSubnode } = props;
     const colorPalette = useColorPalette();
     const [{ activeFilters },] = useFilters();
-    const [highlightedSymbol, toggleHighlightedSymbol, setHighlightedSymbol] = useHighlightedSymbol();
-    const [, toggleShownRecursion,] = useShownRecursion();
+    const { highlightedSymbol, toggleReasonOf } = useHighlightedSymbol();
     const standardNodeHeight = 80;
     const minimumNodeHeight = 34;
 
@@ -45,10 +44,10 @@ function NodeContent(props) {
         contentToShow = node.diff;
     }
 
-    function symbolShouldBeShown(symbolId) {
+    const symbolShouldBeShown = React.useCallback((symbolId) => {
         return activeFilters.length === 0 || any(activeFilters.filter(filter => filter._type === "Signature")
             .map(filter => filter.name === symbolId.symbol.name && filter.args === symbolId.symbol.arguments.length));
-    }
+    }, [activeFilters])
 
     function handleClick(e, src) {
         e.stopPropagation();
@@ -56,35 +55,26 @@ function NodeContent(props) {
         if (!node.reason[make_atoms_string(src.symbol)]) {
             return;
         }
-        let reasons = node.reason[make_atoms_string(src.symbol)];
-        if (reasons.every(tgt => tgt !== null)) {
-            toggleHighlightedSymbol(reasons.map(tgt => { return { "src": src.uuid, "tgt": tgt.uuid } }), highlightedSymbol);
-        }
-        else {
-            let subNode = node.recursive._graph.nodes.filter(node => node.id.atoms.filter(atom => atom.uuid == src.uuid).length > 0);
-            reasons = subNode[0].id.reason[make_atoms_string(src.symbol)];
-            toggleShownRecursion(node.uuid);
-            toggleHighlightedSymbol(reasons.map(tgt => { return { "src": src.uuid, "tgt": tgt.uuid } }), highlightedSymbol);
-        }
+        toggleReasonOf(src.uuid, node.uuid)
     }
 
-    function symbolVisibilityManager(compareHighlightedSymbol, symbol) {
-        const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol.uuid);
-        const j = compareHighlightedSymbol.map(item => item.src).indexOf(symbol.uuid);
-        const childElement = document.getElementById(symbol.uuid + `_${isSubnode ? "sub" : "main"}`);
-        const parentElement = document.getElementById(parentID);
 
-        if (!childElement || !parentElement) {
-            return { "fittingHeight": 0, "isMarked": i !== -1 || j !== -1 };
-        }
-        else {
+
+    const visibilityManager = React.useCallback(() => {
+        function symbolVisibilityManager(compareHighlightedSymbol, symbol) {
+            const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol.uuid);
+            const j = compareHighlightedSymbol.map(item => item.src).indexOf(symbol.uuid);
+            const childElement = document.getElementById(symbol.uuid + `_${isSubnode ? "sub" : "main"}`);
+            const parentElement = document.getElementById(parentID);
+
+            if (!childElement || !parentElement) {
+                return { "fittingHeight": 0, "isMarked": i !== -1 || j !== -1 };
+            }
             const childRect = childElement.getBoundingClientRect();
             const parentRect = parentElement.getBoundingClientRect();
             return { "fittingHeight": childRect.bottom - parentRect.top, "isMarked": i !== -1 || j !== -1 };
         }
-    }
 
-    function visibilityManager() {
         var allHeights = contentToShow
             .filter(symbol => symbolShouldBeShown(symbol))
             .map(s => symbolVisibilityManager(highlightedSymbol, s));
@@ -95,24 +85,28 @@ function NodeContent(props) {
             setHeight(maxSymbolHeight);
             setIsOverflowV(false)
         }
-        else { // marked node is under the fold
+        else { 
+            // marked node is under the fold
             if (markedItems.length && any(markedItems.map(item => item.fittingHeight > standardNodeHeight))) {
                 setHeight(height => {
                     Math.max(height, Math.max(...markedItems.map(item => item.fittingHeight)));
                     setIsOverflowV(maxSymbolHeight > height)
                 });
             }
-            else { // marked node is not under the fold
+            else { 
+                // marked node is not under the fold
                 setHeight(height => Math.max(height, Math.min(standardNodeHeight, maxSymbolHeight)));
                 setIsOverflowV(maxSymbolHeight > standardNodeHeight)
             }
         };
-    }
+    }, [contentToShow, highlightedSymbol, setHeight, setIsOverflowV, standardNodeHeight, minimumNodeHeight, expandNode, symbolShouldBeShown, isSubnode, parentID])
+
 
     React.useEffect(() => {
         visibilityManager();
         onFullyLoaded(() => visibilityManager());
-    }, [highlightedSymbol, state, expandNode, activeFilters])
+    }, [visibilityManager, highlightedSymbol, state, expandNode, activeFilters])
+
 
     function onFullyLoaded(callback) {
         setTimeout(function () {
@@ -126,7 +120,7 @@ function NodeContent(props) {
 
     const classNames2 = `set_value`
     const containerNames = `set_container`
-    let renderedSymbols = contentToShow.filter(symbol =>
+    const renderedSymbols = contentToShow.filter(symbol =>
         symbolShouldBeShown(symbol)).map(s => {
             // const [classNames1, style1] = useHighlightedSymbolAndReasonToCreateClassName(highlightedSymbol, s.uuid, node.reason[make_atoms_string(s)]);
             return <Symbol key={JSON.stringify(s)} symbolIdentifier={s} isSubnode={isSubnode} reasons={node.reason[make_atoms_string(s)]} handleClick={handleClick}/>
@@ -153,7 +147,7 @@ NodeContent.propTypes = {
     /**
      * Set the vertical overflow state of the Node
      */
-    setIsdOverflowV: PropTypes.func,
+    setIsOverflowV: PropTypes.func,
     /**
      * If the node is expanded
      */
@@ -186,6 +180,13 @@ function RecursionButton(props) {
     </div>
 }
 
+RecursionButton.propTypes = {
+    /**
+     * object containing the node data to be displayed
+     * */
+    node: NODE,
+}
+
 function OverflowButton(props) {
     const { setExpandNode } = props;
     const colorPalette = useColorPalette();
@@ -205,16 +206,23 @@ function OverflowButton(props) {
     </div>
 }
 
+OverflowButton.propTypes = {
+    /**
+     * The function to be called to set the node height
+     *  */
+    setExpandNode: PropTypes.func,
+}
+
+
 function useHighlightedNodeToCreateClassName(node) {
-    // TODO: rewrite this as a function inside a useEffect
     const [highlightedNode,] = useHighlightedNode()
-    let classNames = `node_border mouse_over_shadow ${node.uuid} ${highlightedNode === node.uuid ? "highlighted_node" : null}`
+    const [classNames, setClassNames] = React.useState(`node_border mouse_over_shadow ${node.uuid} ${highlightedNode === node.uuid ? "highlighted_node" : null}`);
 
     React.useEffect(() => {
-        classNames = `node_border mouse_over_shadow ${node.uuid} ${highlightedNode === node.uuid ? "highlighted_node" : null}`
-    }, [node.uuid, highlightedNode]
-    )
-    return classNames
+        setClassNames(`node_border mouse_over_shadow ${node.uuid} ${highlightedNode === node.uuid ? "highlighted_node" : null}`);
+    }, [node.uuid, highlightedNode]);
+
+    return classNames;
 }
 
 export function Node(props) {
@@ -296,18 +304,23 @@ Node.propTypes = {
 export function RecursiveSuperNode(props) {
     const { node, showMini } = props;
     const colorPalette = useColorPalette();
-    const [, dispatch] = useShownNodes();
+    const { dispatch: dispatchShownNodes } = useShownNodes();
     const classNames = useHighlightedNodeToCreateClassName(node);
     const { setShownDetail } = useShownDetail();
+
+    const dispatchShownNodesRef = React.useRef(dispatchShownNodes);
+    const nodeuuidRef = React.useRef(node.uuid);
 
     const notifyClick = (node) => {
         setShownDetail(node.uuid);
     }
 
     React.useEffect(() => {
-        dispatch(showNode(node.uuid))
+        const dispatch = dispatchShownNodesRef.current;
+        const nodeuuid = nodeuuidRef.current
+        dispatch(showNode(nodeuuid))
         return () => {
-            dispatch(hideNode(node.uuid))
+            dispatch(hideNode(nodeuuid))
         }
     }, [])
     React.useEffect(() => {

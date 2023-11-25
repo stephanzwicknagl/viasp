@@ -6,32 +6,26 @@ import {useColorPalette} from "../contexts/ColorPalette";
 import {useSettings} from "../contexts/Settings";
 import {NODE} from "../types/propTypes";
 import {Node} from "./Node.react";
-import { useSorts } from "../contexts/ProgramSorts";
 
 function loadFacts(backendURL) {
     return fetch(`${backendURL("graph/facts")}`).then(r => r.json());
 }
 
 export function Facts() {
-    const {state, backendURL} = useSettings();
+    const { backendURL} = useSettings();
     const [fact, setFact] = React.useState(null);
     const backendURLRef = React.useRef(backendURL)
-    const { state: sort } = useSorts();
     
     React.useEffect(() => {
         let mounted = true;
-        // wait for transformations to be set
-        if (sort.sorts.length === 0) {
-            return () => { mounted = false };
-        }
-        loadFacts(backendURLRef.current, sort.currentSort)
+        loadFacts(backendURLRef.current)
             .then(items => {
                 if (mounted) {
                     setFact(items)
                 }
             });
         return () => { mounted = false };
-    }, [sort]);
+    }, []);
 
     if (fact === null) {
         return (
@@ -39,7 +33,7 @@ export function Facts() {
             </div>
         )
     }
-    return fact === null ? null :
+    return fact === null ? <div>Loading...</div> :
         <div className="row_row"><Node 
                 key={fact.uuid} 
                 node={fact}

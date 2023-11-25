@@ -6,7 +6,7 @@ import { useAnimationUpdater } from "../contexts/AnimationUpdater";
 import PropTypes from 'prop-types'
 
 export function Arrows() {
-    const [highlightedSymbol, ,] = useHighlightedSymbol();
+    const { highlightedSymbol } = useHighlightedSymbol();
     const [shownRecursion, , ] = useShownRecursion(); 
     // state to update Arrows after height animation of node
     const [value, , ,] = useAnimationUpdater();

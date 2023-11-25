@@ -9,7 +9,6 @@ import {NODE, SIGNATURE, TRANSFORMATION} from "../types/propTypes";
 import {showOnlyTransformation, useTransformations} from "../contexts/transformations";
 import {useColorPalette} from "../contexts/ColorPalette";
 import { useShownDetail } from "../contexts/ShownDetail";
-import { useSorts } from "../contexts/ProgramSorts";
 
 
 const KEY_DOWN = 40;
@@ -79,7 +78,7 @@ export function Search() {
     const {backendURL} = useSettings();
     const { sixty } = useColorPalette();
     const { setShownDetail } = useShownDetail();
-    const { state: {currentSort} } = useSorts();
+
     let suggestionsListComponent;
     React.useEffect(() => {
         const highlighted = filteredSuggestions[activeSuggestion]

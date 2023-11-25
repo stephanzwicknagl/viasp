@@ -9,7 +9,7 @@ import { useHighlightedSymbol } from "../contexts/HighlightedSymbol";
 function useHighlightedSymbolToCreateClassName(symbol) {
     let classNames = "symbol";
     let style = null;
-    const [compareHighlightedSymbol, ,] = useHighlightedSymbol();
+    const { highlightedSymbol: compareHighlightedSymbol } = useHighlightedSymbol();
 
 
     const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol);

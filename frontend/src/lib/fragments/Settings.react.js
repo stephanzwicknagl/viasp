@@ -11,7 +11,7 @@ function makeClassNameFromMarkedSymbol(highlightedSymbol) {
 }
 
 function ClearMarked() {
-    const [highlightedSymbol,, setHighlightedSymbol] = useHighlightedSymbol()
+    const { highlightedSymbol, setHighlightedSymbol } = useHighlightedSymbol()
     const colorPalette = useColorPalette();
     const className = makeClassNameFromMarkedSymbol(highlightedSymbol)
     const [isHovered, setIsHovered] = useState(false);
