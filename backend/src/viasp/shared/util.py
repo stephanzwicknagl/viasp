@@ -69,7 +69,7 @@ def hash_from_sorted_transformations(sorted_program: List[Any]) -> str:
     hash_object = sha1(concatenated.encode())
     return hash_object.hexdigest()
 
-def hash_transformation_rules(rules: Tuple[Any]) -> str:
+def hash_transformation_rules(rules: Tuple[Any, ...]) -> str:
     hash_object = sha1()
     for rule in rules:
         rule_str = current_app.json.dumps(rule)

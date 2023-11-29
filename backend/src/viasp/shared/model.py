@@ -15,6 +15,7 @@ from .util import DefaultMappingProxyType, hash_transformation_rules
 @dataclass()
 class SymbolIdentifier:
     symbol: Symbol = field(hash=True)
+    has_reason: bool = field(default=False, hash=False)
     uuid: UUID = field(default_factory=uuid4, hash=False)
 
     def __eq__(self, other):
@@ -145,24 +146,6 @@ class FailedReason(Enum):
 class TransformationError:
     ast: AST
     reason: FailedReason
-
-@dataclass
-class ReasonNode:
-    atoms: FrozenSet[Symbol] = field(default_factory=frozenset, hash=True)
-    reason: FrozenSet[Symbol] = field(default_factory=defaultdict, hash=False)
-    uuid: UUID = field(default_factory=uuid4, hash=False)
-
-    def __hash__(self):
-        return hash((self.atoms))
-
-    def __eq__(self, o):
-        return isinstance(o, type(self)) and (self.atoms, self.reason) == (o.atoms, o.reason)
-
-    def __repr__(self):
-        repr_reasons = []
-        for key, val in self.reason.items():
-            repr_reasons.append(f"{key}: {val}")
-        return f"Node(atoms={{{'. '.join(map(str, self.atoms))}}}, reasons={{{'. '.join(repr_reasons)}}}, uuid={self.uuid})"
 
 @dataclass
 class TransformerTransport:

@@ -117,6 +117,9 @@ def identify_reasons(g: nx.DiGraph) -> nx.DiGraph:
                         for r in rr:
                             tmp_reason.append(get_identifiable_reason(v.recursive, node, r, super_graph=g, super_node=v))
                         node.reason[str(new)] = tmp_reason
+            for s in v.diff:
+                if s in v.reason.keys() and len(v.reason[str(s)]) > 0:
+                    s.has_reason = True
             searched_nodes.add(v)
             for w in g.successors(v): 
                 children_next.add(w)
@@ -155,7 +158,7 @@ def harmonize_uuids(g: nx.DiGraph) -> nx.DiGraph:
     """
     database = get_database()
 
-    if database.get_current_graph() is not "":
+    if database.get_current_graph() != "":
         pattern_g = database.load()
 
         pattern_nodes = set(pattern_g.nodes())

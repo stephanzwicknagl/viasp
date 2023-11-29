@@ -110,7 +110,8 @@ def dataclass_to_dict(o):
     elif isinstance(o, TransformationError):
         return {"_type": "TransformationError", "ast": o.ast, "reason": o.reason}
     elif isinstance(o, SymbolIdentifier):
-        return {"_type": "SymbolIdentifier", "symbol": o.symbol, "uuid": o.uuid}
+        print(f"Encoding _type: SymbolIdentifier, symbol: {o.symbol}, has_reason: {o.has_reason}", flush=True)
+        return {"_type": "SymbolIdentifier", "symbol": o.symbol, "has_reason": o.has_reason, "uuid": o.uuid}
     elif isinstance(o, Signature):
         return {"_type": "Signature", "name": o.name, "args": o.args}
     elif isinstance(o, Transformation):
