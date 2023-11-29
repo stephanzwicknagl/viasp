@@ -47,7 +47,7 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT, colors=None):
         backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
 
 
-    command = ["viasp", "--host", host, "--port", str(port)]
+    command = ["viasp_server", "--host", host, "--port", str(port)]
 
     # if 'ipykernel_launcher.py' in sys.argv[0]:
     #     display_refresh_button()
