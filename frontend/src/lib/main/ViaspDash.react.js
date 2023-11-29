@@ -52,7 +52,7 @@ function GraphContainer(props) {
     const backendUrlRef = React.useRef(backendURL);
     const messageDispatchRef = React.useRef(message_dispatch);
     const graphContainerRef = React.useRef(null);
-    const { reloadEdges } = useEdges();
+    // const { reloadEdges } = useEdges();
 
 
     function onMoveEnd(newList, movedItem, oldIndex, newIndex) {
@@ -62,7 +62,7 @@ function GraphContainer(props) {
                     messageDispatchRef.current(showError(`Failed to set new current graph: ${error}`))
                 })
                 dispatchTransformation(reorderTransformation(oldIndex, newIndex));
-                reloadEdges();
+                // reloadEdges();
                 return;
             }
         });

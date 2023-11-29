@@ -1,5 +1,4 @@
 import React, {Suspense} from "react";
-import { make_atoms_string } from "../utils/index";
 import './node.css';
 import PropTypes from "prop-types";
 import { Symbol } from "./Symbol.react";
@@ -51,11 +50,9 @@ function NodeContent(props) {
 
     function handleClick(e, src) {
         e.stopPropagation();
-
-        if (!node.reason[make_atoms_string(src.symbol)]) {
-            return;
+        if (src.has_reason) {
+            toggleReasonOf(src.uuid, node.uuid)
         }
-        toggleReasonOf(src.uuid, node.uuid)
     }
 
 
@@ -122,8 +119,7 @@ function NodeContent(props) {
     const containerNames = `set_container`
     const renderedSymbols = contentToShow.filter(symbol =>
         symbolShouldBeShown(symbol)).map(s => {
-            // const [classNames1, style1] = useHighlightedSymbolAndReasonToCreateClassName(highlightedSymbol, s.uuid, node.reason[make_atoms_string(s)]);
-            return <Symbol key={JSON.stringify(s)} symbolIdentifier={s} isSubnode={isSubnode} reasons={node.reason[make_atoms_string(s)]} handleClick={handleClick}/>
+            return <Symbol key={JSON.stringify(s)} symbolIdentifier={s} isSubnode={isSubnode} handleClick={handleClick}/>
         })
 
     return <div className={containerNames} style={{ "color": colorPalette.dark }}>

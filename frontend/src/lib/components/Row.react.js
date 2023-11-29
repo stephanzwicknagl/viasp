@@ -46,10 +46,6 @@ export class RowTemplate extends React.Component {
         super(props);
     }
 
-    // getDragHeight() {
-    //     return 20;
-    // }
-
     render () {
         const { item, itemSelected, anySelected, dragHandleProps } = this.props;
         const transformation = item.transformation;
@@ -61,16 +57,19 @@ export class RowTemplate extends React.Component {
         const dragged = itemSelected !== 0;
         const background = Object.values(this.context.twenty)
 
+        const opacity = itemSelected === 0 ? 1-anySelected*0.5 : 1;
+
         return ((<div
                 className="row_container"
                 style={{transform: `scale(${scale})`,
                         zIndex: dragged ? 1 : 0,
                         transformOrigin: 'left',
                         boxShadow: `rgba(0, 0, 0, 0.3) 0px ${shadow}px ${2 * shadow}px 0px`,
-                        background: background[transformation.id % background.length]}}
+                        background: background[transformation.id % background.length],
+                        opacity: opacity }}
                 >
             {transformation === null ? null :
-                    <Row key={transformation.hash} transformation={transformation} dragHandleProps={dragHandleProps} />}
+                <Row key={transformation.hash} transformation={transformation} dragHandleProps={dragHandleProps} itemSelected={itemSelected} />}
                 </div>)
         );
     }
@@ -98,7 +97,7 @@ RowTemplate.propTypes = {
 
 
 export function Row(props) {
-    const {transformation, dragHandleProps} = props;
+    const { transformation, dragHandleProps, itemSelected } = props;
 
     const {backendURL} = useSettings();
     const [nodes, setNodes] = React.useState(null);
@@ -182,7 +181,7 @@ export function Row(props) {
                     showMini={isOverflowH}/>
                 }
                 return <Node key={child.uuid} node={child}
-                showMini={isOverflowH} isSubnode = {false}/>})}</div>
+                    showMini={isOverflowH} isSubnode={false} />})}</div>
         }</div>
 }
 

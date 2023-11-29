@@ -10,6 +10,7 @@ export const SYMBOL = PropTypes.exact({
 export const SYMBOLIDENTIFIER = PropTypes.exact({
     _type: PropTypes.oneOf(['SymbolIdentifier']),
     symbol: SYMBOL,
+    has_reason: PropTypes.bool,
     uuid: PropTypes.string
 })
 
