@@ -118,7 +118,7 @@ def identify_reasons(g: nx.DiGraph) -> nx.DiGraph:
                             tmp_reason.append(get_identifiable_reason(v.recursive, node, r, super_graph=g, super_node=v))
                         node.reason[str(new)] = tmp_reason
             for s in v.diff:
-                if s in v.reason.keys() and len(v.reason[str(s)]) > 0:
+                if str(s.symbol) in v.reason.keys() and len(v.reason[str(s.symbol)]) > 0:
                     s.has_reason = True
             searched_nodes.add(v)
             for w in g.successors(v): 
