@@ -26,17 +26,16 @@ class InstallLocalPackage(install):
 # Package meta-data.
 NAME = 'viasp'
 DESCRIPTION = 'a visualization tool for clingo.'
-URL = 'https://github.com/glaserL/viasp'
+URL = 'https://github.com/potassco/viasp'
 EMAIL = 'Luis.Glaser@uni-potsdam.de'
 AUTHOR = 'Luis Glaser'
 REQUIRES_PYTHON = '>=3.7.0'
-VERSION = '1.3.2'
+VERSION = '2.0.0'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
     # 'viasp-backend',#>=1.3.2,
     # 'viasp-dash',#>=1.1.6
-    'jupyter-dash',
     'jupyter-server-proxy',
     'clingraph',
     'graphviz',

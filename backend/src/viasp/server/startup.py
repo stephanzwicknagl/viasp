@@ -12,15 +12,18 @@
 import sys
 import os
 import atexit
+import shutil
 from subprocess import Popen
 from time import time
+
 import viasp_dash
 from dash import Dash, jupyter_dash
 from dash._jupyter import _jupyter_config
 
 from viasp import clingoApiClient
 from viasp.shared.defaults import (DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT,
-                                   DEFAULT_BACKEND_PROTOCOL)
+                                   DEFAULT_BACKEND_PROTOCOL, CLINGRAPH_PATH, 
+                                   GRAPH_PATH, PROGRAM_STORAGE_PATH, STDIN_TMP_STORAGE_PATH)
 
 
 
@@ -47,7 +50,7 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT, colors=None):
         backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
 
 
-    command = ["viasp", "--host", host, "--port", str(port)]
+    command = ["viasp_server", "--host", host, "--port", str(port)]
 
     # if 'ipykernel_launcher.py' in sys.argv[0]:
     #     display_refresh_button()
@@ -83,8 +86,20 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT, colors=None):
         """ close the log file"""
         file.close()
 
+    def shutdown():
+        """ when quitting app, remove all files in 
+                the static/clingraph folder
+                and auxiliary program files
+        """
+        if os.path.exists(CLINGRAPH_PATH):
+            shutil.rmtree(CLINGRAPH_PATH)
+        for file in [GRAPH_PATH, PROGRAM_STORAGE_PATH, STDIN_TMP_STORAGE_PATH]:
+            if os.path.exists(file):
+                os.remove(file)
+
     # kill the backend on keyboard interruptions
     atexit.register(terminate_process, viasp_backend)
     atexit.register(close_file, log)
+    atexit.register(shutdown)
 
     return app
