@@ -30,7 +30,7 @@ URL = 'https://github.com/potassco/viasp'
 EMAIL = 'Luis.Glaser@uni-potsdam.de'
 AUTHOR = 'Luis Glaser'
 REQUIRES_PYTHON = '>=3.7.0'
-VERSION = '2.0.0'
+VERSION = '2.0.1'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
