@@ -1,7 +1,6 @@
 name: Build Notebook Container
 on: 
-  push:
-    branches: [ main, dev ]
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest
