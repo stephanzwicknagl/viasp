@@ -1,29 +1,13 @@
-=====
-Usage
-=====
-
-viASP consists of two parts, its frontend Dash component and the backend Flask server. Both need to be started and intialized on the local machine before each use.
-
-There are multiple ways of quickly starting viASP, which simplify the startup and initialization processes.
-
-
-Command-line functionality
-==========================
-
-.. warning::
-    this is currently a planned feature
-
-viASP can be used from the command line. Simply run
-
-.. code-block:: bash
-
-    $ viasp encoding.lp
-
-You can now inspect them using viASP at http://127.0.0.1:8050/.
-
+============
+Python Usage
+============
 
 Quickstart script
 =================
+
+viASP consists of two parts, its frontend Dash component and the backend Flask server. Both need to be started and intialized on the local machine before each use.
+
+There are multiple ways aside from the command line functionality to quickly start all parts of viASP while remaining in control of the program flow. The following example shows how to start viASP from a simple python script.
 
 Run the script at ``example/quickstart.py`` to start viASP with a given encoding.
 

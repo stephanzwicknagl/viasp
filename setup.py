@@ -34,8 +34,8 @@ VERSION = '2.0.0'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
-    # 'viasp-backend',#>=1.3.2,
-    # 'viasp-dash',#>=1.1.6
+    'viasp-backend',
+    'viasp-dash',
     'jupyter-server-proxy',
     'clingraph',
     'graphviz',

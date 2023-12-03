@@ -28,6 +28,7 @@ viASP allows you to explore the visualization in a variety of ways:
    :caption: Contents:
 
    viasp/installation
+   viasp/commandline
    viasp/usage
    viasp/api
    viasp/contributing
