@@ -30,8 +30,8 @@ Developing the frontend
 
 1. Move to frontend folder :code:`cd viasp/frontend`
 2. Run :code:`npm i` to install all needed dependencies
-3. Run :code:`npx webpack` to pack the javascript
-4. Run viASP with a clingo program :code:`viasp encoding.lp`
+3. Run :code:`npm run start` to continuously pack the javascript
+4. Run a modified viASP App to see changes on the frontend immediately :code:`python DevApp.py 0 encoding.lp`
 
 .. Note::
     The JavaScript and CSS files are located at ``/frontend/src/lib``. The frontend code needs to be packed before changes become visible to the webpage.
