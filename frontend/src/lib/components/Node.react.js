@@ -251,7 +251,7 @@ export function Node(props) {
     const divID = `${node.uuid}_animate_height`;
 
     return <div className={classNames}
-        style={{ "backgroundColor": colorPalette.light, "color": colorPalette.primary }}
+        style={{ "backgroundColor": colorPalette.light, "color": colorPalette.secondary }}
         id={node.uuid}
         onClick={(e) => { e.stopPropagation(); notifyClick(node) }}>
         {showMini ?

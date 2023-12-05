@@ -217,7 +217,7 @@ jobs:
       - name: Run Tests
         working-directory: examples
         run: |
-          viasp &
+          viasp_server &
           BACKENDPID=$!
           echo Giving backend time to startup..
           sleep 15s
