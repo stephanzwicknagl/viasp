@@ -11,6 +11,14 @@ The python viasp package can be found `here <https://pypi.org/project/viasp/>`_.
 
     $ pip install viasp
 
+
+.. warning:: 
+    Ensure that viASP is installed in an environment with a python version compatible with clingo. To create one, use
+
+    .. code-block:: bash
+
+        $ conda create -n viasp_env 'python<3.11'
+
 .. warning:: 
     To support the usage of clingraph in viASP, install `graphviz <https://www.graphviz.org/download/>`_  (version 2.50 or greater) manually.
 
