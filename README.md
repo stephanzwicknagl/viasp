@@ -30,13 +30,28 @@ pip install viasp
 
 ## Usage
 
+Consider the file [`hamiltonian.lp`](https://github.com/potassco/viasp/blob/main/examples/hamiltonian.lp):
+
+```prolog
+node(1..4). start(1).
+edge(1,2). edge(2,3). edge(2,4). edge(3,1).
+edge(3,4). edge(4,1). edge(4,3). 
+
+{ hc(V,U) } :- edge(V,U).
+reached(V)  :- hc(S,V), start(S).
+reached(V)  :- reached(U), hc(U,V).
+:- node(V), not reached(V).
+:- hc(V,U), hc(V,W), U!=W.
+:- hc(U,V), hc(W,V), U!=W.
+```
+
 To start a visualization from the command line, run:
 
 ```bash
-viasp path/to/encoding.lp
+viasp hamiltonian.lp
 ```
 
-Check out the [documentation](https://viasp.readthedocs.io/en/latest/) to see more on how to use viASP.
+Check out the [documentation](https://viasp.readthedocs.io/en/latest/) to see a full description on how to use viASP.
 
 ## Examples
 

@@ -14,12 +14,12 @@ except importlib.metadata.PackageNotFoundError:
 
 def _get_parser():
     parser = argparse.ArgumentParser(prog='viasp', description=textwrap.dedent(r"""
-           _           _____ _____  
-          (_)   /\    / ____|  __ \ 
-    __   ___   /  \  | (___ | |__) |
-    \ \ / / | / /\ \  \___ \|  ___/ 
-     \ V /| |/ ____ \ ____) | |     
-      \_/ |_/_/    \_\_____/|_|     
+           _        _____ _____  
+          (_)  /\  / ____|  __ \ 
+    __   ___  /  \| (___ | |__) |
+    \ \ / / |/ /\ \\___ \|  ___/ 
+     \ V /| / ____ \___) | |     
+      \_/ |/_/    \_\___/|_|     
                     
     viASP is a package to generate interactive 
     visualizations of ASP programs and 
@@ -30,9 +30,7 @@ def _get_parser():
     parser.add_argument('--host', type=str, help='The host for the backend and frontend', default=DEFAULT_BACKEND_HOST)
     parser.add_argument('-p', '--port', type=int, help='The port for the backend', default=DEFAULT_BACKEND_PORT)
     parser.add_argument('-f', '--frontend-port', type=int, help='The port for the frontend', default=DEFAULT_FRONTEND_PORT)
-    parser.add_argument('--version','-v', action='version',
-                    version=f'%(prog)s {VERSION}')
-    
+    parser.add_argument('--version','-v', action='version', version=f'%(prog)s {VERSION}')
 
     clingraph_group = parser.add_argument_group('Clingraph', 'If included, a clingraph visualization will be made.')
     clingraph_group.add_argument('--viz_encoding', type=str, help='The path to the visualization encoding.', default=None)
