@@ -73,7 +73,7 @@ The output prints the stable models of the program and information about the via
     Press CTRL+C to quit
 
 
-To define how many models should be included at most, use the ``--models`` or ``-n`` option. Bt default, all models are included.
+To define how many models should be included at most, use the ``--models`` or ``-n`` option. By default, all models are included.
 
 .. code-block:: bash
 
