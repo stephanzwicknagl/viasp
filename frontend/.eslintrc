@@ -5,8 +5,9 @@
   ],
   "parser": "@babel/eslint-parser",
   "parserOptions": {
-    "ecmaVersion": 6,
+    "ecmaVersion": 14,
     "sourceType": "module",
+    "requireConfigFile": false,
     "ecmaFeatures": {
       "arrowFunctions": true,
       "blockBindings": true,
