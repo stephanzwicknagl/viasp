@@ -3,6 +3,7 @@ import {Node, RecursiveSuperNode} from "./Node.react";
 import './row.css';
 import PropTypes from "prop-types";
 import {RowHeader} from "./RowHeader.react";
+import { DropSignaler } from "./DropSignaler.react";
 import {toggleTransformation, useTransformations} from "../contexts/transformations";
 import {useSettings} from "../contexts/Settings";
 import { TRANSFORMATION, TRANSFORMATIONWRAPPER } from "../types/propTypes";
@@ -57,20 +58,32 @@ export class RowTemplate extends React.Component {
         const dragged = itemSelected !== 0;
         const background = Object.values(this.context.twenty)
 
-        const opacity = itemSelected === 0 ? 1-anySelected*0.5 : 1;
+        const opacity = () => {
+            if (itemSelected === 0)
+                return 1-anySelected*0.5;
+            else
+                return 1;
+        }
 
-        return ((<div
-                className="row_container"
-                style={{transform: `scale(${scale})`,
-                        zIndex: dragged ? 1 : 0,
-                        transformOrigin: 'left',
-                        boxShadow: `rgba(0, 0, 0, 0.3) 0px ${shadow}px ${2 * shadow}px 0px`,
-                        background: background[transformation.id % background.length],
-                        opacity: opacity }}
-                >
+        const containerStyle = {
+            transform: `scale(${scale})`,
+            zIndex: dragged ? 1 : 0,
+            transformOrigin: 'left',
+            boxShadow: `rgba(0, 0, 0, 0.3) 0px ${shadow}px ${2 * shadow}px 0px`,
+            background: background[transformation.id % background.length],
+            opacity: opacity,
+        };
+
+        return (
+        <div>
+            <DropSignaler itemSelected={itemSelected} anySelected={anySelected} />
+            <div className="row_container"
+                style={containerStyle}>
             {transformation === null ? null :
-                <Row key={transformation.hash} transformation={transformation} dragHandleProps={dragHandleProps} itemSelected={itemSelected} />}
-                </div>)
+                <Row key={transformation.hash} transformation={transformation} 
+                    dragHandleProps={dragHandleProps} itemSelected={itemSelected} />}
+                </div>
+        </div>
         );
     }
 }

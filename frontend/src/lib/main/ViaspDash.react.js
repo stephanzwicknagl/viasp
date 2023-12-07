@@ -14,7 +14,7 @@ import { ClingraphProvider, useClingraph } from '../contexts/Clingraph';
 import { ColorPaletteProvider } from "../contexts/ColorPalette"; 
 import {HighlightedNodeProvider} from "../contexts/HighlightedNode";
 import {showError, useMessages, UserMessagesProvider} from "../contexts/UserMessages";
-import { EdgeProvider, useEdges } from '../contexts/Edges';
+import { EdgeProvider } from '../contexts/Edges';
 import { ShownDetailProvider } from '../contexts/ShownDetail';
 import { Settings } from '../LazyLoader';
 import {UserMessages} from "../components/messages";
