@@ -1,6 +1,6 @@
 import json
 import sys
-import shutil
+import fileinput
 from inspect import signature
 from typing import List, Union
 
@@ -132,9 +132,9 @@ class Control:
             with open(path, "w", encoding="utf-8") as f:
                 f.writelines(tmp)
         else:
-            shutil.copy(path, STDIN_TMP_STORAGE_PATH)
-            path = str(STDIN_TMP_STORAGE_PATH)
-        self.viasp.register_function_call("load", signature(self.passed_control.load), [], kwargs={"path": path}) #? or self.passed_control.load
+            with open(path, "r", encoding="utf-8") as f, open(STDIN_TMP_STORAGE_PATH, "a", encoding="utf-8") as out:
+                out.writelines(f.readlines())
+        self.viasp.register_function_call("load", signature(self.passed_control.load), [], kwargs={"path": path})
         self.passed_control.load(path=str(path))
 
     def add(self, *args, **kwargs):

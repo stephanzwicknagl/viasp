@@ -1,6 +1,6 @@
-==========================
+##########################
 Command line functionality
-==========================
+##########################
 
 viASP provides command line functionality to generate graphs from files. The graphs can then be inspected in the browser.
 
@@ -21,24 +21,49 @@ The command line usage is described below. Additionally, all options can be foun
     $ viasp --help
 
 
+****************
 Loading Programs
-================
+****************
 
-To load a program, pass the path to the program file as an argument. For programs split into multiple files, all of them can be loaded at once.
+Loading from files
+==================
+
+Consider the file `hamiltonian.lp <https://github.com/potassco/viasp/blob/main/examples/hamiltonian.lp>`_
+
+.. code-block:: prolog
+
+    node(1..4). start(1).
+    edge(1,2). edge(2,3). edge(2,4). edge(3,1).
+    edge(3,4). edge(4,1). edge(4,3). 
+
+    { hc(V,U) } :- edge(V,U).
+    reached(V)  :- hc(S,V), start(S).
+    reached(V)  :- reached(U), hc(U,V).
+    :- node(V), not reached(V).
+    :- hc(V,U), hc(V,W), U!=W.
+    :- hc(U,V), hc(W,V), U!=W.
+
+
+To load the program, pass the path to the file as an argument.
 
 .. code-block:: bash
 
-    $ viasp sprinkler.lp encoding2.lp
+    $ viasp hamiltonian.lp
+
+
+For programs split into multiple files, all of them can be loaded at once.
+
+.. code-block:: bash
+
+    $ viasp hamiltonian.lp model1.lp
 
 The output prints the stable models of the program and information about the viasp server and frontend url
 
 .. code-block:: bash
     
     Starting backend at http://localhost:5050
-    Answer:
-    rain wet    
-    Answer:
-    sprinkler wet
+    Answer:    
+    node(1) node(2) node(3) node(4) edge(1,2) edge(2,3) edge(2,4) edge(3,1) edge(3,4) edge(4,1) edge(4,3) hc(1,2) hc(2,3) hc(3,4) hc(4,1) start(1) reached(2) reached(3) reached(4) reached(1)
     SAT
     [INFO] (2023-12-01 12:38:44) Set models.
     [INFO] (2023-12-01 12:38:44) Reconstructing in progress.
@@ -48,15 +73,27 @@ The output prints the stable models of the program and information about the via
     Press CTRL+C to quit
 
 
-To define how many models should be included at most, use the ``--models`` or ``-n`` option.
+To define how many models should be included at most, use the ``--models`` or ``-n`` option. By default, all models are included.
 
 .. code-block:: bash
 
-    $ viasp encoding.lp -n 3
+    $ viasp hamiltonian.lp -n 1
 
 
+Loading from stdin
+==================
+
+To load a program from stdin, use `-` as the file path.
+
+.. code-block:: bash
+
+    $ cat hamiltonian.lp | viasp -
+
+
+
+*********
 Clingraph
-=========
+*********
 
 viASP can include clingraph visualizations in the frontend. To do so, pass the path to a separte visualization program as an argument.
 
@@ -71,8 +108,9 @@ To pass additional arguments to clingraph, use the ``--engine`` and ``--graphviz
     $ viasp encoding.lp --viz_encoding viz_encoding.lp --engine clingraph --graphviz_type dot
 
 
+*******
 Relaxer
-=======
+*******
 
 By default, viASP supports the visualization of unsatisfiable programs using the relaxer. viASP transforms the integrity constraints of unsatisfiable programs into weak constraints and visualizes the resulting program. The resulting graph can be used to inspect the reason for unsatisfiability.
 
@@ -87,8 +125,9 @@ To specify the head name of the weak constraint, use the ``--head_name`` option.
 
 To turn off the relaxer, use the ``--no-relaxer`` or ``-r`` option.
 
+*************
 Other options
-=============
+*************
 
 To specify the port of the backend, use the ``--port`` or ``-p`` option.
 
