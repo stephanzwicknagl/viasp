@@ -3,7 +3,7 @@
     "eslint:recommended",
     "prettier"
   ],
-  "parser": "@babel/eslint-parser",
+  // "parser": "@babel/eslint-parser",
   "parserOptions": {
     "ecmaVersion": 14,
     "sourceType": "module",
