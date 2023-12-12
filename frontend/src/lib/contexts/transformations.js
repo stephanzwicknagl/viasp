@@ -28,7 +28,8 @@ function fetchSorts(backendURL) {
 const initialState = {
     transformations: [],
     possibleSorts: [],
-    currentSort: "",
+    currentSort: '',
+    currentDragged: '',
 };
 
 const HIDE_TRANSFORMATION = 'APP/TRANSFORMATIONS/HIDE';
@@ -39,6 +40,7 @@ const ADD_TRANSFORMATION = 'APP/TRANSFORMATIONS/ADD';
 const ADD_SORT = 'APP/TRANSFORMATIONS/ADDSORT';
 const SET_CURRENT_SORT = 'APP/TRANSFORMATIONS/SETCURRENTSORT';
 const REORDER_TRANSFORMATION = 'APP/TRANSFORMATIONS/REORDER';
+const SET_CURRENT_DRAGGED = 'APP/TRANSFORMATIONS/SETDRAGGED';
 const hideTransformation = (t) => ({type: HIDE_TRANSFORMATION, t})
 const showTransformation = (t) => ({type: SHOW_TRANSFORMATION, t})
 const toggleTransformation = (t) => ({type: TOGGLE_TRANSFORMATION, t})
@@ -47,6 +49,7 @@ const addTransformation = (t) => ({type: ADD_TRANSFORMATION, t})
 const addSort = (s) => ({ type: ADD_SORT, s })
 const setCurrentSort = (s) => ({ type: SET_CURRENT_SORT, s})
 const reorderTransformation = (oldIndex, newIndex) => ({type: REORDER_TRANSFORMATION, oldIndex, newIndex})
+const setCurrentDragged = (h) => ({type: SET_CURRENT_DRAGGED, h})
 const TransformationContext = React.createContext();
 
 const transformationReducer = (state = initialState, action) => {
@@ -126,6 +129,12 @@ const transformationReducer = (state = initialState, action) => {
             currentSort: action.s
         }
     }
+    if (action.type === SET_CURRENT_DRAGGED) {
+        return {
+            ...state,
+            currentDragged: action.h
+        }
+    }
     return {...state}
 }
 
@@ -169,4 +178,12 @@ TransformationProvider.propTypes = {
      */
     children: PropTypes.element,
 }
-export {TransformationProvider, TransformationContext, useTransformations, toggleTransformation, showOnlyTransformation, reorderTransformation}
+export {
+    TransformationProvider,
+    TransformationContext,
+    useTransformations,
+    toggleTransformation,
+    showOnlyTransformation,
+    reorderTransformation,
+    setCurrentDragged,
+};

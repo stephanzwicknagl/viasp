@@ -9,7 +9,12 @@ import {Facts} from "../components/Facts.react";
 import { Edges } from "../components/Edges.react";
 import { Arrows } from "../components/Arrows.react";
 import { ShownNodesProvider } from "../contexts/ShownNodes";
-import { TransformationProvider, useTransformations, reorderTransformation } from "../contexts/transformations";
+import {
+    TransformationProvider,
+    useTransformations,
+    reorderTransformation,
+    setCurrentDragged,
+} from '../contexts/transformations';
 import { ClingraphProvider, useClingraph } from '../contexts/Clingraph';
 import { ColorPaletteProvider } from "../contexts/ColorPalette"; 
 import {HighlightedNodeProvider} from "../contexts/HighlightedNode";
@@ -25,6 +30,7 @@ import { ShownRecursionProvider } from '../contexts/ShownRecursion';
 import { AnimationUpdaterProvider } from '../contexts/AnimationUpdater';
 import DraggableList from 'react-draggable-list';
 import { computeSortHash } from '../utils';
+import { DropSignalerContainer } from '../components/DropSignaler.react';
 
 
 function postCurrentSort(backendURL, hash) {
@@ -45,16 +51,21 @@ function postCurrentSort(backendURL, hash) {
 
 function GraphContainer(props) {
     const {notifyDash} = props;
-    const {state: {transformations, possibleSorts}, dispatch: dispatchTransformation} = useTransformations()
+    const {
+        state: {transformations, possibleSorts}, 
+        dispatch: dispatchTransformation
+    } = useTransformations()
     const { clingraphUsed } = useClingraph();
     const [, message_dispatch] = useMessages()
     const { backendURL } = useSettings();
     const backendUrlRef = React.useRef(backendURL);
     const messageDispatchRef = React.useRef(message_dispatch);
     const graphContainerRef = React.useRef(null);
+    const draggableListRef = React.useRef(null);
 
 
     function onMoveEnd(newList, movedItem, oldIndex, newIndex) {
+        dispatchTransformation(setCurrentDragged(''));
         computeSortHash(newList.map(t => t.transformation.hash)).then((newHash) => {
             if (possibleSorts.includes(newHash)) {
                 postCurrentSort(backendUrlRef.current, newHash).catch(error => {
@@ -69,14 +80,15 @@ function GraphContainer(props) {
     return <div className="graph_container" ref={graphContainerRef}>
         <Facts /><Suspense fallback={<div>Loading...</div>}><Settings /></Suspense>
         <DraggableList
+            ref={draggableListRef}
             itemKey="hash"
             template={RowTemplate}
             list={transformations}
             onMoveEnd={onMoveEnd}
             container={() => graphContainerRef.current}
             padding = {0}
-            // unsetZIndex = {true} 
-          />
+            />
+        <DropSignalerContainer transformations={transformations} draggableList={draggableListRef.current} />
         { clingraphUsed ? <Boxrow /> : null}
         </div>
 }

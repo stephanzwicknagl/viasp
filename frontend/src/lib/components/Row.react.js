@@ -2,9 +2,8 @@ import React, {useRef, useEffect, useCallback, Suspense} from "react";
 import {Node, RecursiveSuperNode} from "./Node.react";
 import './row.css';
 import PropTypes from "prop-types";
-import {RowHeader} from "./RowHeader.react";
-import { DropSignaler } from "./DropSignaler.react";
-import {toggleTransformation, useTransformations} from "../contexts/transformations";
+import { RowHeader } from "./RowHeader.react";
+import { useTransformations, setCurrentDragged } from "../contexts/transformations";
 import {useSettings} from "../contexts/Settings";
 import { TRANSFORMATION, TRANSFORMATIONWRAPPER } from "../types/propTypes";
 import { ColorPaletteContext } from "../contexts/ColorPalette";
@@ -16,8 +15,6 @@ import dragHandleRounded from '@iconify/icons-material-symbols/drag-handle-round
 function loadMyAsyncData(hash, backendURL) {
     return fetch(`${backendURL("graph/children")}/${hash}`).then(r => r.json());
 }
-
-
 
 export class DragHandle extends React.Component {
     constructor(props) {
@@ -45,10 +42,12 @@ export class RowTemplate extends React.Component {
     static contextType = ColorPaletteContext;
     constructor(props) {
         super(props);
+        this.rowRef = React.createRef();
     }
 
-    render () {
-        const { item, itemSelected, anySelected, dragHandleProps } = this.props;
+    render() {
+        const {item, itemSelected, anySelected, dragHandleProps} =
+            this.props;
         const transformation = item.transformation;
 
         const scaleConstant = 0.02;
@@ -56,14 +55,12 @@ export class RowTemplate extends React.Component {
         const scale = itemSelected * scaleConstant + 1;
         const shadow = itemSelected * shadowConstant + 0;
         const dragged = itemSelected !== 0;
-        const background = Object.values(this.context.twenty)
+        const background = Object.values(this.context.twenty);
 
         const opacity = () => {
-            if (itemSelected === 0)
-                return 1-anySelected*0.5;
-            else
-                return 1;
-        }
+            if (itemSelected === 0) { return 1 - anySelected * 0.5 };
+            return 1;
+        };
 
         const containerStyle = {
             transform: `scale(${scale})`,
@@ -75,15 +72,20 @@ export class RowTemplate extends React.Component {
         };
 
         return (
-        <div>
-            <DropSignaler itemSelected={itemSelected} anySelected={anySelected} />
-            <div className="row_container"
-                style={containerStyle}>
-            {transformation === null ? null :
-                <Row key={transformation.hash} transformation={transformation} 
-                    dragHandleProps={dragHandleProps} itemSelected={itemSelected} />}
-                </div>
-        </div>
+            <div
+                className="row_signal_container"
+                style={containerStyle}
+                ref={this.rowRef}
+            >
+                {transformation === null ? null : (
+                    <Row
+                        key={transformation.hash}
+                        transformation={transformation}
+                        dragHandleProps={dragHandleProps}
+                        itemSelected={itemSelected}
+                    />
+                )}
+            </div>
         );
     }
 }
@@ -121,7 +123,11 @@ export function Row(props) {
     const handleRef = useRef(null);
     const backendURLRef = React.useRef(backendURL);
     const transformationhashRef = React.useRef(transformation.hash)
-    const {state: {transformations}} = useTransformations();
+    const {
+        state: {transformations, currentDragged},
+        dispatch: dispatchTransformation,
+    } = useTransformations();
+    const dispatchTransformationRef = React.useRef(dispatchTransformation);
     const [shownRecursion, ,] = useShownRecursion();
 
     useEffect(() => {
@@ -130,6 +136,14 @@ export function Row(props) {
             handleRef.current.style.top = `${headerHeight}px`;
         }
     }, []);
+
+    React.useEffect(() => {
+        const transformationhash = transformationhashRef.current;
+        const dispatchTransformation = dispatchTransformationRef.current;
+        if (itemSelected > 0 && currentDragged === '') {
+            dispatchTransformation(setCurrentDragged(transformationhash));
+        }
+    }, [itemSelected, currentDragged]);
 
     React.useEffect(() => {
         let mounted = true;
@@ -184,7 +198,7 @@ export function Row(props) {
                                             }) => transformation.id === t.id && shown) !== null;
     // const style1 = { "backgroundColor": background[transformation.id % background.length] };
 
-    return <div>
+    return <div className="row_container">
         <RowHeader transformation={transformation.rules} ref={headerRef} />
         {dragHandleProps === null ? null : <DragHandle dragHandleProps={dragHandleProps} ref={handleRef} />}
         {!showNodes ? null :
@@ -208,7 +222,11 @@ Row.propTypes = {
      * an object which should be spread as props on the HTML element to be used as the drag handle. 
      * The whole item will be draggable by the wrapped element.
      **/
-    dragHandleProps: PropTypes.object
+    dragHandleProps: PropTypes.object,
+    /**
+     * It starts at 0, and quickly increases to 1 when the item is picked up by the user.
+     */
+    itemSelected: PropTypes.number,
 };
 
 
