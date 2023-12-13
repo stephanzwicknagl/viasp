@@ -1,0 +1,48 @@
+{% set name = "viasp-backend" %}
+{% set version = environ.get('VERSION_NUMBER') %}
+{% set dev = not environ.get('BUILD_RELEASE', false) %}
+{% set revision = environ.get('GITHUB_SHA', 'wip') %}
+{% set build = environ.get('BUILD_NUMBER', "0") %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ../../../backend
+
+build:
+  noarch: python
+  script: python -m pip install --no-deps --ignore-installed .
+  number: {{ build }}
+  entry_points: 
+    ['viasp_server = viasp.__main__:backend',
+    'viasp = viasp.__main__:start']
+
+requirements:
+  host:
+    - python >=3.7
+    - setuptools >=42
+    - wheel
+    - pip
+  run:
+    - python >=3.7
+    - networkx >=2.4
+    - flask ==2.2.0
+    - werkzeug ==2.2.2
+    - clingo >=5.6.0
+    - flask-cors >=3.0
+    - requests >=2.26.0
+    - igraph >=0.8
+    - numpy
+    - clingraph
+
+about:
+  home: https://github.com/potassco/viasp
+  summary: The backend for the viasp package.
+  license: MIT
+  license_file: LICENCE.md
+
+extra:
+  recipe-maintainers:
+    - stephanzwicknagl
