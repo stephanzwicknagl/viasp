@@ -1,0 +1,39 @@
+{% set name = "viasp-dash" %}
+{% set version = "2.0.2" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ../../../frontend
+
+build:
+  noarch: python
+  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+  number: 0
+
+requirements:
+  host:
+    - python
+    - pip
+  run:
+    - python
+    - dash >=2
+
+test:
+  imports:
+    - viasp_dash
+  commands:
+    - pip check
+  requires:
+    - pip
+
+about:
+  summary: The dash frontend for the viasp package.
+  license: MIT
+  license_file: LICENCE.md
+
+extra:
+  recipe-maintainers:
+    - stephanzwicknagl
