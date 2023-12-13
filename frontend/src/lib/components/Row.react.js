@@ -10,6 +10,7 @@ import { ColorPaletteContext } from "../contexts/ColorPalette";
 import { useShownRecursion } from "../contexts/ShownRecursion";
 import { IconWrapper } from '../LazyLoader';
 import dragHandleRounded from '@iconify/icons-material-symbols/drag-handle-rounded';
+import { HereDropSignaler } from "./DropSignaler.react";
 
 
 function loadMyAsyncData(hash, backendURL) {
@@ -63,6 +64,7 @@ export class RowTemplate extends React.Component {
         };
 
         const containerStyle = {
+            position: 'relative',
             transform: `scale(${scale})`,
             zIndex: dragged ? 1 : 0,
             transformOrigin: 'left',
@@ -78,12 +80,19 @@ export class RowTemplate extends React.Component {
                 ref={this.rowRef}
             >
                 {transformation === null ? null : (
+                    <>
+                    <HereDropSignaler 
+                        hash={transformation.hash} 
+                        itemSelected={itemSelected} 
+                        anySelected={anySelected}
+                    />
                     <Row
                         key={transformation.hash}
                         transformation={transformation}
                         dragHandleProps={dragHandleProps}
                         itemSelected={itemSelected}
                     />
+                    </>
                 )}
             </div>
         );

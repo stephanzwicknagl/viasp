@@ -143,12 +143,13 @@ function DropSignaler(props) {
     }, [item.props.anySelected, item.props.itemSelected]);
     
     const heightMultiplier = 0.5;
-    const height = showMultiplier * heightMultiplier;
+    const height = item.props.anySelected * heightMultiplier;
 
     const blurRadiusMultiplier = 20;
     const shadowSpreadRadiusMultiplier = 10;
-    const shadowBlurRadius = showMultiplier * blurRadiusMultiplier;
-    const shadowSpreadRadius = showMultiplier * shadowSpreadRadiusMultiplier;
+    const shadowBlurRadius = item.props.anySelected * blurRadiusMultiplier;
+    const shadowSpreadRadius =
+        item.props.anySelected * shadowSpreadRadiusMultiplier;
     const topStyle = {
         position: 'relative',
         top: `-${0.5*height}rem`,
@@ -207,4 +208,142 @@ DropSignaler.propTypes = {
      * Whether this is the last element in the list of transformations
      */
     isLastElement: PropTypes.bool,
+};
+
+export function HereDropSignaler(props) {
+    const {hash, isLastElement, itemSelected, anySelected} = props;
+    const [topColor, setTopColor] = React.useState('red');
+    const {
+        state: {transformations, possibleSorts, currentDragged},
+    } = useTransformations();
+
+    // on mount and unmount
+    // React.useEffect(
+    //     () => {
+    //         // Create a new div at the start of the parent element
+    //         // to position the upperDropSignaler
+    //         const parentElement = item.rowRef.current;
+    //         const div = document.createElement('div');
+    //         parentElement.insertBefore(div, parentElement.firstChild);
+    //         setTopSignalerParent(div);
+
+    //         if (isLastElement) {
+    //             setBottomSignalerParent(parentElement);
+    //         }
+
+    //         return () => {
+    //             // Remove the div at the start of the parent element
+    //             const parentElement = item.rowRef.current;
+    //             parentElement.removeChild(parentElement.firstChild);
+    //             setTopSignalerParent(null);
+    //             setBottomSignalerParent(null);
+    //         };
+    //     },
+    //     [] /* eslint-disable-line react-hooks/exhaustive-deps */
+    // );
+
+    const canBeDroppedAbove = React.useCallback(() => {
+
+        if (currentDragged !== '' && itemSelected === 0 && transformations) {
+            const sort = transformations.map((t) => t.hash);
+            const oldIndex = sort.findIndex((h) => h === currentDragged);
+            const newIndex =
+                sort.findIndex((h) => h === hash) - 1;
+            const [removed] = sort.splice(oldIndex, 1);
+            sort.splice(newIndex, 0, removed);
+            const ans = computeSortHash(sort).then((newHash) => {
+                return possibleSorts?.includes(newHash);
+            });
+            return ans;
+        }
+        return false;
+    }, [
+        transformations,
+        possibleSorts,
+        currentDragged,
+        itemSelected,
+        hash,
+    ]);
+
+    const canBeDroppedBelow = React.useCallback(() => {
+        return true;
+    }, []);
+
+    React.useEffect(() => {
+        const ans = canBeDroppedAbove();
+        console.log("ANS", ans)
+        setTopColor(ans ? 'green' : 'red');
+    }, [
+        canBeDroppedAbove,
+        transformations,
+        possibleSorts,
+        currentDragged,
+        hash,
+    ]);
+
+    const brightGreen = '#00ff00';
+
+    const showMultiplier = anySelected && !itemSelected ? anySelected : 0;
+    const heightMultiplier = 0.5;
+
+    const height = showMultiplier * heightMultiplier;
+    const blurRadiusMultiplier = 20;
+    const shadowSpreadRadiusMultiplier = 10;
+    const shadowBlurRadius = showMultiplier * blurRadiusMultiplier;
+    const shadowSpreadRadius = showMultiplier * shadowSpreadRadiusMultiplier;
+    const topStyle = {
+        position: 'relative',
+        zIndex: 100,
+        top: `-${0.5 * height}rem`,
+        height: `${height}rem`,
+        boxShadow: `0px 0px ${shadowBlurRadius}px ${shadowSpreadRadius}px rgba(0, 255, 0, 0.2)`,
+        backgroundColor: `${topColor}`,
+    };
+
+    // const myStyleBottom = {
+    //     position: 'relative',
+    //     bottom: `-${0.5 * height}px`,
+    //     // top: `-${0.5 * height}px`,
+    //     height: `${height}rem`,
+    //     boxShadow: `0px 0px ${shadowBlurRadius}px ${shadowSpreadRadius}px rgba(0, 255, 0, 0.2)`,
+    // };
+
+    // if (this.props.isLastElement) {
+    //     myStyleBottom.backgroundColor = this.canBeDroppedBelow()
+    //         ? brightGreen
+    //         : 'red';
+    // }
+
+    return (
+        <>
+            <div className="dropSignaler" style={topStyle}></div>,
+            {
+                //         isLastElement &&
+                //         bottomSignalerParent &&
+                //         ReactDOM.createPortal(
+                //             <div
+                //                 className="dropSignaler"
+                //                 style={myStyleBottom}
+                //             ></div>,
+                //             bottomSignalerParent
+                //         );
+                //
+            }
+        </>
+    );
+}
+
+HereDropSignaler.propTypes = {
+    /**
+     * The corresponding transformation hash the signaler belongs to
+     * */
+    hash: PropTypes.string,
+    /**
+     * It starts at 0, and quickly increases to 1 when the item is picked up by the user.
+     */
+    itemSelected: PropTypes.number,
+    /**
+     * It starts at 0, and quickly increases to 1 when any item is picked up by the user.
+     */
+    anySelected: PropTypes.number,
 };

@@ -88,7 +88,7 @@ function GraphContainer(props) {
             container={() => graphContainerRef.current}
             padding = {0}
             />
-        <DropSignalerContainer transformations={transformations} draggableList={draggableListRef.current} />
+            {/* <DropSignalerContainer transformations={transformations} draggableList={draggableListRef.current} /> */}
         { clingraphUsed ? <Boxrow /> : null}
         </div>
 }
