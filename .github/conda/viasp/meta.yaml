@@ -31,6 +31,14 @@ requirements:
     - clingraph
     - python-graphviz
 
+test:
+  imports:
+    - viasp
+  commands:
+    - viasp_server
+    - viasp
+
+
 about:
 
   home: https://github.com/potassco/viasp
