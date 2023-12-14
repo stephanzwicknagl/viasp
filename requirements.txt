@@ -10,6 +10,7 @@ build
 dash>=2.11
 pyyaml
 dash-html-components
+igraph>=0.8
 numpy
 clingraph
 
