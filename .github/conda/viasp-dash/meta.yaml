@@ -1,5 +1,8 @@
 {% set name = "viasp-dash" %}
-{% set version = "2.0.2" %}
+{% set version = environ.get('VERSION_NUMBER') %}
+{% set dev = not environ.get('BUILD_RELEASE', false) %}
+{% set revision = environ.get('GITHUB_SHA', 'wip') %}
+{% set build = environ.get('BUILD_NUMBER', "0") %}
 
 package:
   name: {{ name|lower }}
@@ -11,7 +14,7 @@ source:
 build:
   noarch: python
   script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
-  number: 0
+  number: {{ build }}
 
 requirements:
   host:
