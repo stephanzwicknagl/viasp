@@ -16,8 +16,8 @@ build:
   script: python -m pip install --no-deps --ignore-installed .
   number: {{ build }}
   entry_points: 
-    ['viasp_server = viasp.__main__:backend',
-    'viasp = viasp.__main__:start']
+    - viasp_server = viasp.__main__:backend
+    - viasp = viasp.__main__:start
 
 requirements:
   host:
@@ -33,7 +33,7 @@ requirements:
     - clingo >=5.6.0
     - flask-cors >=3.0
     - requests >=2.26.0
-    - igraph >=0.8
+    - python-igraph >=0.8
     - numpy
     - clingraph
 

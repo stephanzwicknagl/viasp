@@ -34,7 +34,10 @@ requirements:
 test:
   imports:
     - viasp
-    - viasp_server
+  commands:
+    - viasp_server --help
+    - viasp --help
+
 
 about:
 
