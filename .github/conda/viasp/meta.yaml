@@ -35,8 +35,8 @@ test:
   imports:
     - viasp
   commands:
-    - viasp_server
-    - viasp
+    - viasp_server --help
+    - viasp --help
 
 
 about:
