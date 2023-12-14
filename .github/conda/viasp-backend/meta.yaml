@@ -36,6 +36,7 @@ requirements:
     - igraph >=0.8
     - numpy
     - clingraph
+    - viasp_dash
 
 test:
   imports:
