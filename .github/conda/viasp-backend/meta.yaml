@@ -40,7 +40,9 @@ requirements:
 test:
   imports:
     - viasp
+  commands:
     - viasp_server
+    - viasp
 
 about:
   home: https://github.com/potassco/viasp
