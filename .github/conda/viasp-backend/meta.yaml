@@ -16,8 +16,8 @@ build:
   script: python -m pip install --no-deps --ignore-installed .
   number: {{ build }}
   entry_points: 
-    ['viasp_server = viasp.__main__:backend',
-    'viasp = viasp.__main__:start']
+    - viasp_server = viasp.__main__:backend
+    - viasp = viasp.__main__:start
 
 requirements:
   host:
