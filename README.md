@@ -28,7 +28,7 @@ viASP is available as a [conda package](https://anaconda.org/stephanzwicknagl/vi
 conda install viasp -c potassco -c conda-forge -c stephanzwicknagl
 ```
 
-Alternatively, viASP is also availabel on [PyPI](https://pypi.org/project/viasp/). You can install it with pip:
+Alternatively, viASP is also available on [PyPI](https://pypi.org/project/viasp/). You can install it with pip:
 
 ```bash
 pip install viasp
