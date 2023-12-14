@@ -33,7 +33,6 @@ requirements:
     - clingo >=5.6.0
     - flask-cors >=3.0
     - requests >=2.26.0
-    - igraph >=0.8
     - numpy
     - clingraph
 
