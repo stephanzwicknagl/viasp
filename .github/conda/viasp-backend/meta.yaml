@@ -37,6 +37,11 @@ requirements:
     - numpy
     - clingraph
 
+test:
+  imports:
+    - viasp
+    - viasp_server
+
 about:
   home: https://github.com/potassco/viasp
   summary: The backend for the viasp package.
