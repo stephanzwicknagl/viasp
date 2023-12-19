@@ -309,16 +309,26 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             self.visit(elem, body_aggregate_elements=body_aggregate_elements)
         return body_aggregate_elements
 
+    def visit_ShowTerm(self, showTerm: AST):
+        self.pass_through.add(showTerm)
+        # new_rule = ast.Rule(
+        #     showTerm.location, 
+        #     ast.Literal(showTerm.location, ast.Sign.NoSign, showTerm.term), 
+        #     showTerm.body)
+        # self.rules.append(new_rule)
+
 
     def visit_Minimize(self, minimize: Minimize):
         deps = defaultdict(list)
         self.pass_through.add(minimize)
 
         return minimize
+    
+    def visit_Defined(self, defined: AST):
+        self.pass_through.add(defined)
 
     def visit_Definition(self, definition):
         self.constants.add(definition)
-        return definition
 
     def add_program(self, program: str, registered_transformer: Transformer = None) -> None:
         if registered_transformer is not None:
