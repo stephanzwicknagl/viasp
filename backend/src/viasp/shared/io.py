@@ -2,7 +2,7 @@ import json
 from enum import IntEnum
 from json import JSONEncoder, JSONDecoder
 from dataclasses import is_dataclass
-from typing import Any, Union, Collection, Iterable, Dict, Sequence
+from typing import Any, Union, Collection, Iterable, Dict, Sequence, cast
 from pathlib import PosixPath
 from uuid import UUID
 import os
@@ -39,6 +39,12 @@ def object_hook(obj):
         return clingo.Function(**obj)
     elif t == "Number":
         return clingo.Number(**obj)
+    elif t == "String":
+        return clingo.String(**obj)
+    elif t == "Infimum":
+        return clingo.Infimum
+    elif t == "Supremum":
+        return clingo.Supremum
     elif t == "Node":
         obj['atoms'] = frozenset(obj['atoms'])
         obj['diff'] = frozenset(obj['diff'])
@@ -50,7 +56,11 @@ def object_hook(obj):
     elif t == "Graph":
         return nx.node_link_graph(obj["_graph"])
     elif t == "StableModel":
+        print(f"StableModel: {obj}", flush=True)
         return StableModel(**obj)
+    elif t == "ModelType":
+        print(f"ModelType: {obj}", flush=True)
+        return ModelType.StableModel
     elif t == "ClingoMethodCall":
         return ClingoMethodCall(**obj)
     elif t == "SymbolIdentifier":
@@ -146,7 +156,7 @@ def encode_object(o):
     elif isinstance(o, PosixPath):
         return str(o)
     elif isinstance(o, ModelType):
-        return {"__enum__": str(o)}
+        return {"_type": "ModelType", "__enum__": str(o)}
     elif isinstance(o, Symbol):
         x = symbol_to_dict(o)
         return x
@@ -179,12 +189,18 @@ def model_to_dict(model: clingo_Model) -> dict:
 
 
 def clingo_model_to_stable_model(model: clingo_Model) -> StableModel:
-    return StableModel(model.cost, model.optimality_proven, model.type, encode_object(model.symbols(atoms=True)),
-                       encode_object(model.symbols(terms=True)), encode_object(model.symbols(shown=True)),
-                       encode_object(model.symbols(theory=True)))
+    return StableModel(
+        model.cost, 
+        model.optimality_proven, 
+        model.type, 
+        cast(Collection[Symbol], encode_object(model.symbols(atoms=True))),
+        cast(Collection[Symbol], encode_object(model.symbols(terms=True))), 
+        cast(Collection[Symbol], encode_object(model.symbols(shown=True))),
+        cast(Collection[Symbol], encode_object(model.symbols(theory=True))),
+        )
 
 def clingo_symbols_to_stable_model(atoms: Iterable[Symbol]) -> StableModel:
-    return StableModel(atoms=encode_object(atoms))
+    return StableModel(atoms=cast(Collection[Symbol], encode_object(atoms)))
 
 def symbol_to_dict(symbol: clingo.Symbol) -> dict:
     symbol_dict = {}
@@ -196,49 +212,57 @@ def symbol_to_dict(symbol: clingo.Symbol) -> dict:
     elif symbol.type == clingo.SymbolType.Number:
         symbol_dict["number"] = symbol.number
         symbol_dict["_type"] = "Number"
+    elif symbol.type == clingo.SymbolType.String:
+        symbol_dict["string"] = symbol.string
+        symbol_dict["_type"] = "String"
+    elif symbol.type == clingo.SymbolType.Infimum:
+        symbol_dict["_type"] = "Infimum"
+    elif symbol.type == clingo.SymbolType.Supremum:
+        symbol_dict["_type"] = "Supremum"
     return symbol_dict
 
 
-class viasp_ModelType(IntEnum):
-    """
-    Enumeration of the different types of models.
-    """
-    BraveConsequences = clingo_model_type_brave_consequences
-    """
-    The model stores the set of brave consequences.
-    """
-    CautiousConsequences = clingo_model_type_cautious_consequences
-    """
-    The model stores the set of cautious consequences.
-    """
-    StableModel = clingo_model_type_stable_model
-    """
-    The model captures a stable model.
-    """
+# Legacy: To be deleted in Version 3.0
+# class viasp_ModelType(IntEnum):
+#     """
+#     Enumeration of the different types of models.
+#     """
+#     BraveConsequences = clingo_model_type_brave_consequences
+#     """
+#     The model stores the set of brave consequences.
+#     """
+#     CautiousConsequences = clingo_model_type_cautious_consequences
+#     """
+#     The model stores the set of cautious consequences.
+#     """
+#     StableModel = clingo_model_type_stable_model
+#     """
+#     The model captures a stable model.
+#     """
 
-    @classmethod
-    def from_clingo_ModelType(cls, clingo_ModelType: ModelType):
-        if clingo_ModelType.name == cls.BraveConsequences.name:
-            return cls.BraveConsequences
-        elif clingo_ModelType.name == cls.StableModel.name:
-            return cls.StableModel
-        else:
-            return cls.CautiousConsequences
+#     @classmethod
+#     def from_clingo_ModelType(cls, clingo_ModelType: ModelType):
+#         if clingo_ModelType.name == cls.BraveConsequences.name:
+#             return cls.BraveConsequences
+#         elif clingo_ModelType.name == cls.StableModel.name:
+#             return cls.StableModel
+#         else:
+#             return cls.CautiousConsequences
 
 
-class ClingoModelEncoder(JSONEncoder):
-    def default(self, o: Any) -> Any:
-        if isinstance(o, clingo_Model):
-            x = model_to_dict(o)
-            return x
-        elif isinstance(o, ModelType):
-            if o in [ModelType.CautiousConsequences, ModelType.BraveConsequences, ModelType.StableModel]:
-                return {"__enum__": str(o)}
-            return super().default(o)
-        elif isinstance(o, Symbol):
-            x = symbol_to_dict(o)
-            return x
-        return super().default(o)
+# class ClingoModelEncoder(JSONEncoder):
+#     def default(self, o: Any) -> Any:
+#         if isinstance(o, clingo_Model):
+#             x = model_to_dict(o)
+#             return x
+#         elif isinstance(o, ModelType):
+#             if o in [ModelType.CautiousConsequences, ModelType.BraveConsequences, ModelType.StableModel]:
+#                 return {"__enum__": str(o)}
+#             return super().default(o)
+#         elif isinstance(o, Symbol):
+#             x = symbol_to_dict(o)
+#             return x
+#         return super().default(o)
 
 
 def deserialize(data: str, *args, **kwargs):
