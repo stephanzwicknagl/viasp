@@ -146,8 +146,9 @@ def test_definition_statement_analyzed_correctly():
 def test_script_statement_analyzed_correctly():
     program = """
 #script(python)
+from clingo.symbol import Number
 def test2():
-    return 42
+    return Number(42)
 #end.
 1{a;b;p(@test2())}.
 """
