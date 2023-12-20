@@ -56,10 +56,8 @@ def object_hook(obj):
     elif t == "Graph":
         return nx.node_link_graph(obj["_graph"])
     elif t == "StableModel":
-        print(f"StableModel: {obj}", flush=True)
         return StableModel(**obj)
     elif t == "ModelType":
-        print(f"ModelType: {obj}", flush=True)
         return ModelType.StableModel
     elif t == "ClingoMethodCall":
         return ClingoMethodCall(**obj)

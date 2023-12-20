@@ -1,7 +1,7 @@
 """Mostly graph utility functions."""
 import networkx as nx
 from clingo import Symbol
-from clingo.ast import Rule, ASTType
+from clingo.ast import Rule, ASTType, AST, Location
 from typing import List, Sequence
 from ..shared.simple_logging import warn
 from ..shared.model import Node, SymbolIdentifier
@@ -165,4 +165,16 @@ def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol,
     # stop criterion: v is the root node and there is no super_graph
     warn(f"An explanation could not be made")
     return None
-    
+
+def place_ast_at_location(ast: AST) -> str:
+    """
+    Generates a string where ast is located at the 
+    proper location defined in the given AST.
+    """
+    ans = ""
+    if hasattr(ast,"location") and ast.location != None and isinstance(ast.location, Location):
+        for i in range(ast.location.begin.line-1):
+            ans += "\n"
+        for i in range(ast.location.begin.column-1):
+            ans += " "
+    return ans + str(ast)
