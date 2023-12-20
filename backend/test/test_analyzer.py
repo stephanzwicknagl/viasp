@@ -1,126 +1,79 @@
 from typing import List
 
-import clingo
 import pytest
-from clingo.ast import AST, ASTType, parse_string
+from clingo.ast import AST
 
 from viasp.asp.ast_types import (SUPPORTED_TYPES, UNSUPPORTED_TYPES,
                                  make_unknown_AST_enum_types)
 from viasp.asp.reify import ProgramAnalyzer
 
 
-def assertProgramEqual(actual, expected, message=None):
-    if isinstance(actual, list):
-        actual = set([str(e) for e in actual])
-
-    if isinstance(expected, list):
-        expected = set([str(e) for e in expected])
-    assert actual == expected, message if message is not None else f"{expected} should be equal to {actual}"
-
-def parse_program_to_ast(prg: str) -> List[AST]:
-    parsed = []
-    parse_string(prg, lambda rule: parsed.append(rule))
-    return parsed
-
 
 def test_simple_fact_analyzed_correctly():
     program = "a."
-    expected = "a."
     transformer = ProgramAnalyzer()
     program = transformer.sort_program(program)
-    filtered = transformer.get_filtered()
-    will_work = transformer.will_work()
-    assert filtered == []
-    assert will_work == True
-    # assertProgramEqual(rules, parse_program_to_ast(expected))
+    assert transformer.get_filtered() == []
+    assert transformer.will_work()
 
 def test_fact_with_variable_analyzed_correctly():
     program = "a(1)."
-    expected = "a(1)."
-
     transformer = ProgramAnalyzer()
     program = transformer.sort_program(program)
-    filtered = transformer.get_filtered()
-    will_work = transformer.will_work()
-    assert filtered == []
-    assert will_work == True
-    # assertProgramEqual(rules, parse_program_to_ast(expected))
+    assert transformer.get_filtered() == []
+    assert transformer.will_work()
 
 
 def test_disjunction_causes_error_and_doesnt_get_passed():
     program = "a; b."
-
     transformer = ProgramAnalyzer()
     program = transformer.sort_program(program)
     assert len(transformer.get_filtered())
     assert not len(program)
+    assert not transformer.will_work()
 
 def test_simple_rule_analyzed_correctly():
     program = "a :- b."
-    expected = "a :- b."
     transformer = ProgramAnalyzer()
     program = transformer.sort_program(program)
-    filtered = transformer.get_filtered()
-    will_work = transformer.will_work()
-    assert filtered == []
-    assert will_work == True
-    # assertProgramEqual(rules, parse_program_to_ast(expected))
+    assert transformer.get_filtered() == []
+    assert transformer.will_work()
 
 def test_rule_without_negation_analyzed_correctly():
     program = "a :- b, c."
-    expected = "a :- b, c."
     transformer = ProgramAnalyzer()
     program = transformer.sort_program(program)
-    filtered = transformer.get_filtered()
-    will_work = transformer.will_work()
-    assert filtered == []
-    assert will_work == True
-    # assertProgramEqual(rules, parse_program_to_ast(expected))
+    assert transformer.get_filtered() == []
+    assert transformer.will_work()
 
 def test_rule_with_negation_analyzed_correctly():
     program = "a :- not b, c."
-    expected = "a :- not b, c."
     transformer = ProgramAnalyzer()
     program = transformer.sort_program(program)
-    filtered = transformer.get_filtered()
-    will_work = transformer.will_work()
-    assert filtered == []
-    assert will_work == True
-    # assertProgramEqual(rules, parse_program_to_ast(expected))
+    assert transformer.get_filtered() == []
+    assert transformer.will_work()
 
 def test_multiple_nested_variable_analyzed_correctly():
     program = "x(1). y(1). l(x(X),y(Y)) :- x(X), y(Y)."
-    expected = "x(1). y(1). l(x(X),y(Y)) :- x(X), y(Y)."    
     transformer = ProgramAnalyzer()
     program = transformer.sort_program(program)
-    filtered = transformer.get_filtered()
-    will_work = transformer.will_work()
-    assert filtered == []
-    assert will_work == True
-    # assertProgramEqual(rules, parse_program_to_ast(expected))
+    assert transformer.get_filtered() == []
+    assert transformer.will_work()
 
 def test_show_statement_without_terms_analyzed_correctly():
     program = "#show a/1."
-    expected = "#show a/1."
     transformer = ProgramAnalyzer()
     program = transformer.sort_program(program)
-    filtered = transformer.get_filtered()
-    will_work = transformer.will_work()
-    assert filtered == []
-    assert will_work == True
-    # assertProgramEqual(rules, parse_program_to_ast(expected))
+    assert transformer.get_filtered() == []
+    assert transformer.will_work()
 
 def test_show_statement_with_terms_analyzed_correctly():
     program = "a. #show b : a."
     expected = "a. b :- a."
     transformer = ProgramAnalyzer()
     program = transformer.sort_program(program)
-    filtered = transformer.get_filtered()
-    will_work = transformer.will_work()
-    #TODO Transform it into a rule
-    assert len(filtered) == 1, "Show Term should be filtered out." 
-    assert will_work == True, "Program with ShowTerm should work."
-    # assertProgramEqual(rules, parse_program_to_ast(expected))
+    assert transformer.get_filtered() == [], "Show Term should not be filtered out." 
+    assert transformer.will_work(), "Program with ShowTerm should work."
 
 def test_defined_statement_analyzed_correctly():
     program = "#defined a/1."
