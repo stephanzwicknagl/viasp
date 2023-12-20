@@ -89,11 +89,11 @@ export function Edges(props) {
     return <div ref={target} className="edge_container" >
             {edges.map(link => <LineTo
                 key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"top center"}
-                to={link.tgt} zIndex={1} borderColor={colorPalete.seventy.dark} borderStyle={"solid"} borderWidth={1} />)}
+                to={link.tgt} zIndex={1} borderColor={colorPalete.dark} borderStyle={"solid"} borderWidth={1} />)}
             {!usingClingraph ? null:
             clingraphEdges.map(link => <LineTo
                 key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"top center"}
-                to={link.tgt} zIndex={1} borderColor={colorPalete.seventy.bright} borderStyle={"dashed"} borderWidth={2} />)}
+                to={link.tgt} zIndex={1} borderColor={colorPalete.dark} borderStyle={"dashed"} borderWidth={2} />)}
         </div>
 
         

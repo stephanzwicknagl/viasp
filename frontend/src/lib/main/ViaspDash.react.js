@@ -40,7 +40,7 @@ function GraphContainer(props) {
     const background = Object.values(colorPalette.twenty);
 
 
-    return <div className="graph_container">
+    return <div className="graph_container" >
         <Facts notifyClick={(clickedOn) => {
             notifyDash(clickedOn)
             setDetail(clickedOn.uuid)
@@ -48,7 +48,7 @@ function GraphContainer(props) {
         /><Suspense fallback={<div>Loading...</div>}><Settings /></Suspense>
         {transformations.map(({transformation}, i) => {
             if (i === lastNodeInGraph && usingClingraph) {
-                return <div>
+                return <div key={`transformation_wrapper_${i}`}>
                         <Row
                             key={transformation.id}
                             transformation={transformation}
@@ -59,9 +59,10 @@ function GraphContainer(props) {
                             color={background[i % background.length]}
                         />
                         <Boxrow
-                            key={transformation.id}
+                            key={transformation.id+1}
                             transformation={transformation}
-                        /></div>
+                        />
+                        </div>
             }
             else {
                 return <Row

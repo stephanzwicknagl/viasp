@@ -6,20 +6,29 @@ import {useColorPalette} from "../contexts/ColorPalette";
 export function RowHeader(props) {
     const { transformation } = props;
     const colorPalette = useColorPalette();
-    return <div style={{
-        "backgroundColor": colorPalette.secondary,
-        "color": colorPalette.light,
-        "borderColor": colorPalette.secondary
-    }}
-        className="row_header">{transformation.map(rule =>
-            <div key={rule}
-                style={{ whiteSpace: 'pre' }}
-                dangerouslySetInnerHTML={{
-                    __html: rule.replace(/</g, "&lt;")
-                        .replace(/>/g, "&gt;")
-                        .replace(/\n/g, "<br>")
-                }} />)}
-    </div>
+    return (
+        <div
+            style={{
+                backgroundColor: colorPalette.primary,
+                color: colorPalette.light,
+                borderColor: colorPalette.primary,
+            }}
+            className="row_header"
+        >
+            {transformation.map((rule) => (
+                <div
+                    key={rule}
+                    style={{whiteSpace: 'pre'}}
+                    dangerouslySetInnerHTML={{
+                        __html: rule
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;')
+                            .replace(/\n/g, '<br>'),
+                    }}
+                />
+            ))}
+        </div>
+    );
 }
 
 RowHeader.propTypes = {
