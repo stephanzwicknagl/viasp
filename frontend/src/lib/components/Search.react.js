@@ -24,8 +24,8 @@ function ActiveFilters() {
 
 function CloseButton(props) {
     const {onClose} = props;
-    const {sixty} = useColorPalette();
-    return <span style={{color: sixty.bright}} className='close' onClick={onClose}>X</span>
+    const colorPalette = useColorPalette();
+    return <span style={{color: colorPalette.light}} className='close' onClick={onClose}>X</span>
 }
 
 CloseButton.propTypes = {
@@ -38,7 +38,7 @@ CloseButton.propTypes = {
 function ActiveFilter(props) {
     const {filter} = props;
     const [, dispatch] = useFilters();
-    const {ten, sixty} = useColorPalette();
+    const colorPalette = useColorPalette();
     const classes = ["filter", "search_row"]
     if (filter._type === "Transformation") {
         classes.push("search_rule")
@@ -54,7 +54,7 @@ function ActiveFilter(props) {
         dispatch(clear(filter))
     }
 
-    return <li style={{backgroundColor: ten.bright, color: sixty.dark}} className={classes.join(" ")}
+    return <li style={{backgroundColor: colorPalette.primary, color: colorPalette.light}} className={classes.join(" ")}
                key={filter.name}>{filter.name}/{filter.args}<CloseButton
         onClose={onClose}/>
     </li>
@@ -76,7 +76,7 @@ export function Search(props) {
     const [, dispatch] = useFilters();
     const {dispatch: dispatchT} = useTransformations()
     const {backendURL} = useSettings();
-    const {sixty} = useColorPalette();
+    const colorPalette = useColorPalette();
     let suggestionsListComponent;
     React.useEffect(() => {
         const highlighted = filteredSuggestions[activeSuggestion]
@@ -144,9 +144,9 @@ export function Search(props) {
     if (showSuggestions && userInput) {
         if (filteredSuggestions.length) {
             suggestionsListComponent = (
-                <ul className="search_result_list" style={{backgroundColor: sixty.dark}}>
+                <ul className="search_result_list" style={{backgroundColor: colorPalette.light}}>
                     {filteredSuggestions.map((suggestion, index) => {
-                        return <Suggestion active={index === activeSuggestion} key={index}
+                        return <Suggestion active={index === activeSuggestion} key={index} 
                                            value={suggestion} select={select}/>
                     })}
                 </ul>

@@ -1,12 +1,12 @@
 from collections import defaultdict
-from typing import Dict, List, Tuple, Iterable, Set, Collection, Any, Union, Sequence
+from typing import Dict, List, Tuple, Iterable, Set, Collection, Any, Union, Sequence, cast
 
 import clingo
 import networkx as nx
 from clingo import ast, Symbol
 from clingo.ast import Transformer, parse_string, Rule, ASTType, AST, Literal, Minimize, Disjunction
 
-from .utils import is_constraint, merge_constraints, topological_sort
+from .utils import is_constraint, merge_constraints, topological_sort, place_ast_at_location
 from ..asp.utils import merge_cycles, remove_loops
 from viasp.asp.ast_types import SUPPORTED_TYPES, ARITH_TYPES, UNSUPPORTED_TYPES, UNKNOWN_TYPES
 from ..shared.model import Transformation, TransformationError, FailedReason
@@ -21,7 +21,8 @@ def make_signature(literal: clingo.ast.Literal) -> Tuple[str, int]:
     if literal.atom.ast_type in [ast.ASTType.BodyAggregate]:
         return literal, 0
     unpacked = literal.atom.symbol
-    if unpacked.ast_type == ast.ASTType.Pool:
+    if (hasattr(unpacked, "ast_type") and 
+        unpacked.ast_type == ASTType.Pool):
         unpacked = unpacked.arguments[0]
     return unpacked.name, len(unpacked.arguments) if hasattr(unpacked, "arguments") else 0
 
@@ -199,8 +200,8 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         super().__init__()
         # TODO: self.dependencies can go?
         self.dependencies = nx.DiGraph()
-        self.dependants: Dict[Tuple[str, int], Set[Rule]] = defaultdict(set)
-        self.conditions: Dict[Tuple[str, int], Set[Rule]] = defaultdict(set)
+        self.dependants: Dict[Tuple[str, int], Set[AST]] = defaultdict(set)
+        self.conditions: Dict[Tuple[str, int], Set[AST]] = defaultdict(set)
         self.positive_conditions: Dict[Tuple[str, int], Set[Rule]] = defaultdict(set)
         self.rule2signatures = defaultdict(set)
         self.facts: Set[Symbol] = set()
@@ -280,7 +281,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
                         ):
                             self.positive_conditions[u_sig].add(rule)
         
-        for v in filter(lambda symbol: symbol.atom.ast_type != ASTType.BooleanConstant if hasattr(symbol, "atom") else False, deps.keys()):
+        for v in filter(lambda symbol: symbol.atom.ast_type != ASTType.BooleanConstant if (hasattr(symbol, "atom") and hasattr(symbol.atom, "ast_type")) else False, deps.keys()):
             v_sig = make_signature(v)
             self.dependants[v_sig].add(rule)
 
@@ -309,16 +310,47 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             self.visit(elem, body_aggregate_elements=body_aggregate_elements)
         return body_aggregate_elements
 
+    def visit_ShowTerm(self, showTerm: AST):
+        if (hasattr(showTerm, "location") and isinstance(showTerm.location, ast.Location) 
+            and hasattr(showTerm, "term") and isinstance(showTerm.term, AST) 
+            and hasattr(showTerm, "body") and isinstance(showTerm.body, Sequence)
+            and all(isinstance(elem, AST) for elem in showTerm.body)):
+            new_head = ast.Literal(
+                    showTerm.location,
+                    ast.Sign.NoSign,
+                    ast.SymbolicAtom(
+                        showTerm.term
+                        )
+            )
+            self.visit(
+                ast.Rule(
+                showTerm.location, 
+                new_head, 
+                cast(Sequence, showTerm.body))
+            )
+        else:
+            print(f"Plan B for ShowTerm: {showTerm}", flush=True)
+            new_rule = ast.Rule(
+            cast(ast.Location, showTerm.location), 
+            ast.Literal(
+                cast(ast.Location, showTerm.location), 
+                ast.Sign.NoSign, 
+                cast(AST, showTerm.term)), 
+            cast(Sequence, showTerm.body))
+            parse_string(place_ast_at_location(new_rule), lambda rule: self.visit(rule))
+
 
     def visit_Minimize(self, minimize: Minimize):
         deps = defaultdict(list)
         self.pass_through.add(minimize)
 
         return minimize
+    
+    def visit_Defined(self, defined: AST):
+        self.pass_through.add(defined)
 
     def visit_Definition(self, definition):
         self.constants.add(definition)
-        return definition
 
     def add_program(self, program: str, registered_transformer: Transformer = None) -> None:
         if registered_transformer is not None:
@@ -346,8 +378,8 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         sorted_program = self.sort_program_by_dependencies()
         return [Transformation(i, prg) for i, prg in enumerate(sorted_program)]
 
-    def make_dependency_graph(self, head_dependencies: Dict[Tuple[str, int], Iterable[clingo.ast.AST]],
-                              body_dependencies: Dict[Tuple[str, int], Iterable[clingo.ast.AST]]) -> nx.DiGraph:
+    def make_dependency_graph(self, head_dependencies: Dict[Tuple[str, int], Set[AST]],
+                              body_dependencies: Dict[Tuple[str, int], Set[AST]]) -> nx.DiGraph:
         """
         We draw a dependency graph based on which rule head contains which literals.
         That way we know, that in order to have a rule r with a body containing literal l, all rules that have l in their

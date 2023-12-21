@@ -44,27 +44,3 @@ Facts.propTypes = {
      */
     notifyClick: PropTypes.func
 }
-
-function FactBanner(props) {
-    const {fact} = props;
-    const [, dispatch] = useShownNodes()
-    const colorPalette = useColorPalette();
-
-    React.useEffect(() => {
-        dispatch(showNode(fact.uuid))
-        return () => {
-            dispatch(hideNode(fact.uuid))
-        }
-    }, [])
-    const clazzName = `${fact.uuid} facts_banner noselect`
-    return <div className={clazzName}
-                style={{"color": colorPalette.sixty.dark, "backgroundColor": colorPalette.ten.dark}}>Facts</div>
-}
-
-FactBanner.propTypes = {
-    /**
-     * The ID used to identify this component in Dash callbacks.
-     */
-    id: PropTypes.string,
-    fact: NODE
-}

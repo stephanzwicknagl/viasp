@@ -25,9 +25,9 @@ export function Box(props) {
     const classNames = useHighlightedNodeToCreateClassName(node)
 
     return <div className={classNames}
-                style={{"backgroundColor": colorPalette.sixty.dark, "color": colorPalette.ten.dark}}
+                style={{"backgroundColor": colorPalette.primary, "color": colorPalette.primary}}
                 id={node}>
-        <div style={{ "backgroundColor": colorPalette.ten.dark, "color": colorPalette.sixty.dark }}>
+        <div style={{ "backgroundColor": colorPalette.primary, "color": colorPalette.primary }}>
             <img src={`${backendURL("graph/clingraph")}/${node}`} alt="Clingraph" /> 
         </div> 
     </div>

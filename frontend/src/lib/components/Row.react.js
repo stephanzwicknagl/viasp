@@ -178,7 +178,7 @@ export function Boxrow(props) {
     return <div className="boxrow_container">
         {/* TODO: make boxrow_header to toggle showing of visualization */}
             <div ref={ref} className="boxrow_row">  
-                {nodes.map((child) => <Box  node={child}/>)}</div>
+                {nodes.map((child) => <Box key={child} node={child}/>)}</div>
         </div>
 }
 

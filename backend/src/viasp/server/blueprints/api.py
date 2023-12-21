@@ -128,6 +128,8 @@ def wrap_marked_models(marked_models: Iterable[StableModel]):
         wrapped = []
         for part in model.atoms:
             wrapped.append(f"{part}.")
+        for part in model.terms:
+            wrapped.append(f"{part}.")
         result.append(wrapped)
     return result
 

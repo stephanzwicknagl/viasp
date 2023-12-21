@@ -13,8 +13,8 @@ function DetailSymbolPill(props) {
     const colorPalette = useColorPalette();
     return <span className="detail_atom_view_content"
                  style={{
-                     backgroundColor: colorPalette.fifty.dark,
-                     color: colorPalette.thirty.bright
+                     backgroundColor: colorPalette.primary,
+                     color: colorPalette.light
                  }}>{make_atoms_string(symbol)}</span>
 
 }

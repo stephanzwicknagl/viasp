@@ -25,18 +25,18 @@ function SuggestionContent(props) {
 
     if (value._type === "Node") {
         suggestionSymbol = "{}"
-        color = colorPalette.ten.dark;
+        color = colorPalette.primary;
         display = make_atoms_string(state.show_all ? value.atoms : value.diff)
     }
     if (value._type === "Signature") {
         suggestionSymbol = "  /"
-        color = colorPalette.ten.dark;
+        color = colorPalette.primary;
         display = `${value.name}/${value.args}`
     }
 
     if (value._type === "Transformation") {
         suggestionSymbol = ":-"
-        color = colorPalette.ten.dark;
+        color = colorPalette.primary;
         display = make_rules_string(value.rules)
     }
     return <StyledSuggestion color={color} content={suggestionSymbol}>{display}</StyledSuggestion>
