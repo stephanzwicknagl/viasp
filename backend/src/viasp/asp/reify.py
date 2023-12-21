@@ -313,14 +313,22 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     def visit_ShowTerm(self, showTerm: AST):
         if (hasattr(showTerm, "location") and isinstance(showTerm.location, ast.Location) 
             and hasattr(showTerm, "term") and isinstance(showTerm.term, AST) 
+            and hasattr(showTerm.term, "symbol") and isinstance(showTerm.term.symbol, clingo.symbol.Symbol)
+            and hasattr(showTerm.term.symbol, "name") and isinstance(showTerm.term.symbol.name, str)
+            and hasattr(showTerm.term.symbol, "arguments") and isinstance(showTerm.term.symbol.arguments, Sequence)
             and hasattr(showTerm, "body") and isinstance(showTerm.body, Sequence)
             and all(isinstance(elem, AST) for elem in showTerm.body)):
             new_head = ast.Literal(
                     showTerm.location,
                     ast.Sign.NoSign,
                     ast.SymbolicAtom(
-                        showTerm.term
-                        )
+                        ast.Function(
+                            showTerm.location,
+                            showTerm.term.symbol.name,
+                            cast(Sequence, showTerm.term.symbol.arguments),
+                            0
+                            )
+                    )
             )
             self.visit(
                 ast.Rule(
