@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, Tuple, Iterable, Set, Collection, Any, Union, Sequence
+from typing import Dict, List, Tuple, Iterable, Set, Collection, Any, Union, Sequence, cast
 
 import clingo
 import networkx as nx
@@ -311,11 +311,33 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         return body_aggregate_elements
 
     def visit_ShowTerm(self, showTerm: AST):
-        new_rule = ast.Rule(
-            showTerm.location, 
-            ast.Literal(showTerm.location, ast.Sign.NoSign, showTerm.term), 
-            showTerm.body)
-        parse_string(place_ast_at_location(new_rule), lambda rule: self.visit(rule))
+        if (hasattr(showTerm, "location") and isinstance(showTerm.location, ast.Location) 
+            and hasattr(showTerm, "term") and isinstance(showTerm.term, AST) 
+            and hasattr(showTerm, "body") and isinstance(showTerm.body, Sequence)
+            and all(isinstance(elem, AST) for elem in showTerm.body)):
+            new_head = ast.Literal(
+                    showTerm.location,
+                    ast.Sign.NoSign,
+                    ast.SymbolicAtom(
+                        showTerm.term
+                        )
+            )
+            self.visit(
+                ast.Rule(
+                showTerm.location, 
+                new_head, 
+                cast(Sequence, showTerm.body))
+            )
+        else:
+            print(f"Plan B for ShowTerm: {showTerm}", flush=True)
+            new_rule = ast.Rule(
+            cast(ast.Location, showTerm.location), 
+            ast.Literal(
+                cast(ast.Location, showTerm.location), 
+                ast.Sign.NoSign, 
+                cast(AST, showTerm.term)), 
+            cast(Sequence, showTerm.body))
+            parse_string(place_ast_at_location(new_rule), lambda rule: self.visit(rule))
 
 
     def visit_Minimize(self, minimize: Minimize):

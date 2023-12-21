@@ -2,6 +2,7 @@ import argparse
 import textwrap
 import webbrowser
 import importlib.metadata
+from clingo.script import enable_python
 
 from viasp import Control
 from viasp.server import startup
@@ -84,6 +85,7 @@ def start():
     options = [str(models)]
 
     backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
+    enable_python()
     ctl = Control(options, viasp_backend_url=backend_url)
     for path in paths:
         ctl.load(path)
