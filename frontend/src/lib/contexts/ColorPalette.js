@@ -2,17 +2,17 @@ import React from "react";
 import PropTypes from "prop-types";
 
 export const defaultPalette = {
-    primary: '#6554C0', // '#879ee7'
+    primary: '#879ee7',
     success: '#36B37E',
     info: '#B3BAC5',
     warning: '#FFAB00',
     danger: '#FF5630',
-    light: '#F4F5F7',
+    light: '#F4F5FA',
     medium: '#a9a9a9',
     dark: '#444',
     // row background (any number)
     twenty: {
-        0: '#a9a9a94a', 
+        0: '#a9a9a92f', 
         1: '#ffffff'},
     // reason arrows & highlights (any number)
     highlight: {
