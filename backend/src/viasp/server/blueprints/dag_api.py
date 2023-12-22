@@ -189,15 +189,16 @@ def get_src_tgt_mapping_from_graph(shown_nodes_ids=[], shown_recursive_ids=[]):
     shown_nodes_ids = set(shown_nodes_ids)
 
     graph = get_graph()
-    nodes = set(graph.nodes)
+    nodes = graph.nodes
     to_be_deleted = set(existing for existing in nodes if shown_nodes_ids is not None and existing.uuid not in shown_nodes_ids)
 
     to_be_added = []
     for recursive_uuid in shown_recursive_ids:
-        # get node from graph where node attribute uuid is uuid
-        node = next(n for n in nodes if n.uuid == recursive_uuid)
-        for source, target in node.recursive.edges:
-            to_be_added.append((source, target))
+        node = next((n for n in nodes if n.uuid == recursive_uuid), None)
+        if node != None:
+            for source, target in node.recursive.edges:
+                to_be_added.append((source, target))
+        # TODO: keep recursion open after reordering
     graph.add_edges_from(to_be_added)
 
     for node in to_be_deleted:
