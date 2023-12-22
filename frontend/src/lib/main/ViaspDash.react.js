@@ -30,7 +30,6 @@ import { ShownRecursionProvider, useShownRecursion } from '../contexts/ShownRecu
 import { AnimationUpdaterProvider } from '../contexts/AnimationUpdater';
 import DraggableList from 'react-draggable-list';
 import { computeSortHash } from '../utils';
-import { DropSignalerContainer } from '../components/DropSignaler.react';
 
 
 function postCurrentSort(backendURL, hash) {
@@ -90,7 +89,6 @@ function GraphContainer(props) {
             container={() => graphContainerRef.current}
             padding = {0}
             />
-            {/* <DropSignalerContainer transformations={transformations} draggableList={draggableListRef.current} /> */}
         { clingraphUsed ? <Boxrow /> : null}
         </div>
 }
