@@ -1,6 +1,6 @@
-
 .dropSignaler {
-   width: '80%';
-   left: '10%';
-   border-radius: '5rem';
+   position: relative;
+   width: 80%;
+   left: 10%;
+   border-radius: 5rem;
 }

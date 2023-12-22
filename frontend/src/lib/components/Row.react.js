@@ -3,7 +3,7 @@ import {Node, RecursiveSuperNode} from "./Node.react";
 import './row.css';
 import PropTypes from "prop-types";
 import { RowHeader } from "./RowHeader.react";
-import { useTransformations, setCurrentDragged } from "../contexts/transformations";
+import { useTransformations, setCurrentDragged, TransformationContext } from "../contexts/transformations";
 import {useSettings} from "../contexts/Settings";
 import { TRANSFORMATION, TRANSFORMATIONWRAPPER } from "../types/propTypes";
 import { ColorPaletteContext } from "../contexts/ColorPalette";
@@ -40,61 +40,83 @@ DragHandle.propTypes = {
 };
 
 export class RowTemplate extends React.Component {
-    static contextType = ColorPaletteContext;
+    static contextType = TransformationContext;
     constructor(props) {
         super(props);
         this.rowRef = React.createRef();
     }
 
+    componentDidUpdate(prevProps) {
+        if (
+            this.props.itemSelected > 0 &&
+            this.context.state.currentDragged !== this.props.item.transformation.hash &&
+            prevProps.itemSelected !== this.props.itemSelected
+        ) {
+            this.context.dispatch(
+                setCurrentDragged(this.props.item.transformation.hash)
+            );
+        }
+    }
+
     render() {
-        const {item, itemSelected, anySelected, dragHandleProps} =
-            this.props;
+        const {item, itemSelected, anySelected, dragHandleProps} = this.props;
         const transformation = item.transformation;
 
-        const scaleConstant = 0.02;
-        const shadowConstant = 15;
-        const scale = itemSelected * scaleConstant + 1;
-        const shadow = itemSelected * shadowConstant + 0;
-        const dragged = itemSelected !== 0;
-        const background = Object.values(this.context.twenty);
-
-        const opacity = () => {
-            if (itemSelected === 0) { return 1 - anySelected * 0.5 };
-            return 1;
-        };
-
-        const containerStyle = {
-            position: 'relative',
-            transform: `scale(${scale})`,
-            zIndex: dragged ? 1 : 0,
-            transformOrigin: 'left',
-            boxShadow: `rgba(0, 0, 0, 0.3) 0px ${shadow}px ${2 * shadow}px 0px`,
-            background: background[transformation.id % background.length],
-            opacity: opacity,
-        };
-
         return (
-            <div
-                className="row_signal_container"
-                style={containerStyle}
-                ref={this.rowRef}
-            >
-                {transformation === null ? null : (
-                    <>
-                    <HereDropSignaler 
-                        hash={transformation.hash} 
-                        itemSelected={itemSelected} 
-                        anySelected={anySelected}
-                    />
-                    <Row
-                        key={transformation.hash}
-                        transformation={transformation}
-                        dragHandleProps={dragHandleProps}
-                        itemSelected={itemSelected}
-                    />
-                    </>
-                )}
-            </div>
+            <ColorPaletteContext.Consumer>
+                {({twenty}) => {
+                    const scaleConstant = 0.02;
+                    const shadowConstant = 15;
+                    const scale = itemSelected * scaleConstant + 1;
+                    const shadow = itemSelected * shadowConstant + 0;
+                    const dragged = itemSelected !== 0;
+                    const background = Object.values(twenty);
+
+                    const opacity = () => {
+                        if (itemSelected === 0) {
+                            return 1 - anySelected * 0.5;
+                        }
+                        return 1;
+                    };
+
+                    const containerStyle = {
+                        position: 'relative',
+                        transform: `scale(${scale})`,
+                        zIndex: dragged ? 1 : 0,
+                        transformOrigin: 'left',
+                        boxShadow: `rgba(0, 0, 0, 0.3) 0px ${shadow}px ${
+                            2 * shadow
+                        }px 0px`,
+                        background:
+                            background[transformation.id % background.length],
+                        // opacity: opacity(),
+                    };
+                    return (
+                        <div
+                            className="row_signal_container"
+                            style={containerStyle}
+                            ref={this.rowRef}
+                        >
+                            {transformation === null ? null : (
+                                <>
+                                    <HereDropSignaler
+                                        hash={transformation.hash}
+                                        itemSelected={itemSelected}
+                                        anySelected={anySelected}
+                                        rowRef={this.rowRef}
+                                    />
+                                    <Row
+                                        key={transformation.hash}
+                                        transformation={transformation}
+                                        dragHandleProps={dragHandleProps}
+                                        itemSelected={itemSelected}
+                                    />
+                                </>
+                            )}
+                        </div>
+                    );
+                }}
+            </ColorPaletteContext.Consumer>
         );
     }
 }
@@ -145,14 +167,6 @@ export function Row(props) {
             handleRef.current.style.top = `${headerHeight}px`;
         }
     }, []);
-
-    React.useEffect(() => {
-        const transformationhash = transformationhashRef.current;
-        const dispatchTransformation = dispatchTransformationRef.current;
-        if (itemSelected > 0 && currentDragged === '') {
-            dispatchTransformation(setCurrentDragged(transformationhash));
-        }
-    }, [itemSelected, currentDragged]);
 
     React.useEffect(() => {
         let mounted = true;

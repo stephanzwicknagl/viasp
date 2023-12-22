@@ -78,48 +78,20 @@ function DropSignaler(props) {
         }, [] /* eslint-disable-line react-hooks/exhaustive-deps */
     );
 
-    const canBeDroppedAbove = React.useCallback(
-        () => {
-            // console.log('Calculating if it can be dropped above...');
-            const itemSelected = item.props.itemSelected;
-
-            if (currentDragged !== '' && itemSelected === 0 && transformations) {
-                const sort = transformations.map((t) => t.hash);
-                const oldIndex = sort.findIndex(
-                    (h) => h === currentDragged
-                );
-                const newIndex =
-                    sort.findIndex(
-                        (h) => h === item.props.item.hash
-                    ) - 1;
-                const [removed] = sort.splice(oldIndex, 1);
-                sort.splice(newIndex, 0, removed);
-                // generate hash
-                computeSortHash(sort).then((newHash) => {
-                    // compare hash to potential sorts
-                    // console.log('Calculating:', {
-                    //     newHash: newHash,
-                    //     possibleSorts: possibleSorts,
-                    //     includes: possibleSorts?.includes(newHash),
-                    // });
-                    return possibleSorts?.includes(newHash);
-                });
-            }
-            return false;
-        }, [transformations, possibleSorts, currentDragged, item.props.itemSelected, item.props.item.hash]
-    );
-
-    const canBeDroppedBelow = React.useCallback(
-        () => {
-            return true;
-        }, []
-    );
-
     React.useEffect(
         () => {
-            setTopColor(canBeDroppedAbove() ? 'green' : 'red');
+            setTopColor(
+                canBeDropped(
+                    transformations,
+                    possibleSorts,
+                    currentDragged,
+                    item.props.item.hash,
+                    true
+                )
+                    ? 'green'
+                    : 'red'
+            );
         }, [
-        canBeDroppedAbove,
         transformations,
         possibleSorts,
         currentDragged,
@@ -130,7 +102,6 @@ function DropSignaler(props) {
 
 
     
-    const brightGreen = '#00ff00';
     // todo: when does showMultiplier rerender, or what?
     const [showMultiplier, setShowMultiplier] = React.useState(1);
 
@@ -210,78 +181,65 @@ DropSignaler.propTypes = {
     isLastElement: PropTypes.bool,
 };
 
+async function canBeDropped (transformations, possibleSorts, currentDragged, hash, dropAbove) {
+    if (currentDragged !== '' && transformations) {
+        const sort = transformations.map((t) => t.hash);
+        const oldIndex = sort.findIndex(
+            (h) => h === currentDragged
+        );
+        const [removed] = sort.splice(oldIndex, 1);
+        let newIndex = sort.findIndex((h) => h === hash);
+        if (!dropAbove) {
+            newIndex += 1;
+        };
+        sort.splice(newIndex, 0, removed);
+        const newHash = await computeSortHash(sort);
+        return possibleSorts?.includes(newHash);
+    }
+    return false;
+}
+
 export function HereDropSignaler(props) {
-    const {hash, isLastElement, itemSelected, anySelected} = props;
-    const [topColor, setTopColor] = React.useState('red');
+    const {hash, itemSelected, anySelected, rowRef} = props;
+    const green = '#00ff00';
+    const red = '#ff0000';
+    const [topColor, setTopColor] = React.useState(red);
+    const [belowColor, setBelowColor] = React.useState(red);
     const {
         state: {transformations, possibleSorts, currentDragged},
     } = useTransformations();
 
-    // on mount and unmount
-    // React.useEffect(
-    //     () => {
-    //         // Create a new div at the start of the parent element
-    //         // to position the upperDropSignaler
-    //         const parentElement = item.rowRef.current;
-    //         const div = document.createElement('div');
-    //         parentElement.insertBefore(div, parentElement.firstChild);
-    //         setTopSignalerParent(div);
-
-    //         if (isLastElement) {
-    //             setBottomSignalerParent(parentElement);
-    //         }
-
-    //         return () => {
-    //             // Remove the div at the start of the parent element
-    //             const parentElement = item.rowRef.current;
-    //             parentElement.removeChild(parentElement.firstChild);
-    //             setTopSignalerParent(null);
-    //             setBottomSignalerParent(null);
-    //         };
-    //     },
-    //     [] /* eslint-disable-line react-hooks/exhaustive-deps */
-    // );
-
-    const canBeDroppedAbove = React.useCallback(() => {
-
-        if (currentDragged !== '' && itemSelected === 0 && transformations) {
-            const sort = transformations.map((t) => t.hash);
-            const oldIndex = sort.findIndex((h) => h === currentDragged);
-            const newIndex =
-                sort.findIndex((h) => h === hash) - 1;
-            const [removed] = sort.splice(oldIndex, 1);
-            sort.splice(newIndex, 0, removed);
-            const ans = computeSortHash(sort).then((newHash) => {
-                return possibleSorts?.includes(newHash);
-            });
-            return ans;
-        }
-        return false;
-    }, [
-        transformations,
-        possibleSorts,
-        currentDragged,
-        itemSelected,
-        hash,
-    ]);
-
-    const canBeDroppedBelow = React.useCallback(() => {
-        return true;
-    }, []);
+    const isLastElement = transformations[transformations.length-1].hash === hash;
 
     React.useEffect(() => {
-        const ans = canBeDroppedAbove();
-        console.log("ANS", ans)
-        setTopColor(ans ? 'green' : 'red');
+        canBeDropped(
+            transformations, 
+            possibleSorts, 
+            currentDragged, 
+            hash, 
+            true
+        ).then((ans) => {
+                setTopColor(ans ? green : red);
+        })
+        if (isLastElement) {
+            canBeDropped(
+                transformations,
+                possibleSorts,
+                currentDragged,
+                hash,
+                false
+            ).then((ans) => {
+                setBelowColor(ans ? green : red);
+            });
+        }
     }, [
-        canBeDroppedAbove,
         transformations,
         possibleSorts,
         currentDragged,
         hash,
+        isLastElement,
     ]);
 
-    const brightGreen = '#00ff00';
 
     const showMultiplier = anySelected && !itemSelected ? anySelected : 0;
     const heightMultiplier = 0.5;
@@ -289,45 +247,62 @@ export function HereDropSignaler(props) {
     const height = showMultiplier * heightMultiplier;
     const blurRadiusMultiplier = 20;
     const shadowSpreadRadiusMultiplier = 10;
+    const shadowOpacity = '33';
     const shadowBlurRadius = showMultiplier * blurRadiusMultiplier;
     const shadowSpreadRadius = showMultiplier * shadowSpreadRadiusMultiplier;
     const topStyle = {
-        position: 'relative',
-        zIndex: 100,
         top: `-${0.5 * height}rem`,
         height: `${height}rem`,
-        boxShadow: `0px 0px ${shadowBlurRadius}px ${shadowSpreadRadius}px rgba(0, 255, 0, 0.2)`,
+        boxShadow: `0px 0px ${shadowBlurRadius}px ${shadowSpreadRadius}px ${topColor}${shadowOpacity}`,
         backgroundColor: `${topColor}`,
     };
 
-    // const myStyleBottom = {
-    //     position: 'relative',
-    //     bottom: `-${0.5 * height}px`,
-    //     // top: `-${0.5 * height}px`,
-    //     height: `${height}rem`,
-    //     boxShadow: `0px 0px ${shadowBlurRadius}px ${shadowSpreadRadius}px rgba(0, 255, 0, 0.2)`,
-    // };
+    const myStyleBottom = {
+        position: 'relative',
+        bottom: `-${0.5 * height}px`,
+        height: `${height}rem`,
+        boxShadow: `0px 0px ${shadowBlurRadius}px ${shadowSpreadRadius}px ${belowColor}${shadowOpacity}`,
+        backgroundColor: `${belowColor}`,
+    };
 
-    // if (this.props.isLastElement) {
-    //     myStyleBottom.backgroundColor = this.canBeDroppedBelow()
-    //         ? brightGreen
-    //         : 'red';
-    // }
+    const [bottomSignalerParent, setBottomSignalerParent] =
+            React.useState(null);
+    React.useEffect(
+        () => {
+            const rowRefcurrent = rowRef.current;
+            // Create a new div at the start of the parent element
+            // to position the upperDropSignaler
+            const parentElement = rowRefcurrent;
+            const div = document.createElement('div');
+            parentElement.insertBefore(div, parentElement.firstChild);
+
+            if (isLastElement) {
+                setBottomSignalerParent(parentElement);
+            }
+
+            return () => {
+                // Remove the div at the start of the parent element
+                const parentElement = rowRefcurrent;
+                parentElement.removeChild(parentElement.firstChild);
+                setBottomSignalerParent(null);
+            };
+        },
+        [] /* eslint-disable-line react-hooks/exhaustive-deps */
+    );
 
     return (
         <>
-            <div className="dropSignaler" style={topStyle}></div>,
+            <div className="dropSignaler" style={topStyle}></div>
             {
-                //         isLastElement &&
-                //         bottomSignalerParent &&
-                //         ReactDOM.createPortal(
-                //             <div
-                //                 className="dropSignaler"
-                //                 style={myStyleBottom}
-                //             ></div>,
-                //             bottomSignalerParent
-                //         );
-                //
+                isLastElement &&
+                bottomSignalerParent &&
+                ReactDOM.createPortal(
+                    <div
+                        className="dropSignaler"
+                        style={myStyleBottom}
+                    ></div>,
+                    bottomSignalerParent
+                )
             }
         </>
     );
@@ -346,4 +321,8 @@ HereDropSignaler.propTypes = {
      * It starts at 0, and quickly increases to 1 when any item is picked up by the user.
      */
     anySelected: PropTypes.number,
+    /**
+     * The row DOM element to which this signaler belongs
+     */
+    rowRef: PropTypes.object,
 };

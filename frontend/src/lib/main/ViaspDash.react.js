@@ -26,7 +26,7 @@ import {UserMessages} from "../components/messages";
 import {DEFAULT_BACKEND_URL, SettingsProvider, useSettings} from "../contexts/Settings";
 import {FilterProvider} from "../contexts/Filters";
 import { HighlightedSymbolProvider, useHighlightedSymbol } from '../contexts/HighlightedSymbol';
-import { ShownRecursionProvider } from '../contexts/ShownRecursion';
+import { ShownRecursionProvider, useShownRecursion } from '../contexts/ShownRecursion';
 import { AnimationUpdaterProvider } from '../contexts/AnimationUpdater';
 import DraggableList from 'react-draggable-list';
 import { computeSortHash } from '../utils';
@@ -58,6 +58,7 @@ function GraphContainer(props) {
     const { clingraphUsed } = useClingraph();
     const [, message_dispatch] = useMessages()
     const { backendURL } = useSettings();
+    const [ ,,setShownRecursion ] = useShownRecursion();
     const backendUrlRef = React.useRef(backendURL);
     const messageDispatchRef = React.useRef(message_dispatch);
     const graphContainerRef = React.useRef(null);
@@ -72,6 +73,7 @@ function GraphContainer(props) {
                     messageDispatchRef.current(showError(`Failed to set new current graph: ${error}`))
                 })
                 dispatchTransformation(reorderTransformation(oldIndex, newIndex));
+                setShownRecursion([]);
                 return;
             }
         });
