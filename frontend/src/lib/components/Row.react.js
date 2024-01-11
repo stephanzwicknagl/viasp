@@ -23,26 +23,29 @@ export function Row(props) {
 
     const [nodes, setNodes] = React.useState(null);
     const [isOverflowH, setIsOverflowH] = React.useState(false);
-    const [overflowBreakingPoint, setOverflowBreakingPoint] = React.useState(null);
+    const [overflowBreakingPoint, setOverflowBreakingPoint] =
+        React.useState(null);
     const ref = React.useRef(null);
-    const {state: {transformations}, dispatch} = useTransformations();
+    const {
+        state: {transformations},
+        dispatch,
+    } = useTransformations();
     const {backendURL} = useSettings();
     const [shownRecursion, ,] = useShownRecursion();
 
     React.useEffect(() => {
         let mounted = true;
-        loadMyAsyncData(transformation.id, backendURL)
-            .then(items => {
-                if (mounted) {
-                    setNodes(items)
-                }
-            })
-        return () => mounted = false;
+        loadMyAsyncData(transformation.id, backendURL).then((items) => {
+            if (mounted) {
+                setNodes(items);
+            }
+        });
+        return () => (mounted = false);
     }, []);
 
     function checkForOverflow() {
         if (ref !== null && ref.current) {
-            const e = ref.current
+            const e = ref.current;
             const wouldOverflowNow = e.offsetWidth < e.scrollWidth;
             // We overflowed previously but not anymore
             if (overflowBreakingPoint <= e.offsetWidth) {
@@ -51,8 +54,8 @@ export function Row(props) {
             if (!isOverflowH && wouldOverflowNow) {
                 // We have to react to overflow now but want to remember when we'll not overflow anymore
                 // on a resize
-                setOverflowBreakingPoint(e.offsetWidth)
-                setIsOverflowH(true)
+                setOverflowBreakingPoint(e.offsetWidth);
+                setIsOverflowH(true);
             }
             // We never overflowed and also don't now
             if (overflowBreakingPoint === null && !wouldOverflowNow) {
@@ -62,41 +65,62 @@ export function Row(props) {
     }
 
     React.useEffect(() => {
-        checkForOverflow()
-    }, [nodes])
+        checkForOverflow();
+    }, [nodes]);
 
     React.useEffect(() => {
-        window.addEventListener('resize', checkForOverflow)
-        return _ => window.removeEventListener('resize', checkForOverflow)
-    })
+        window.addEventListener('resize', checkForOverflow);
+        return (_) => window.removeEventListener('resize', checkForOverflow);
+    });
     if (nodes === null) {
         return (
             <div className="row_container">
-                <RowHeader transformation={transformation.rules}/>
+                <RowHeader transformation={transformation.rules} />
                 <div>Loading Transformations..</div>
             </div>
-        )
+        );
     }
-    const showNodes = transformations.find(({
-                                                transformation: t,
-                                                shown
-                                            }) => transformation.id === t.id && shown) !== undefined
-    const style1 = { "backgroundColor": color};
+    const showNodes =
+        transformations.find(
+            ({transformation: t, shown}) => transformation.id === t.id && shown
+        ) !== undefined;
+    const style1 = {backgroundColor: color};
 
-    return <div className="row_container" style={style1}>
-        <RowHeader transformation={transformation.rules} />
-        {!showNodes ? null :
-            <div ref={ref} className="row_row" >{nodes.map((child) => { 
-                if (child.recursive && shownRecursion.indexOf(child.uuid) !== -1) {
-                    return <RecursiveSuperNode key={child.uuid} node={child}
-                    showMini={isOverflowH}
-                    notifyClick={notifyClick}/>
-                }
-                else{
-                    return <Node key={child.uuid} node={child}
-                    showMini={isOverflowH}
-                    notifyClick={notifyClick} isSubnode = {false}/>}})}</div>
-        }</div>
+    return (
+        <div className="row_container" style={style1}>
+            <RowHeader transformation={transformation.rules} />
+            {!showNodes ? null : (
+                <div ref={ref} className="row_row">
+                    {nodes.map((child) => {
+                        if (
+                            child.recursive &&
+                            shownRecursion.indexOf(child.uuid) !== -1
+                        ) {
+                            return (
+                                <div className="branch_space" key={child.uuid}>
+                                    <RecursiveSuperNode
+                                        node={child}
+                                        showMini={isOverflowH}
+                                        notifyClick={notifyClick}
+                                    />
+                                </div>
+                            );
+                        } else {
+                            return (
+                                <div className="branch_space" key={child.uuid}>
+                                    <Node
+                                        node={child}
+                                        showMini={isOverflowH}
+                                        notifyClick={notifyClick}
+                                        isSubnode={false}
+                                    />
+                                </div>
+                            );
+                        }})}
+                    </div>
+            )}
+        </div>
+    );
 }
 
 
