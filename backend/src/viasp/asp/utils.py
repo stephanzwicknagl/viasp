@@ -166,15 +166,3 @@ def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol,
     warn(f"An explanation could not be made")
     return None
 
-def place_ast_at_location(ast: AST) -> str:
-    """
-    Generates a string where ast is located at the 
-    proper location defined in the given AST.
-    """
-    ans = ""
-    if hasattr(ast,"location") and ast.location != None and isinstance(ast.location, Location):
-        for i in range(ast.location.begin.line-1):
-            ans += "\n"
-        for i in range(ast.location.begin.column-1):
-            ans += " "
-    return ans + str(ast)

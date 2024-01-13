@@ -6,7 +6,7 @@ import networkx as nx
 from clingo import ast, Symbol
 from clingo.ast import Transformer, parse_string, Rule, ASTType, AST, Literal, Minimize, Disjunction
 
-from .utils import is_constraint, merge_constraints, topological_sort, place_ast_at_location
+from .utils import is_constraint, merge_constraints, topological_sort
 from ..asp.utils import merge_cycles, remove_loops
 from viasp.asp.ast_types import SUPPORTED_TYPES, ARITH_TYPES, UNSUPPORTED_TYPES, UNKNOWN_TYPES
 from ..shared.model import Transformation, TransformationError, FailedReason
@@ -310,43 +310,38 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             self.visit(elem, body_aggregate_elements=body_aggregate_elements)
         return body_aggregate_elements
 
-    def visit_ShowTerm(self, showTerm: AST):
-        if (hasattr(showTerm, "location") and isinstance(showTerm.location, ast.Location) 
-            and hasattr(showTerm, "term") and isinstance(showTerm.term, AST) 
-            and hasattr(showTerm.term, "symbol") and isinstance(showTerm.term.symbol, clingo.symbol.Symbol)
-            and hasattr(showTerm.term.symbol, "name") and isinstance(showTerm.term.symbol.name, str)
-            and hasattr(showTerm.term.symbol, "arguments") and isinstance(showTerm.term.symbol.arguments, Sequence)
-            and hasattr(showTerm, "body") and isinstance(showTerm.body, Sequence)
-            and all(isinstance(elem, AST) for elem in showTerm.body)):
-            new_head = ast.Literal(
-                    showTerm.location,
-                    ast.Sign.NoSign,
-                    ast.SymbolicAtom(
-                        ast.Function(
-                            showTerm.location,
-                            showTerm.term.symbol.name,
-                            cast(Sequence, showTerm.term.symbol.arguments),
-                            0
-                            )
-                    )
-            )
-            self.visit(
-                ast.Rule(
-                showTerm.location, 
-                new_head, 
-                cast(Sequence, showTerm.body))
-            )
-        else:
-            print(f"Plan B for ShowTerm: {showTerm}", flush=True)
-            new_rule = ast.Rule(
-            cast(ast.Location, showTerm.location), 
-            ast.Literal(
-                cast(ast.Location, showTerm.location), 
-                ast.Sign.NoSign, 
-                cast(AST, showTerm.term)), 
-            cast(Sequence, showTerm.body))
-            parse_string(place_ast_at_location(new_rule), lambda rule: self.visit(rule))
+    def get_first_attribute_with_name_from_tree(self, ast: AST, attribute: str) -> Any:
+        while not hasattr(ast, attribute):
+            if hasattr(ast, "symbol"):
+                ast = cast(AST, ast.symbol)
+            else:
+                break
+        return getattr(ast, attribute, None)
 
+    def visit_ShowTerm(self, showTerm: AST):
+        term_location: ast.Location = getattr(showTerm, "location")
+        term: AST = getattr(showTerm, "term")
+        term_body: Sequence = getattr(showTerm, "body")
+
+        name: str = self.get_first_attribute_with_name_from_tree(term, "name")
+        arguments: Sequence = self.get_first_attribute_with_name_from_tree(term, "arguments")
+        new_head = ast.Literal(
+            term_location,
+            ast.Sign.NoSign,
+            ast.SymbolicAtom(
+                ast.Function(
+                    term_location,
+                    name,
+                    arguments,
+                    0
+                )
+            )
+        )
+        rule_from_show_term = ast.Rule(
+            term_location, 
+            new_head, 
+            term_body)
+        self.visit(rule_from_show_term)
 
     def visit_Minimize(self, minimize: Minimize):
         deps = defaultdict(list)
