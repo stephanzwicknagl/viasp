@@ -6,6 +6,7 @@ from clingo.ast import AST
 from viasp.asp.ast_types import (SUPPORTED_TYPES, UNSUPPORTED_TYPES,
                                  make_unknown_AST_enum_types)
 from viasp.asp.reify import ProgramAnalyzer
+from viasp.shared.model import Transformation
 
 
 
@@ -69,11 +70,12 @@ def test_show_statement_without_terms_analyzed_correctly():
 
 def test_show_statement_with_terms_analyzed_correctly():
     program = "a. #show b : a."
-    expected = "a. b :- a."
+    expected = "b :- a."
     transformer = ProgramAnalyzer()
     program = transformer.sort_program(program)
     assert transformer.get_filtered() == [], "Show Term should not be filtered out." 
     assert transformer.will_work(), "Program with ShowTerm should work."
+    assert  "".join(str(r) for t in program for r in t.rules) == expected, "Show Term should be transformed to rule."
 
 def test_defined_statement_analyzed_correctly():
     program = "#defined a/1."
