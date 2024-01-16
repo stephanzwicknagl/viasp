@@ -18,16 +18,12 @@
         "required": false,
         "description": "Dash-assigned callback that should be called to report property changes\nto Dash, to make them available for callbacks."
       },
-      "colors": {
+      "colorPalette": {
         "type": {
           "name": "object"
         },
         "required": false,
-        "description": "Colors to be used in the application.",
-        "defaultValue": {
-          "value": "{}",
-          "computed": false
-        }
+        "description": "Colors to be used in the application."
       },
       "clickedOn": {
         "type": {
@@ -50,6 +46,13 @@
           "value": "DEFAULT_BACKEND_URL",
           "computed": true
         }
+      },
+      "colors": {
+        "defaultValue": {
+          "value": "{}",
+          "computed": false
+        },
+        "required": false
       }
     }
   }

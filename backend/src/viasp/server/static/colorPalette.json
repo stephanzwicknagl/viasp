@@ -1,0 +1,21 @@
+{
+    "primary": "#879ee7",
+    "light": "#F4F5FA",
+    "medium": "#a9a9a9",
+    "dark": "#444",
+    "twenty": {
+        "0": "#a9a9a92f",
+        "1": "#ffffff"
+    },
+    "highlight": {
+        "0": "#d48521",
+        "1": "#9a8298",
+        "2": "#e0e4ac",
+        "3": "#98f4e2",
+        "4": "#21d485"
+    },
+    "success": "#36B37E",
+    "info": "#B3BAC5",
+    "warning": "#FFAB00",
+    "danger": "#FF5630"
+}
