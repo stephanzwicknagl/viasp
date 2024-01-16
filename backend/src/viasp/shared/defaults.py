@@ -1,5 +1,6 @@
 import pathlib
 import os
+import json
 
 DEFAULT_BACKEND_PROTOCOL = "http"
 DEFAULT_BACKEND_HOST = "localhost"
@@ -12,3 +13,4 @@ STATIC_PATH =  pathlib.Path(__file__).parent.parent.resolve() / "server/static/"
 CLINGRAPH_PATH = os.path.join(STATIC_PATH, "clingraph")
 PROGRAM_STORAGE_PATH = SHARED_PATH / "prg.lp"
 STDIN_TMP_STORAGE_PATH = SHARED_PATH / "viasp_stdin_tmp.lp"
+COLOR_PALETTE = json.load(open(os.path.join(STATIC_PATH, "colorPalette.json"), "r"))

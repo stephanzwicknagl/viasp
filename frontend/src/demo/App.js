@@ -1,23 +1,20 @@
 /* eslint no-magic-numbers: 0 */
-import React, { useState } from 'react';
+import React from 'react';
+import colorPaletteData from '../../../backend/src/viasp/server/static/colorPalette.json';
 
 import { ViaspDash } from '../lib';
 
 const App = () => {
-
-    const [state, setState] = useState({ value: '', label: 'Type Here' });
-    const setProps = (newProps) => {
-        setState(newProps);
-    };
-
+    const backend_url = "http://localhost:5050";
     return (
         <div>
-            <ViaspDash 
-                setProps={setProps}
-                {...state}
+            <ViaspDash
+                id="myID"
+                backendURL={backend_url}
+                colorPalette={colorPaletteData}
             />
         </div>
-    )
+    );
 };
 
 

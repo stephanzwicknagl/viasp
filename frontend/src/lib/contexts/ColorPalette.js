@@ -1,69 +1,15 @@
 import React from "react";
 import PropTypes from "prop-types";
 
-export const defaultPalette = {
-    primary: '#879ee7',
-    success: '#36B37E',
-    info: '#B3BAC5',
-    warning: '#FFAB00',
-    danger: '#FF5630',
-    light: '#F4F5FA',
-    medium: '#a9a9a9',
-    dark: '#444',
-    // row background (any number)
-    twenty: {
-        0: '#a9a9a92f', 
-        1: '#ffffff'},
-    // reason arrows & highlights (any number)
-    highlight: {
-        0: '#d48521',
-        1: '#9a8298',
-        2: '#e0e4ac',
-        3: '#98f4e2',
-        4: '#21d485',
-    },
-};
-
 const ColorPaletteContext = React.createContext([]);
-export const updateColorPalette = (custom_colors) => {
-    if ("ten" in custom_colors) {
-        defaultPalette.ten = custom_colors.ten;
-    }
-    if ("twenty" in custom_colors) {
-        defaultPalette.twenty = custom_colors.twenty;
-    }
-    if ("thirty" in custom_colors) {
-        defaultPalette.thirty = custom_colors.thirty;
-    }
-    if ("fourty" in custom_colors) {
-        defaultPalette.fourty = custom_colors.fourty;
-    }
-    if ("fifty" in custom_colors) {
-        defaultPalette.fifty = custom_colors.fifty;
-    }
-    if ("sixty" in custom_colors) {
-        defaultPalette.sixty = custom_colors.sixty;
-    }
-    if ("seventy" in custom_colors) {
-        defaultPalette.seventy = custom_colors.seventy;
-    }
-    if ("highlight" in custom_colors) {
-        defaultPalette.highlight = custom_colors.highlight;
-    }
-    if ("error" in custom_colors) {
-        defaultPalette.error = custom_colors.error;
-    }
-    if ("warn" in custom_colors) {
-        defaultPalette.warn = custom_colors.warn;
-    }
-    React.useContext(ColorPaletteContext)
-    return defaultPalette;
-};
 
 export const useColorPalette = () => React.useContext(ColorPaletteContext);
 export const ColorPaletteProvider = ({children, colorPalette}) => {
-    const updatedColorPalette = !colorPalette ? defaultPalette : updateColorPalette(colorPalette)
-    return <ColorPaletteContext.Provider value={updatedColorPalette}>{children}</ColorPaletteContext.Provider>
+    return (
+        <ColorPaletteContext.Provider value={colorPalette}>
+            {children}
+        </ColorPaletteContext.Provider>
+    );
 }
 
 ColorPaletteProvider.propTypes = {
@@ -75,15 +21,15 @@ ColorPaletteProvider.propTypes = {
      * The color palette to update the color palette with
      */
     colorPalette: PropTypes.exact({
-        ten: PropTypes.object,
-        twenty: PropTypes.object,
-        thirty: PropTypes.object,
-        fourty: PropTypes.object,
-        fifty: PropTypes.object,
-        sixty: PropTypes.object,
-        seventy: PropTypes.object,
-        highlight: PropTypes.object,
-        error: PropTypes.object,
-        warn: PropTypes.object
-    })
-}
+        primary: PropTypes.string,
+        light: PropTypes.string,
+        medium: PropTypes.string,
+        dark: PropTypes.string,
+        twenty: PropTypes.objectOf(PropTypes.string),
+        highlight: PropTypes.objectOf(PropTypes.string),
+        success: PropTypes.string,
+        info: PropTypes.string,
+        warning: PropTypes.string,
+        danger: PropTypes.string,
+    }),
+};
