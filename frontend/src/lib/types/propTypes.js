@@ -34,6 +34,7 @@ export const NODE = PropTypes.exact({
     rule_nr: PropTypes.number,
     reason: PropTypes.object, 
     recursive: PropTypes.oneOfType([PropTypes.bool, GRAPH]),
+    space_multiplier: PropTypes.number,
     uuid: PropTypes.string
 })
 export const BOX = PropTypes.exact({

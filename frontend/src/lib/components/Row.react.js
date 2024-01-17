@@ -92,12 +92,17 @@ export function Row(props) {
             {!showNodes ? null : (
                 <div ref={ref} className="row_row">
                     {nodes.map((child) => {
+                        const space_multiplier = child.space_multiplier * 100;
                         if (
                             child.recursive &&
                             shownRecursion.indexOf(child.uuid) !== -1
                         ) {
                             return (
-                                <div className="branch_space" key={child.uuid}>
+                                <div
+                                    className="branch_space"
+                                    key={child.uuid}
+                                    style={{flex: `0 0 ${space_multiplier}%`}}
+                                >
                                     <RecursiveSuperNode
                                         node={child}
                                         showMini={isOverflowH}
@@ -107,7 +112,11 @@ export function Row(props) {
                             );
                         } else {
                             return (
-                                <div className="branch_space" key={child.uuid}>
+                                <div
+                                    className="branch_space"
+                                    key={child.uuid}
+                                    style={{flex: `0 0 ${space_multiplier}%`}}
+                                >
                                     <Node
                                         node={child}
                                         showMini={isOverflowH}
