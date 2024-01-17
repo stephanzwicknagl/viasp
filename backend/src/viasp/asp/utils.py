@@ -166,3 +166,31 @@ def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol,
     warn(f"An explanation could not be made")
     return None
 
+def calculate_spacing_factor(g: nx.DiGraph) -> nx.DiGraph:
+    """
+    Calculate the spacing factor for each node the graph.
+    This will make sure the branches of the graph are spaced out evenly.
+
+    :param g: The graph.
+    :return: The graph with the spacing_multiplier in each node.
+    """
+    # get fact node:
+    root_node = get_root_node_from_graph(g)
+
+    # go through entire graph, starting at root_node and traveling down the graph via successors
+    children_next = []
+    searched_nodes = set()
+    children_current = [root_node]
+    while len(children_current) != 0:
+        for v in children_current:
+            successors: List[Node] = list(g.successors(v))
+            if len(successors) != 0:
+                for w in successors:
+                    w.space_multiplier = v.space_multiplier / len(successors)
+
+            searched_nodes.add(v)
+            for w in g.successors(v): 
+                children_next.append(w)
+        children_current = children_next
+        children_next = []
+    return g

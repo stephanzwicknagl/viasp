@@ -11,7 +11,7 @@ from networkx import DiGraph
 
 from .reify import ProgramAnalyzer, has_an_interval
 from .recursion import RecursionReasoner
-from .utils import insert_atoms_into_nodes, identify_reasons
+from .utils import insert_atoms_into_nodes, identify_reasons, calculate_spacing_factor
 from ..shared.model import Node, Transformation, SymbolIdentifier
 from ..shared.simple_logging import info, warn
 from ..shared.util import pairwise, get_leafs_from_graph
@@ -159,7 +159,7 @@ def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collect
         new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, h_symbols, recursion_transformations, conflict_free_h, analyzer)
         paths.append(new_path)
 
-    result_graph = identify_reasons(join_paths_with_facts(paths))
+    result_graph = calculate_spacing_factor(identify_reasons(join_paths_with_facts(paths)))
     if analyzer.pass_through:
         append_noops(result_graph, analyzer)
     return result_graph

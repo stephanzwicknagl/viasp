@@ -37,13 +37,14 @@ class Node:
     atoms: FrozenSet[SymbolIdentifier] = field(default_factory=frozenset, hash=True)
     reason: MappingProxyType = field(default_factory=DefaultMappingProxyType, hash=True) # type: MappingProxyType[str, List[SymbolIdentifier]]
     recursive: Union[bool, nx.DiGraph] = field(default=False, hash=False)
+    space_multiplier: float = field(default=1.0, hash=False)
     uuid: UUID = field(default_factory=uuid4, hash=False)
 
     def __hash__(self):
         return hash((self.atoms, self.rule_nr, self.diff))
 
     def __eq__(self, o):
-        return isinstance(o, type(self)) and (self.atoms, self.rule_nr, self.diff, self.reason) == (o.atoms, o.rule_nr, o.diff, o.reason)
+        return isinstance(o, type(self)) and (self.atoms, self.rule_nr, self.diff, self.reason, self.space_multiplier) == (o.atoms, o.rule_nr, o.diff, o.reason, o.space_multiplier)
 
     def __repr__(self):
         repr_reasons = []
@@ -52,7 +53,7 @@ class Node:
         else:
             for key, val in self.reason.items():
                 repr_reasons.append(f"{key}: [{', '.join(map(str,val))}]")
-        return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{', '.join(map(str,self.atoms))}}}, reasons={{{', '.join(repr_reasons)}}}, recursive={self.recursive}, uuid={self.uuid})"
+        return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{', '.join(map(str,self.atoms))}}}, reasons={{{', '.join(repr_reasons)}}}, recursive={self.recursive}, space_multiplier={self.space_multiplier}, uuid={self.uuid})"
 
 
 @dataclass(frozen=False)
