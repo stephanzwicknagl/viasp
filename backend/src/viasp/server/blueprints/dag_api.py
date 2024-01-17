@@ -116,7 +116,7 @@ def get_children(transformation_id):
     raise NotImplementedError
 
 
-def get_src_tgt_mapping_from_graph(shown_nodes_ids=None, shown_recursive_ids=[]):
+def get_src_tgt_mapping_from_graph(shown_nodes_ids=None, shown_recursive_ids=[], shown_clingraph=False):
     shown_nodes_ids = set(shown_nodes_ids) if shown_nodes_ids is not None else None
 
     graph = get_database().load(as_json=False)
@@ -136,13 +136,16 @@ def get_src_tgt_mapping_from_graph(shown_nodes_ids=None, shown_recursive_ids=[])
             for _, target, _ in graph.out_edges(node, data=True):
                 graph.add_edge(source, target)
         graph.remove_node(node)
-    return [{"src": src.uuid, "tgt": tgt.uuid} for src, tgt in graph.edges()]
-
-def get_src_tgt_mapping_from_clingraph(ids=None):
-    from .api import using_clingraph, last_nodes_in_graph
-    last = last_nodes_in_graph(get_graph())
-    imgs = using_clingraph
-    return [{"src": src, "tgt": tgt} for src, tgt in list(zip(last, imgs))]
+    
+    clingraph_edges = []
+    if shown_clingraph:
+        from .api import using_clingraph, last_nodes_in_graph
+        clingraph_edges = [
+            {"src": src, "tgt": tgt} for src, tgt in 
+                list(zip(
+                        last_nodes_in_graph(graph), 
+                        using_clingraph))]
+    return [{"src": src.uuid, "tgt": tgt.uuid} for src, tgt in graph.edges()] + clingraph_edges
 
 
 @bp.route("/graph/transformations", methods=["GET"])
@@ -165,21 +168,10 @@ def get_edges():
     to_be_returned = []
     if request.method == "POST":
         shown_recursive_ids = request.json["shownRecursion"] if "shownRecursion" in request.json else []
-        to_be_returned = get_src_tgt_mapping_from_graph(request.json["shownNodes"], shown_recursive_ids)
+        to_be_returned = get_src_tgt_mapping_from_graph(request.json["shownNodes"], shown_recursive_ids, request.json["usingClingraph"])
     elif request.method == "GET":
         to_be_returned = get_src_tgt_mapping_from_graph()
 
-    jsonified = jsonify(to_be_returned)
-    return jsonified
-
-@bp.route("/clingraph/edges", methods=["GET", "POST"])
-@cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
-def get_clingraph_edges():
-    to_be_returned = []
-    if request.method == "POST":
-        to_be_returned = get_src_tgt_mapping_from_clingraph(request.json)
-    elif request.method == "GET":
-        to_be_returned = get_src_tgt_mapping_from_clingraph()
     jsonified = jsonify(to_be_returned)
     return jsonified
 

@@ -19,15 +19,6 @@ function loadEdges(nodeInfo, backendURL) {
     }).then(r => r.json());
 }
 
-function loadClingraphEdges(shownNodes, backendURL) {
-    return fetch(`${backendURL("clingraph/edges")}`, {
-        method: "POST",
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(shownNodes)
-    }).then(r => r.json());
-}
 
 const useResize = (target) => {
     const [size, setSize] = React.useState()
@@ -44,7 +35,6 @@ export function Edges(props) {
     const { usingClingraph } = props;
     const colorPalete = useColorPalette();
     const [edges, setEdges] = React.useState([]);
-    const [clingraphEdges, setClingraphEdges] = React.useState([]);
     const target = React.useRef(null)
     useResize(target)
     const [{shownNodes},] = useShownNodes();
@@ -59,7 +49,8 @@ export function Edges(props) {
         
         const nodeInfo = {
             shownNodes: shownNodes,
-            shownRecursion: shownRecursion
+            shownRecursion: shownRecursion,
+            usingClingraph: usingClingraph
         }
         loadEdges(nodeInfo, backendURL)
         .then(items => {
@@ -69,35 +60,15 @@ export function Edges(props) {
         })
         return () => mounted = false;
     }, [shownNodes, shownRecursion, state, activeFilters]);
-
-    if (usingClingraph) {
-        React.useEffect(() => {
-            let mounted = true;
-
-            loadClingraphEdges(shownNodes, backendURL)
-                .then(items => {
-                    if (mounted) {
-                        setClingraphEdges(items)
-                        // setEdges(edges.concat(items))
-                    }
-                })
-            return () => mounted = false;
-        }, [shownNodes, state, activeFilters]);
-    };
-
     
     return <div ref={target} className="edge_container" >
             {edges.map(link => <LineTo
                 key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"top center"}
                 to={link.tgt} zIndex={1} borderColor={colorPalete.dark} borderStyle={"solid"} borderWidth={1} />)}
-            {!usingClingraph ? null:
-            clingraphEdges.map(link => <LineTo
-                key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"top center"}
-                to={link.tgt} zIndex={1} borderColor={colorPalete.dark} borderStyle={"dashed"} borderWidth={2} />)}
         </div>
+    }
 
         
-}
 
 Edges.propTypes = {
     /**
