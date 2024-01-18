@@ -25,7 +25,7 @@ Keyword arguments:
     _namespace = 'viasp_dash'
     _type = 'ViaspDash'
     @_explicitize_args
-    def __init__(self, id=Component.UNDEFINED, colorPalette=Component.UNDEFINED, clickedOn=Component.UNDEFINED, backendURL=Component.UNDEFINED, colors=Component.UNDEFINED, **kwargs):
+    def __init__(self, id=Component.UNDEFINED, colorPalette=Component.UNDEFINED, clickedOn=Component.UNDEFINED, backendURL=Component.UNDEFINED, **kwargs):
         self._prop_names = ['id', 'backendURL', 'clickedOn', 'colorPalette']
         self._valid_wildcard_attributes =            []
         self.available_properties = ['id', 'backendURL', 'clickedOn', 'colorPalette']
