@@ -148,48 +148,6 @@ class DependencyCollector(Transformer):
         return boolean_constant.update(**self.visit_children(boolean_constant, **kwargs))
 
 
-class TheoryTransformer(Transformer):
-
-    def visit_TheoryAtom(self, atom: AST) -> AST:
-        term = atom.term
-        new_heads = []
-        if term.name == "diff":
-            content: List[Union[AST, List[AST]]] = []
-            self.visit_children(atom, theory_content=content)
-            for i in content:
-                inner_var = ast.Function(term.location, '', i, 0) if isinstance(i, List) else i
-                inner__   = ast.Variable(term.location, 'X')  # TODO: get conflict free version?
-                outer_function = ast.Function(term.location, 'dl', [inner_var, inner__], 0)
-                outer_symatom = ast.SymbolicAtom(outer_function)
-                new_heads.append(ast.Literal(term.location, 0, outer_symatom))
-
-        return new_heads
-
-    def visit_TheoryAtomElement(self, atom_element, in_elem: bool = False, theory_content: List = []):
-        return atom_element.update(**self.visit_children(atom_element, True, theory_content))
-
-    def visit_TheoryGuard(self, guard, in_elem: bool = False, theory_content: List = []):
-        return guard.update(**self.visit_children(guard, in_elem, theory_content))
-    
-    def visit_SymbolicTerm(self, term, in_elem: bool = False, theory_content: List = []):
-        if in_elem:
-            if term.symbol.type == clingo.SymbolType.Function:
-                theory_content.append(term)
-        return term
-
-    def visit_Variable(self, variable, in_elem: bool = False, theory_content: List = []):
-        if in_elem:
-            theory_content.append(variable)
-        return variable
-
-    def visit_TheorySequence(self, sequence, in_elem: bool = False, theory_content: List = []):
-        if in_elem:
-            variables: List[AST] = []
-            for s in sequence.terms:
-                variables.append(s) # TODO: actually s could be any other theory_term
-            theory_content.append(variables)
-        return sequence
-
 
 class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     """
