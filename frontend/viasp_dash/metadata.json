@@ -23,7 +23,11 @@
           "name": "object"
         },
         "required": false,
-        "description": "Colors to be used in the application."
+        "description": "Colors to be used in the application.",
+        "defaultValue": {
+          "value": "{}",
+          "computed": false
+        }
       },
       "clickedOn": {
         "type": {
@@ -46,13 +50,6 @@
           "value": "DEFAULT_BACKEND_URL",
           "computed": true
         }
-      },
-      "colors": {
-        "defaultValue": {
-          "value": "{}",
-          "computed": false
-        },
-        "required": false
       }
     }
   }

@@ -78,7 +78,7 @@ def test_get_edges(client_with_a_graph):
     assert res.status_code == 200
     assert type(res.json) == list
     uuids = [node.uuid for node in client_with_a_graph.get("/graph").json]
-    res = client_with_a_graph.post("/graph/edges", json={"shownNodes": uuids, "shownRecursion": []})
+    res = client_with_a_graph.post("/graph/edges", json={"shownRecursion": []})
     assert res.status_code == 200
     assert type(res.json) == list
     assert len(res.json) == 8
@@ -89,7 +89,7 @@ def test_get_edges_with_recursion(client_with_a_recursive_graph):
     assert res.status_code == 200
     assert type(res.json) == list
     uuids = [node.uuid for node in client_with_a_recursive_graph.get("/graph").json]
-    res = client_with_a_recursive_graph.post("/graph/edges", json={"shownNodes": uuids, "shownRecursion": [uuids[-1]]})
+    res = client_with_a_recursive_graph.post("/graph/edges", json={"shownRecursion": [uuids[-1]]})
     assert res.status_code == 200
     assert type(res.json) == list
-    assert len(res.json) == 4
+    assert len(res.json) == 6

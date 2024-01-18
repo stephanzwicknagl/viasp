@@ -211,7 +211,7 @@ ViaspDash.propTypes = {
 };
 
 ViaspDash.defaultProps = {
-    colors: {},
+    colorPalette: {},
     clickedOn: {},
     backendURL: DEFAULT_BACKEND_URL
 }
