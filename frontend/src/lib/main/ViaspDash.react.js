@@ -147,7 +147,7 @@ MainWindow.propTypes = {
  * ViaspDash is the main dash component
  */
 export default function ViaspDash(props) {
-    const {id, backendURL, colorPalette} = props;
+    const {id, backendURL, setProps, colorPalette} = props;
 
     function notifyDash(clickedOn) {
         setProps({clickedOn: clickedOn})
