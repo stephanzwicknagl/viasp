@@ -48,7 +48,6 @@ export function Edges(props) {
         let mounted = true;
         
         const nodeInfo = {
-            shownNodes: shownNodes,
             shownRecursion: shownRecursion,
             usingClingraph: usingClingraph
         }
@@ -59,12 +58,24 @@ export function Edges(props) {
             }
         })
         return () => mounted = false;
-    }, [shownNodes, shownRecursion, state, activeFilters]);
+    }, [shownRecursion, state, activeFilters]);
     
     return <div ref={target} className="edge_container" >
-            {edges.map(link => <LineTo
+            {edges.map(link => {
+                if (link.recursion === "in") {
+                    return <LineTo
+                    key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"top center"} toAnchor={"top center"}
+                    to={link.tgt} zIndex={1} borderColor={colorPalete.dark} borderStyle={link.style} borderWidth={1} />
+                } else if (link.recursion === "out") {
+                    return <LineTo
+                    key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"bottom center"}
+                    to={link.tgt} zIndex={1} borderColor={colorPalete.dark} borderStyle={link.style} borderWidth={1} />
+                }
+                return <LineTo
                 key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"top center"}
-                to={link.tgt} zIndex={1} borderColor={colorPalete.dark} borderStyle={"solid"} borderWidth={1} />)}
+                to={link.tgt} zIndex={1} borderColor={colorPalete.dark} borderStyle={link.style} borderWidth={1} />
+                }
+            )}
         </div>
     }
 
