@@ -2,7 +2,7 @@
 import networkx as nx
 from clingo import Symbol
 from clingo.ast import Rule, ASTType, AST, Location
-from typing import List, Sequence
+from typing import List, Sequence, Optional
 from ..shared.simple_logging import warn
 from ..shared.model import Node, SymbolIdentifier
 from ..shared.util import pairwise, get_root_node_from_graph
@@ -105,14 +105,13 @@ def insert_atoms_into_nodes(path: List[Node]) -> None:
         state = set(map(SymbolIdentifier, (s.symbol for s in state)))
 
 
-def identify_reasons(g: nx.DiGraph) -> nx.DiGraph:
+def identify_reasons(g: nx.DiGraph) -> None:
     """
     Identify the reasons for each symbol in the graph.
     Takes the Symbol from node.reason and overwrites the values of the Dict node.reason
     with the SymbolIdentifier of the corresponding symbol.
 
     :param g: The graph to identify the reasons for.
-    :return: The graph with the reasons identified.
     """
     # get fact node:
     root_node = get_root_node_from_graph(g)
@@ -141,11 +140,10 @@ def identify_reasons(g: nx.DiGraph) -> nx.DiGraph:
             children_next = children_next.difference(searched_nodes)
         children_current = list(children_next)
 
-    return g
 
 
 def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol,
-                    super_graph=None, super_node=None) -> SymbolIdentifier:
+                    super_graph=None, super_node=None) -> Optional[SymbolIdentifier]:
     """
     Returns the SymbolIdentifier that is the reason for the given Symbol r.
     If the reason is not in the node, it returns recursively calls itself with the predecessor.
@@ -156,7 +154,7 @@ def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol,
     :param r: The symbol that is the reason
     """
     if (r in v.diff): return next(s for s in v.atoms if s == r)
-    if (g.in_degree(v) != 0): 
+    if (g.in_degree(v) != 0):
         for u in g.predecessors(v):
             return get_identifiable_reason(g, u, r, super_graph=super_graph, super_node=super_node)
     if (super_graph != None and super_node != None):
@@ -166,13 +164,12 @@ def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol,
     warn(f"An explanation could not be made")
     return None
 
-def calculate_spacing_factor(g: nx.DiGraph) -> nx.DiGraph:
+def calculate_spacing_factor(g: nx.DiGraph) -> None:
     """
     Calculate the spacing factor for each node the graph.
     This will make sure the branches of the graph are spaced out evenly.
 
     :param g: The graph.
-    :return: The graph with the spacing_multiplier in each node.
     """
     # get fact node:
     root_node = get_root_node_from_graph(g)
@@ -193,4 +190,3 @@ def calculate_spacing_factor(g: nx.DiGraph) -> nx.DiGraph:
                 children_next.append(w)
         children_current = children_next
         children_next = []
-    return g
