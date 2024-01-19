@@ -20,6 +20,3 @@ docs/_build/
 # ignore build of viasp dash
 # frontend/viasp_dash/*
 # data
-backend/src/viasp/shared/prg.lp
-backend/src/viasp/shared/viasp_graph_storage.json
-backend/src/viasp/shared/viasp_stdin_tmp.lp
