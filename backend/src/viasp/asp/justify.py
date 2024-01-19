@@ -159,7 +159,10 @@ def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collect
         new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, h_symbols, recursion_transformations, conflict_free_h, analyzer)
         paths.append(new_path)
 
-    result_graph = calculate_spacing_factor(identify_reasons(join_paths_with_facts(paths)))
+    result_graph = nx.DiGraph()
+    result_graph.update(join_paths_with_facts(paths))
+    calculate_spacing_factor(result_graph)
+    identify_reasons(result_graph)
     if analyzer.pass_through:
         append_noops(result_graph, analyzer)
     return result_graph
