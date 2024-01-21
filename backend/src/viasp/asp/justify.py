@@ -25,7 +25,8 @@ def get_h_symbols_from_model(wrapped_stable_model: Iterable[Symbol],
                              transformed_prg: Collection[Union[str, AST]],
                              facts: List[Symbol],
                              constants: List[Symbol],
-                             h="h") -> List[Symbol]:
+                             h="h",
+                             h_showTerm="h_showTerm") -> List[Symbol]:
     rules_that_are_reasons_why = []
     ctl = Control()
     stringified = "".join(map(str, transformed_prg))
@@ -39,7 +40,10 @@ def get_h_symbols_from_model(wrapped_stable_model: Iterable[Symbol],
     ctl.ground([("base", [])])
     for x in ctl.symbolic_atoms.by_signature(new_head, 3):
         if x.symbol.arguments[1] in facts:
+            print(f"Skipping {x.symbol.arguments[1]} because it is a fact", flush=True)
             continue
+        rules_that_are_reasons_why.append(x.symbol)
+    for x in ctl.symbolic_atoms.by_signature(h_showTerm, 3):
         rules_that_are_reasons_why.append(x.symbol)
     return rules_that_are_reasons_why
 
@@ -145,6 +149,7 @@ def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collect
     paths: List[nx.DiGraph] = []
     facts = analyzer.get_facts()
     conflict_free_h = analyzer.get_conflict_free_h()
+    conflict_free_h_showTerm = analyzer.get_conflict_free_h_showTerm()
     identifiable_facts = map(SymbolIdentifier,facts)
     sorted_program = analyzer.get_sorted_program()
     mapping = make_transformation_mapping(sorted_program)
@@ -155,8 +160,10 @@ def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collect
         single_node_graph.add_node(fact_node)
         return single_node_graph
     for model in wrapped_stable_models:
-        h_symbols = get_h_symbols_from_model(model, transformed_prg, facts, analyzer.get_constants(),
-                                            conflict_free_h)
+        h_symbols = get_h_symbols_from_model(model, transformed_prg, facts,
+                                             analyzer.get_constants(),
+                                             conflict_free_h,
+                                             conflict_free_h_showTerm)
         new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, h_symbols, recursion_transformations, conflict_free_h, analyzer)
         paths.append(new_path)
 

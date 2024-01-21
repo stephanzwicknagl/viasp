@@ -183,20 +183,6 @@ class DependencyCollector(Transformer):
             **self.visit_children(boolean_constant, **kwargs))
 
 
-# class NameCollector(FilteredTransformer):
-#     """
-#     Receives a ASP program and finds all names of symbols and variables, etc.
-#     """
-
-#     def __init__(self):
-#         super().__init__()
-
-#     def add_program(self, program: str) -> None:
-#         parse_string(program, lambda statement: self.visit(statement) and None)
-
-
-
-
 class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     """
     Receives a ASP program and finds it's dependencies within, can sort a program by it's dependencies.
@@ -237,6 +223,9 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
     def get_conflict_free_showTerm(self):
         return self._get_conflict_free_version_of_name("showTerm")
+
+    def get_conflict_free_h_showTerm(self):
+        return self._get_conflict_free_version_of_name("h_showTerm")
 
     def get_conflict_free_variable(self):
         """
@@ -299,7 +288,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             definition: ast.Definition,  # type: ignore
             **kwargs: Any) -> AST:
         self.constants.add(definition)
-        
+
         self.names.add(definition.name)
         return definition.update(**self.visit_children(definition, **kwargs))
 
@@ -581,11 +570,13 @@ class ProgramReifier(DependencyCollector):
     def __init__(self,
                  rule_nr=1,
                  h="h",
+                 h_showTerm="h_showTerm",
                  model="model",
                  get_conflict_free_variable=lambda s: s,
                  conflict_free_showTerm: str ="ShowTerm"):
         self.rule_nr = rule_nr
         self.h = h
+        self.h_showTerm = h_showTerm
         self.model = model
         self.get_conflict_free_variable = get_conflict_free_variable
         self.conflict_free_showTerm = conflict_free_showTerm
@@ -596,6 +587,7 @@ class ProgramReifier(DependencyCollector):
         dependant: ast.Literal,
         conditions: List[ast.Literal],
         reasons: List[ast.Literal],
+        use_h_showTerm: bool = False,
     ):
         """
         In: H :- B.
@@ -613,7 +605,11 @@ class ProgramReifier(DependencyCollector):
         reason_fun = ast.Function(loc, "", reasons, 0)
         reason_lit = ast.Literal(loc, ast.Sign.NoSign, reason_fun)
 
-        return [ast.Function(loc, self.h, [loc_lit, dependant, reason_lit], 0)]
+        h_attribute = self.h_showTerm if use_h_showTerm else self.h
+
+        return [
+            ast.Function(loc, h_attribute, [loc_lit, dependant, reason_lit], 0)
+        ]
 
     def visit_Rule(self, rule: clingo.ast.Rule):
         """
@@ -704,7 +700,7 @@ class ProgramReifier(DependencyCollector):
             rename_variables=False,
         )
         new_head_s = self._nest_rule_head_in_h_with_explanation_tuple(
-            showTerm.location, showTerm.term, [], reason_literals)
+            showTerm.location, showTerm.term, [], reason_literals, True)
 
         new_body_literals.insert(
             0,

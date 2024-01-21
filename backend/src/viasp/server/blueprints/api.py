@@ -176,6 +176,7 @@ def show_selected_models():
         reified = reify_list(
             analyzer.get_sorted_program(),
             h=analyzer.get_conflict_free_h(),
+            h_showTerm=analyzer.get_conflict_free_h_showTerm(),
             model=analyzer.get_conflict_free_model(),
             get_conflict_free_variable=analyzer.get_conflict_free_variable,
             conflict_free_showTerm=analyzer.get_conflict_free_showTerm())
