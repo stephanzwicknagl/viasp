@@ -25,7 +25,8 @@ def get_h_symbols_from_model(wrapped_stable_model: Iterable[Symbol],
                              transformed_prg: Collection[Union[str, AST]],
                              facts: List[Symbol],
                              constants: List[Symbol],
-                             h="h") -> List[Symbol]:
+                             h="h",
+                             h_showTerm="h_showTerm") -> List[Symbol]:
     rules_that_are_reasons_why = []
     ctl = Control()
     stringified = "".join(map(str, transformed_prg))
@@ -39,7 +40,10 @@ def get_h_symbols_from_model(wrapped_stable_model: Iterable[Symbol],
     ctl.ground([("base", [])])
     for x in ctl.symbolic_atoms.by_signature(new_head, 3):
         if x.symbol.arguments[1] in facts:
+            print(f"Skipping {x.symbol.arguments[1]} because it is a fact", flush=True)
             continue
+        rules_that_are_reasons_why.append(x.symbol)
+    for x in ctl.symbolic_atoms.by_signature(h_showTerm, 3):
         rules_that_are_reasons_why.append(x.symbol)
     return rules_that_are_reasons_why
 
@@ -71,7 +75,7 @@ def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_i
         SymbolIdentifier(symbol),tmp_symbol[rule_nr])
     if pad:
         h_symbols = [
-            Node(frozenset(tmp_symbol[rule_nr]), rule_nr, reason=tmp_reason[rule_nr]) if rule_nr in tmp_symbol else Node(frozenset(), rule_nr) for 
+            Node(frozenset(tmp_symbol[rule_nr]), rule_nr, reason=tmp_reason[rule_nr]) if rule_nr in tmp_symbol else Node(frozenset(), rule_nr) for
             rule_nr in relevant_indices]
     else:
         h_symbols = [
@@ -84,9 +88,9 @@ def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_i
 def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
                                             rule_mapping: Dict[int, Union[AST, str]],
                                             fact_node: Node, h_syms,
-                                            recursive_transformations:frozenset, 
-                                            h="h", 
-                                            analyzer: ProgramAnalyzer = None,
+                                            recursive_transformations:frozenset,
+                                            h="h",
+                                            analyzer: ProgramAnalyzer = ProgramAnalyzer(),
                                             pad=True) \
                                             -> nx.DiGraph:
     h_syms = collect_h_symbols_and_create_nodes(h_syms, rule_mapping.keys(), pad)
@@ -106,7 +110,7 @@ def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
 
     for a, b in pairwise(h_syms):
         if rule_mapping[b.rule_nr].rules in recursive_transformations:
-            b.recursive = get_recursion_subgraph(a.atoms, 
+            b.recursive = get_recursion_subgraph(a.atoms,
                                                  b.diff,
                                                  rule_mapping[b.rule_nr],
                                                  h,
@@ -140,10 +144,12 @@ def append_noops(result_graph: DiGraph, analyzer: ProgramAnalyzer):
 
 
 def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collection[AST],
-                analyzer: ProgramAnalyzer, recursion_transformations: frozenset) -> nx.DiGraph:
+                analyzer: ProgramAnalyzer,
+                recursion_transformations: frozenset) -> nx.DiGraph:
     paths: List[nx.DiGraph] = []
     facts = analyzer.get_facts()
     conflict_free_h = analyzer.get_conflict_free_h()
+    conflict_free_h_showTerm = analyzer.get_conflict_free_h_showTerm()
     identifiable_facts = map(SymbolIdentifier,facts)
     sorted_program = analyzer.get_sorted_program()
     mapping = make_transformation_mapping(sorted_program)
@@ -154,8 +160,10 @@ def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collect
         single_node_graph.add_node(fact_node)
         return single_node_graph
     for model in wrapped_stable_models:
-        h_symbols = get_h_symbols_from_model(model, transformed_prg, facts, analyzer.get_constants(),
-                                            conflict_free_h)
+        h_symbols = get_h_symbols_from_model(model, transformed_prg, facts,
+                                             analyzer.get_constants(),
+                                             conflict_free_h,
+                                             conflict_free_h_showTerm)
         new_path = make_reason_path_from_facts_to_stable_model(model, mapping, fact_node, h_symbols, recursion_transformations, conflict_free_h, analyzer)
         paths.append(new_path)
 
@@ -213,9 +221,11 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
         for dependant, conditions in deps.items():
             if has_an_interval(dependant):
                 # replace dependant with variable: e.g. (1..3) -> X
-                variables = [ast.Variable(loc, analyzer.get_conflict_free_variable())
-                                if arg.ast_type == ast.ASTType.Interval else arg
-                                for arg in dependant.atom.symbol.arguments]
+                variables = [
+                    ast.Variable(loc, analyzer.get_conflict_free_variable())
+                    if arg.ast_type == ast.ASTType.Interval else arg
+                    for arg in dependant.atom.symbol.arguments
+                ]
                 symbol = ast.SymbolicAtom(ast.Function(loc,
                                                         dependant.atom.symbol.name,
                                                         variables,
@@ -237,7 +247,10 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
             reason_fun = ast.Function(loc, '', reason_literals, 0)
             reason_lit = ast.Literal(loc, ast.Sign.NoSign, reason_fun)
 
-            new_head_s = [ast.Function(loc, analyzer.get_conflict_free_h(), [loc_lit, dependant, reason_lit], 0)]
+            new_head_s = [
+                ast.Function(loc, analyzer.get_conflict_free_h(),
+                             [loc_lit, dependant, reason_lit], 0)
+            ]
 
             # new_body.insert(0, dependant)
             new_body.extend(conditions)
