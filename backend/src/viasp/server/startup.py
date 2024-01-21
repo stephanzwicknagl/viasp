@@ -57,7 +57,7 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     #     display_refresh_button()
 
     print(f"Starting backend at {backend_url}")
-    log = open('viasp.log', 'a', encoding="utf-8")
+    log = open('viasp.log', 'w', encoding="utf-8")
     viasp_backend = Popen(command, stdout=log, stderr=log)
 
     app = Dash(__name__)

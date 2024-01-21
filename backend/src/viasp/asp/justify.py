@@ -40,7 +40,6 @@ def get_h_symbols_from_model(wrapped_stable_model: Iterable[Symbol],
     ctl.ground([("base", [])])
     for x in ctl.symbolic_atoms.by_signature(new_head, 3):
         if x.symbol.arguments[1] in facts:
-            print(f"Skipping {x.symbol.arguments[1]} because it is a fact", flush=True)
             continue
         rules_that_are_reasons_why.append(x.symbol)
     for x in ctl.symbolic_atoms.by_signature(h_showTerm, 3):
