@@ -53,8 +53,11 @@ def test_conflict_variables_are_resolved():
     expected = "h(42, 11). h_(1,2). h__(1,model(X),(y(X),)) :- model(X), y(X)."
     analyzer = ProgramAnalyzer()
     analyzer.add_program(program)
-    assertProgramEqual(transform(program, h=analyzer.get_conflict_free_h(), model=analyzer.get_conflict_free_model()),
-                       parse_program_to_ast(expected))
+    assertProgramEqual(
+        transform(program,
+                  h=analyzer.get_conflict_free_h(),
+                  model=analyzer.get_conflict_free_model()),
+        parse_program_to_ast(expected))
 
 
 def test_normal_rule_with_negation_is_transformed_correctly():
@@ -166,4 +169,3 @@ def test_disjunctions_in_head():
     h(1, p(X), (r(X),)) :- p(X), r(X). 
     h(1, q(X), (r(X),)) :- q(X), r(X). """
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
-

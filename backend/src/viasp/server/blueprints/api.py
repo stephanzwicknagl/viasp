@@ -1,5 +1,4 @@
 from typing import Tuple, Any, Dict, Iterable
-from unittest.mock import NonCallableMagicMock
 
 from flask import request, Blueprint, jsonify, abort, Response
 from flask_cors import cross_origin
@@ -10,7 +9,7 @@ from clingraph.orm import Factbase
 from clingraph.graphviz import compute_graphs, render
 from ...shared.defaults import CLINGRAPH_PATH
 
-from .dag_api import set_graph, last_nodes_in_graph, get_graph
+from .dag_api import set_graph
 from ..database import CallCenter, ProgramDatabase
 from ...asp.justify import build_graph
 from ...asp.reify import ProgramAnalyzer, reify_list
@@ -46,7 +45,7 @@ def get_calls():
 def get_program():
     db = ProgramDatabase()
     return db.get_program()
-    
+
 
 @bp.route("/control/add_call", methods=["POST"])
 def add_call():
@@ -122,14 +121,15 @@ def set_transformer():
     return "ok"
 
 
-def wrap_marked_models(marked_models: Iterable[StableModel]):
+def wrap_marked_models(marked_models: Iterable[StableModel],
+                       conflict_free_showTerm: str = "ShowTerm"):
     result = []
     for model in marked_models:
         wrapped = []
         for part in model.atoms:
             wrapped.append(f"{part}.")
         for part in model.terms:
-            wrapped.append(f"{part}.")
+            wrapped.append(f"{conflict_free_showTerm}({part}).")
         result.append(wrapped)
     return result
 
@@ -163,18 +163,22 @@ def get_warnings():
 @bp.route("/control/show", methods=["POST"])
 @cross_origin(origin='localhost', headers=['Content-Type', 'Authorization'])
 def show_selected_models():
-    marked_models = dc.models
-    marked_models = wrap_marked_models(marked_models)
-
     db = ProgramDatabase()
     analyzer = ProgramAnalyzer()
     analyzer.add_program(db.get_program(), dc.transformer)
     _set_warnings(analyzer.get_filtered())
+
+    marked_models = dc.models
+    marked_models = wrap_marked_models(marked_models,
+                                       analyzer.get_conflict_free_showTerm())
     if analyzer.will_work():
         recursion_rules = analyzer.check_positive_recursion()
-        reified = reify_list(analyzer.get_sorted_program(), h=analyzer.get_conflict_free_h(),
-                             model=analyzer.get_conflict_free_model(),
-                             get_conflict_free_variable=analyzer.get_conflict_free_variable)
+        reified = reify_list(
+            analyzer.get_sorted_program(),
+            h=analyzer.get_conflict_free_h(),
+            model=analyzer.get_conflict_free_model(),
+            get_conflict_free_variable=analyzer.get_conflict_free_variable,
+            conflict_free_showTerm=analyzer.get_conflict_free_showTerm())
         g = build_graph(marked_models, reified, analyzer, recursion_rules)
 
         set_graph(g)
@@ -215,7 +219,7 @@ def clingraph_generate():
 
                     filename = uuid4().hex
                     using_clingraph.append(filename)
-                    
+
                     render(graphs, format="png", directory=CLINGRAPH_PATH, name_format=filename, engine=engine)
     if request.method == "GET":
         if len(using_clingraph) > 0:

@@ -115,8 +115,9 @@ def serializable_recursive_graph() -> Dict:
     analyzer.add_program(program)
     recursion_rules = analyzer.check_positive_recursion()
     saved_models = get_stable_models_for_program(program)
-    reified = reify_list(analyzer.get_sorted_program(), h=analyzer.get_conflict_free_h(),
-                             model=analyzer.get_conflict_free_model())
+    reified = reify_list(analyzer.get_sorted_program(),
+                         h=analyzer.get_conflict_free_h(),
+                         model=analyzer.get_conflict_free_model())
     g = build_graph(saved_models, reified, analyzer, recursion_rules)
 
     serializable_recursive_graph = node_link_data(g)

@@ -71,7 +71,7 @@ def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_i
         SymbolIdentifier(symbol),tmp_symbol[rule_nr])
     if pad:
         h_symbols = [
-            Node(frozenset(tmp_symbol[rule_nr]), rule_nr, reason=tmp_reason[rule_nr]) if rule_nr in tmp_symbol else Node(frozenset(), rule_nr) for 
+            Node(frozenset(tmp_symbol[rule_nr]), rule_nr, reason=tmp_reason[rule_nr]) if rule_nr in tmp_symbol else Node(frozenset(), rule_nr) for
             rule_nr in relevant_indices]
     else:
         h_symbols = [
@@ -84,9 +84,9 @@ def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_i
 def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
                                             rule_mapping: Dict[int, Union[AST, str]],
                                             fact_node: Node, h_syms,
-                                            recursive_transformations:frozenset, 
-                                            h="h", 
-                                            analyzer: ProgramAnalyzer = None,
+                                            recursive_transformations:frozenset,
+                                            h="h",
+                                            analyzer: ProgramAnalyzer = ProgramAnalyzer(),
                                             pad=True) \
                                             -> nx.DiGraph:
     h_syms = collect_h_symbols_and_create_nodes(h_syms, rule_mapping.keys(), pad)
@@ -106,7 +106,7 @@ def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
 
     for a, b in pairwise(h_syms):
         if rule_mapping[b.rule_nr].rules in recursive_transformations:
-            b.recursive = get_recursion_subgraph(a.atoms, 
+            b.recursive = get_recursion_subgraph(a.atoms,
                                                  b.diff,
                                                  rule_mapping[b.rule_nr],
                                                  h,
@@ -140,7 +140,8 @@ def append_noops(result_graph: DiGraph, analyzer: ProgramAnalyzer):
 
 
 def build_graph(wrapped_stable_models: Collection[str], transformed_prg: Collection[AST],
-                analyzer: ProgramAnalyzer, recursion_transformations: frozenset) -> nx.DiGraph:
+                analyzer: ProgramAnalyzer,
+                recursion_transformations: frozenset) -> nx.DiGraph:
     paths: List[nx.DiGraph] = []
     facts = analyzer.get_facts()
     conflict_free_h = analyzer.get_conflict_free_h()
@@ -210,9 +211,11 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
         for dependant, conditions in deps.items():
             if has_an_interval(dependant):
                 # replace dependant with variable: e.g. (1..3) -> X
-                variables = [ast.Variable(loc, analyzer.get_conflict_free_variable())
-                                if arg.ast_type == ast.ASTType.Interval else arg
-                                for arg in dependant.atom.symbol.arguments]
+                variables = [
+                    ast.Variable(loc, analyzer.get_conflict_free_variable())
+                    if arg.ast_type == ast.ASTType.Interval else arg
+                    for arg in dependant.atom.symbol.arguments
+                ]
                 symbol = ast.SymbolicAtom(ast.Function(loc,
                                                         dependant.atom.symbol.name,
                                                         variables,
@@ -234,7 +237,10 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
             reason_fun = ast.Function(loc, '', reason_literals, 0)
             reason_lit = ast.Literal(loc, ast.Sign.NoSign, reason_fun)
 
-            new_head_s = [ast.Function(loc, analyzer.get_conflict_free_h(), [loc_lit, dependant, reason_lit], 0)]
+            new_head_s = [
+                ast.Function(loc, analyzer.get_conflict_free_h(),
+                             [loc_lit, dependant, reason_lit], 0)
+            ]
 
             # new_body.insert(0, dependant)
             new_body.extend(conditions)

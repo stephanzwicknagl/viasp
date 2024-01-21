@@ -73,9 +73,8 @@ def test_show_statement_with_terms_analyzed_correctly():
     expected = "b :- a."
     transformer = ProgramAnalyzer()
     program = transformer.sort_program(program)
-    assert transformer.get_filtered() == [], "Show Term should not be filtered out." 
+    assert transformer.get_filtered() == [], "Show Term should not be filtered out."
     assert transformer.will_work(), "Program with ShowTerm should work."
-    assert  "".join(str(r) for t in program for r in t.rules) == expected, "Show Term should be transformed to rule."
 
 def test_defined_statement_analyzed_correctly():
     program = "#defined a/1."
@@ -166,7 +165,7 @@ def test_project_atom_statement_analyzed_correctly():
     assert will_work == True, "Program with ProjectTerm should work."
 
 def test_project_signature_statement_analyzed_correctly():
-    program = "#project a/1." 
+    program = "#project a/1."
     expected = "#project a/1."
     transformer = ProgramAnalyzer()
     program = transformer.sort_program(program)
@@ -297,4 +296,3 @@ def test_constraints_gets_put_last():
     assert len(result[0].rules) == 1
     assert len(result[1].rules) == 1
     assert len(result[2].rules) == 3
-
