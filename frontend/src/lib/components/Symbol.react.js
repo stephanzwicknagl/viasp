@@ -43,10 +43,10 @@ export function Symbol(props) {
     atomString = atomString.length === 0 ? "" : atomString;
 
     if (reasons !== undefined && reasons.length !== 0 && isHovered) {
-        style1 = { backgroundColor: colorPalette.success };
+        style1 = {backgroundColor: colorPalette.explanationSuccess};
     }
     if (reasons !== undefined && reasons.length !== 0 && isClicked) {
-        style1 = { backgroundColor: colorPalette.info };
+        style1 = {backgroundColor: colorPalette.infoBackground};
     }
 
     const handleMouseEnter = () => setIsHovered(true);

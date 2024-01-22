@@ -26,7 +26,7 @@ function ClearMarked() {
         style1.background = darken(0.08, style1.background);
     }
     if (isClicked) {
-        style1.background= colorPalette.info;
+        style1.background = colorPalette.infoBackground;
     }
 
     const handleMouseEnter = () => setIsHovered(true);

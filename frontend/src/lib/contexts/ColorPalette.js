@@ -23,13 +23,10 @@ ColorPaletteProvider.propTypes = {
     colorPalette: PropTypes.exact({
         primary: PropTypes.string,
         light: PropTypes.string,
-        medium: PropTypes.string,
         dark: PropTypes.string,
-        twenty: PropTypes.objectOf(PropTypes.string),
-        highlight: PropTypes.objectOf(PropTypes.string),
-        success: PropTypes.string,
-        info: PropTypes.string,
-        warning: PropTypes.string,
-        danger: PropTypes.string,
+        infoBackground: PropTypes.string,
+        rowShading: PropTypes.objectOf(PropTypes.string),
+        explanationSuccess: PropTypes.string,
+        explanationHighlights: PropTypes.objectOf(PropTypes.string),
     }),
 };

@@ -92,7 +92,7 @@ export function Detail(props) {
         return () => mounted = false;
     }, [shows])
 
-    return <div id="detailSidebar" style={{ backgroundColor: colorPalette.info, color: colorPalette.dark}}
+    return <div id="detailSidebar" style={{ backgroundColor: colorPalette.infoBackground, color: colorPalette.dark}}
                 className={shows === null ? `detail`:`detail detail-open`}>
         <h3><CloseButton onClick={clearDetail}/>{type}</h3>
         {data===null ? 
