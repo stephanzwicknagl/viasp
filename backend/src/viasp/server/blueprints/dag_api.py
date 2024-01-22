@@ -145,7 +145,7 @@ def get_src_tgt_mapping_from_graph(shown_recursive_ids=[], shown_clingraph=False
                             "style": "solid"} for last_node in last_nodes])
     
     if shown_clingraph:
-        from .api import using_clingraph, last_nodes_in_graph
+        from .api import using_clingraph
         to_be_added += [
                 {"src": src, 
                 "tgt": tgt,
