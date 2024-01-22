@@ -32,7 +32,7 @@ function NodeContent(props) {
     const { node, setHeight, parentID, setIsOverflowV, expandNode, isSubnode } = props;
     const colorPalette = useColorPalette();
     const [{ activeFilters },] = useFilters();
-    const [highlightedSymbol, toggleHighlightedSymbol, setHighlightedSymbol] = useHighlightedSymbol();
+    const [highlightedSymbol, toggleHighlightedSymbol] = useHighlightedSymbol();
     const [, toggleShownRecursion,] = useShownRecursion();
     const standardNodeHeight = 80;
     const minimumNodeHeight = 34;
@@ -79,7 +79,7 @@ function NodeContent(props) {
         else {
             const childRect = childElement.getBoundingClientRect();
             const parentRect = parentElement.getBoundingClientRect();
-            return { "fittingHeight": childRect.bottom - parentRect.top, "isMarked": i !== -1 || j !== -1 };
+            return { "fittingHeight": childRect.bottom - parentRect.top + 5, "isMarked": i !== -1 || j !== -1 };
         }
     }
 
@@ -102,7 +102,7 @@ function NodeContent(props) {
                 });
             }
             else { // marked node is not under the fold
-                setHeight(height => Math.max(height, Math.min(standardNodeHeight, maxSymbolHeight)));
+                setHeight(Math.min(standardNodeHeight, maxSymbolHeight));
                 setIsOverflowV(maxSymbolHeight > standardNodeHeight)
             }
         };
@@ -124,14 +124,13 @@ function NodeContent(props) {
     })
 
     const classNames2 = `set_value`
-    const containerNames = `set_container`
     let renderedSymbols = contentToShow.filter(symbol =>
         symbolShouldBeShown(symbol)).map(s => {
             // const [classNames1, style1] = useHighlightedSymbolAndReasonToCreateClassName(highlightedSymbol, s.uuid, node.reason[make_atoms_string(s)]);
             return <Symbol key={JSON.stringify(s)} symbolIdentifier={s} isSubnode={isSubnode} reasons={node.reason[make_atoms_string(s)]} handleClick={handleClick}/>
         })
 
-    return <div className={containerNames} 
+    return <div className='set_container'
                 style={{"color": colorPalette.dark}}>
         <span className={classNames2}>{renderedSymbols.length > 0 ? renderedSymbols : ""}</span>
     </div>
