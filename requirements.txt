@@ -2,7 +2,6 @@ clingo==5.6.1
 flask>=2.2.0
 networkx>=2.6
 pytest>=6.2.4
-clingox>=1.0.0
 requests
 dash
 flask-cors

@@ -1,0 +1,18 @@
+{
+    "primary": "#879ee7",
+    "light": "#F4F5FA",
+    "dark": "#444",
+    "infoBackground": "#B3BAC5",
+    "rowShading": {
+        "0": "#a9a9a92f",
+        "1": "#ffffff"
+    },
+    "explanationSuccess": "#36B37E", 
+    "explanationHighlights": {
+        "0": "#d48521",
+        "1": "#9a8298",
+        "2": "#e0e4ac",
+        "3": "#98f4e2",
+        "4": "#21d485"
+    }
+}

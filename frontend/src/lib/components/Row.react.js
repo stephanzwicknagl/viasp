@@ -127,14 +127,14 @@ export class RowTemplate extends React.Component {
 
         return (
             <ColorPaletteContext.Consumer>
-                {({twenty}) => {
+                {({rowShading}) => {
                     const scaleConstant = 0.02;
                     const shadowConstant = 15;
                     const opacityMultiplier = 0.8;
                     const scale = itemSelected * scaleConstant + 1;
                     const shadow = itemSelected * shadowConstant + 0;
                     const dragged = itemSelected !== 0;
-                    const background = Object.values(twenty);
+                    const background = Object.values(rowShading);
 
 
                     const containerStyle = {
@@ -295,26 +295,40 @@ export function Row(props) {
             {!showNodes ? null : (
                 <div ref={rowbodyRef} className="row_row">
                     {nodes.map((child) => {
+                        const space_multiplier = 25;
+                        // const space_multiplier = child.space_multiplier * 100;
                         if (
                             child.recursive &&
                             shownRecursion.indexOf(child.uuid) !== -1
                         ) {
                             return (
-                                <RecursiveSuperNode
+                                <div
+                                    className="branch_space"
+                                    key={child.uuid}
+                                    style={{flex: `0 0 ${space_multiplier}%`}}
+                                >
+                                    <RecursiveSuperNode
                                     key={child.uuid}
                                     node={child}
                                     showMini={isOverflowH}
                                 />
+                                </div>
                             );
                         }
                         return (
-                            <Node
+                            <div
+                                className="branch_space"
                                 key={child.uuid}
-                                node={child}
-                                showMini={isOverflowH}
-                                isSubnode={false}
-                            />
-                        );
+                                style={{flex: `0 0 ${space_multiplier}%`}}
+                            >
+                                <Node
+                                    key={child.uuid}
+                                    node={child}
+                                    showMini={isOverflowH}
+                                    isSubnode={false}
+                                />
+                            </div>
+                            );
                     })}
                 </div>
             )}

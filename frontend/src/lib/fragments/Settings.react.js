@@ -17,16 +17,18 @@ function ClearMarked() {
     const [isHovered, setIsHovered] = useState(false);
     const [isClicked, setIsClicked] = useState(false);
 
-    let style1 = { 
-                background: colorPalette.success, 
-                color: colorPalette.dark,
-                border: `1px solid ${colorPalette.dark}`};
+    const hoverFactor = 0.08;
+    const style = {
+        background: colorPalette.explanationSuccess,
+        color: colorPalette.dark,
+        border: `1px solid ${colorPalette.dark}`,
+    };
 
     if (isHovered) {
-        style1.background = darken(0.08, style1.background);
+        style.background = darken(hoverFactor, style.background);
     }
     if (isClicked) {
-        style1.background= colorPalette.info;
+        style.background = colorPalette.infoBackground;
     }
 
     const handleMouseEnter = () => setIsHovered(true);
@@ -36,7 +38,7 @@ function ClearMarked() {
 
     return <span onClick={() => setHighlightedSymbol([])}
                 className={className}
-                style={style1}
+                style={style}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
                 onMouseDown={handleMouseDown}

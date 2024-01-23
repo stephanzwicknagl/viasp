@@ -98,8 +98,8 @@ def test_get_edges(client_with_a_graph):
     res = client.get(f"/graph/edges")
     assert res.status_code == 200
     assert type(res.json) == list
-    uuids = [node.uuid for node in client.get(f"/graph").json]
-    res = client.post(f"/graph/edges", json={"shownNodes": uuids, "shownRecursion": []})
+    uuids = [node.uuid for node in client_with_a_graph.get("/graph").json]
+    res = client_with_a_graph.post("/graph/edges", json={"shownRecursion": []})
     assert res.status_code == 200
     assert type(res.json) == list
     if "{b(X)}" in program:

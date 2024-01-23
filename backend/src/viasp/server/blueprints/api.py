@@ -1,8 +1,6 @@
 from typing import Tuple, Any, Dict, Iterable, Collection, List
-from unittest.mock import NonCallableMagicMock
 
 from flask import request, Blueprint, jsonify, abort, Response, current_app
-from flask_cors import cross_origin
 from uuid import uuid4
 
 from clingo import Control
@@ -11,12 +9,12 @@ from clingo.ast import AST
 from clingraph.graphviz import compute_graphs, render
 from ...shared.defaults import CLINGRAPH_PATH
 
-from .dag_api import save_graph, last_nodes_in_graph, get_graph
+from .dag_api import save_graph
 from ..database import CallCenter, ProgramDatabase
 from ...asp.justify import build_graph
 from ...asp.reify import ProgramAnalyzer, reify_list
 from ...asp.relax import ProgramRelaxer, relax_constraints
-from ...shared.model import ClingoMethodCall, StableModel, Transformation
+from ...shared.model import ClingoMethodCall, StableModel
 from ...shared.util import hash_from_sorted_transformations
 from ...asp.replayer import apply_multiple
 
@@ -48,7 +46,7 @@ def get_calls():
 def get_program():
     db = ProgramDatabase()
     return db.get_program()
-    
+
 
 @bp.route("/control/add_call", methods=["POST"])
 def add_call():
@@ -126,12 +124,15 @@ def set_transformer():
     return "ok", 200
 
 
-def wrap_marked_models(marked_models: Iterable[StableModel]) -> List[List[str]]:
+def wrap_marked_models(marked_models: Iterable[StableModel],
+                       conflict_free_showTerm: str = "ShowTerm")  -> List[List[str]]:
     result = []
     for model in marked_models:
         wrapped = []
         for part in model.atoms:
             wrapped.append(f"{part}.")
+        for part in model.terms:
+            wrapped.append(f"{conflict_free_showTerm}({part}).")
         result.append(wrapped)
     return result
 
@@ -157,21 +158,29 @@ def set_warnings():
 
 @bp.route("/control/show", methods=["POST"])
 def show_selected_models():
-    marked_models: List[List[str]] = wrap_marked_models(dc.models)
-
     db = ProgramDatabase()
     analyzer = ProgramAnalyzer()
     analyzer.add_program(db.get_program(), dc.transformer)
     _set_warnings(analyzer.get_filtered())
+
+    marked_models = dc.models
+    marked_models = wrap_marked_models(marked_models,
+                                       analyzer.get_conflict_free_showTerm())
     if analyzer.will_work():
         recursion_rules = analyzer.check_positive_recursion()
         for sorted_program in analyzer.get_sorted_program():
-            reified: Collection[AST] = reify_list(sorted_program, 
-                                h=analyzer.get_conflict_free_h(),
-                                model=analyzer.get_conflict_free_model(),
-                                get_conflict_free_variable=analyzer.get_conflict_free_variable)
-            g = build_graph(marked_models, reified, sorted_program, analyzer, recursion_rules)
-            save_graph(g, hash_from_sorted_transformations(sorted_program), current_app.json.dumps(sorted_program))
+            reified: Collection[AST] = reify_list(
+                sorted_program,
+                h=analyzer.get_conflict_free_h(),
+                h_showTerm=analyzer.get_conflict_free_h_showTerm(),
+                model=analyzer.get_conflict_free_model(),
+                get_conflict_free_variable=analyzer.get_conflict_free_variable,
+                conflict_free_showTerm=analyzer.get_conflict_free_showTerm())
+            g = build_graph(marked_models, reified, sorted_program, analyzer,
+                            recursion_rules)
+            save_graph(g, hash_from_sorted_transformations(sorted_program),
+                       current_app.json.dumps(sorted_program))
+
     return "ok", 200
 
 
@@ -229,4 +238,3 @@ def stringify_reified(reified: List[Collection[AST]]) -> str:
     ab = [", ".join(list(map(str,r))) for r in reified]
     st = '\n    '.join(ab)
     return st
-

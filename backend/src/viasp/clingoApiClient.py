@@ -49,7 +49,8 @@ class ClingoClient(ViaspClient):
 
     def set_target_stable_model(self, stable_models: Collection[StableModel]):
         serialized = json.dumps(stable_models, cls=DataclassJSONEncoder)
-        r = requests.post(f"{self.backend_url}/control/models", data=serialized,
+        r = requests.post(f"{self.backend_url}/control/models",
+                          data=serialized,
                           headers={'Content-Type': 'application/json'})
         if r.ok:
             log(f"Set models.")
@@ -72,7 +73,11 @@ class ClingoClient(ViaspClient):
             error(f"Reconstructing failed [{r.status_code}] ({r.reason})")
 
     def relax_constraints(self, *args, **kwargs):
-        serialized = json.dumps({"args": args, "kwargs": kwargs}, cls=DataclassJSONEncoder)
+        serialized = json.dumps({
+            "args": args,
+            "kwargs": kwargs
+        },
+                                cls=DataclassJSONEncoder)
         r = requests.post(f"{self.backend_url}/control/relax",
                           data=serialized,
                           headers={'Content-Type': 'application/json'})
@@ -80,26 +85,37 @@ class ClingoClient(ViaspClient):
             log(f"Program constraints transformed.")
             return '\n'.join(r.json())
         else:
-            error(f"Transforming constraints failed [{r.status_code}] ({r.reason})")    
+            error(
+                f"Transforming constraints failed [{r.status_code}] ({r.reason})"
+            )
             return None
 
     def clingraph(self, viz_encoding_path, engine, graphviz_type):
         with open(viz_encoding_path, "r") as f:
             prg = f.read().splitlines()
             prg = '\n'.join(prg)
-        
-        serialized = json.dumps({"viz-encoding":prg, "engine":engine, "graphviz-type":graphviz_type}, cls=DataclassJSONEncoder)
+
+        serialized = json.dumps(
+            {
+                "viz-encoding": prg,
+                "engine": engine,
+                "graphviz-type": graphviz_type
+            },
+            cls=DataclassJSONEncoder)
 
         r = requests.post(f"{self.backend_url}/control/clingraph",
-                              data=serialized,
-                              headers={'Content-Type': 'application/json'})
+                          data=serialized,
+                          headers={'Content-Type': 'application/json'})
         if r.ok:
             log(f"Clingraph visualization in progress.")
         else:
-            error(f"Clingraph visualization failed [{r.status_code}] ({r.reason})")
+            error(
+                f"Clingraph visualization failed [{r.status_code}] ({r.reason})"
+            )
 
     def _register_transformer(self, transformer, imports, path):
-        serializable_transformer = TransformerTransport.merge(transformer, imports, path)
+        serializable_transformer = TransformerTransport.merge(
+            transformer, imports, path)
         serialized = json.dumps(serializable_transformer,
                                 cls=DataclassJSONEncoder)
         r = requests.post(f"{self.backend_url}/control/add_transformer",
@@ -108,4 +124,6 @@ class ClingoClient(ViaspClient):
         if r.ok:
             log(f"Transformer registered.")
         else:
-            error(f"Registering transformer failed [{r.status_code}] ({r.reason})")
+            error(
+                f"Registering transformer failed [{r.status_code}] ({r.reason})"
+            )

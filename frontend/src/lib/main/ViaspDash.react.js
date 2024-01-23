@@ -141,44 +141,50 @@ MainWindow.propTypes = {
  * ViaspDash is the main dash component
  */
 export default function ViaspDash(props) {
-    const {id, setProps, backendURL, colors} = props;
+    const {id, backendURL, setProps, colorPalette} = props;
 
     function notifyDash(clickedOn) {
         setProps({clickedOn: clickedOn})
     }
 
-    return <div id={id}>
-        <ColorPaletteProvider colorPalette={colors}>
-            <SettingsProvider backendURL={backendURL}>
-                <HighlightedNodeProvider>
-                    <HighlightedSymbolProvider>
-                        <ShownRecursionProvider>
-                            <ShownDetailProvider>
-                                <FilterProvider>
-                                    <AnimationUpdaterProvider>
+    return (
+        <div id={id}>
+            <ColorPaletteProvider colorPalette={colorPalette}>
+                <SettingsProvider backendURL={backendURL}>
+                    <HighlightedNodeProvider>
+                        <HighlightedSymbolProvider>
+                            <ShownRecursionProvider>
+                                <ShownDetailProvider>
+                                    <FilterProvider>
+                                        <AnimationUpdaterProvider>
                                             <UserMessagesProvider>
                                                 <ShownNodesProvider>
-                                                        <TransformationProvider>
-                                                            <EdgeProvider>
-                                                                <ClingraphProvider>
-                                                                    <div>
-                                                                        <UserMessages/>
-                                                                        <MainWindow notifyDash={notifyDash}/>
-                                                                    </div>
-                                                                </ClingraphProvider>
-                                                            </EdgeProvider>
-                                                        </TransformationProvider>
+                                                    <TransformationProvider>
+                                                        <EdgeProvider>
+                                                            <ClingraphProvider>
+                                                                <div>
+                                                                    <UserMessages />
+                                                                    <MainWindow
+                                                                        notifyDash={
+                                                                            notifyDash
+                                                                        }
+                                                                    />
+                                                                </div>
+                                                            </ClingraphProvider>
+                                                        </EdgeProvider>
+                                                    </TransformationProvider>
                                                 </ShownNodesProvider>
                                             </UserMessagesProvider>
-                                    </AnimationUpdaterProvider>
-                                </FilterProvider>
-                            </ShownDetailProvider>
-                        </ShownRecursionProvider>
-                    </HighlightedSymbolProvider>
-                </HighlightedNodeProvider>
-            </SettingsProvider>
-        </ColorPaletteProvider>
-    </div>
+                                        </AnimationUpdaterProvider>
+                                    </FilterProvider>
+                                </ShownDetailProvider>
+                            </ShownRecursionProvider>
+                        </HighlightedSymbolProvider>
+                    </HighlightedNodeProvider>
+                </SettingsProvider>
+            </ColorPaletteProvider>
+        </div>
+    );
 }
 
 
@@ -196,7 +202,7 @@ ViaspDash.propTypes = {
     /**
      * Colors to be used in the application.
      */
-    colors: PropTypes.object,
+    colorPalette: PropTypes.object,
     /**
      * Object to set by the notifyDash callback
      */
@@ -205,11 +211,11 @@ ViaspDash.propTypes = {
     /**
      * The url to the viasp backend server
      */
-    backendURL: PropTypes.string
+    backendURL: PropTypes.string,
 };
 
 ViaspDash.defaultProps = {
-    colors: {},
+    colorPalette: {},
     clickedOn: {},
     backendURL: DEFAULT_BACKEND_URL
 }

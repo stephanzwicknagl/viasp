@@ -39,10 +39,12 @@ export function Symbol(props) {
     atomString = atomString.length === 0 ? "" : atomString;
 
     if (symbolIdentifier.has_reason && isHovered) {
-        style = { backgroundColor: colorPalette.success };
+        // if (reasons !== undefined && reasons.length !== 0 && isHovered) {
+        style = {backgroundColor: colorPalette.explanationSuccess};
     }
     if (symbolIdentifier.has_reason && isClicked) {
-        style = { backgroundColor: colorPalette.info };
+        // if (reasons !== undefined && reasons.length !== 0 && isClicked) {
+        style = {backgroundColor: colorPalette.infoBackground};
     }
 
     const handleMouseEnter = () => setIsHovered(true);

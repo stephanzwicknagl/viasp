@@ -6,25 +6,34 @@ import { useAnimationUpdater } from "../contexts/AnimationUpdater";
 import { useClingraph } from "../contexts/Clingraph";
 import { useEdges } from "../contexts/Edges";
 
-export function Edges() {
-    const colorPalete = useColorPalette();
-    const {clingraphUsed} = useClingraph();
-    const { edges, clingraphEdges } = useEdges();
 
-    const [value, , , ] = useAnimationUpdater();
+export function Edges(props) {
+    const {clingraphUsed} = useClingraph();
+    const colorPalete = useColorPalette();
+    const { edges, clingraphEdges } = useEdges();
+    const [value, , ,] = useAnimationUpdater();
+
 
     return <div className="edge_container" >
-            {edges.map(link => 
-            <LineTo
+            {edges.map(link => {
+                if (link.recursion === "in") {
+                    return <LineTo
+                    key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"top center"} toAnchor={"top center"}
+                    to={link.tgt} zIndex={1} borderColor={colorPalete.dark} borderStyle={link.style} borderWidth={1} />
+                } else if (link.recursion === "out") {
+                    return <LineTo
+                    key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"bottom center"}
+                    to={link.tgt} zIndex={1} borderColor={colorPalete.dark} borderStyle={link.style} borderWidth={1} />
+                }
+                return <LineTo
                 key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"top center"}
-                to={link.tgt} zIndex={5} borderColor={colorPalete.seventy.dark} borderStyle={"solid"} borderWidth={1} />)}
-            {!clingraphUsed ? null:
-            clingraphEdges.map(link => 
-            <LineTo
-                key={link.src + "-" + link.tgt} from={link.src} fromAnchor={"bottom center"} toAnchor={"top center"}
-                to={link.tgt} zIndex={5} borderColor={colorPalete.seventy.bright} borderStyle={"dashed"} borderWidth={2} />)}
+                to={link.tgt} zIndex={1} borderColor={colorPalete.dark} borderStyle={link.style} borderWidth={1} />
+                }
+            )}
         </div>
-}
+    }
+
+        
 
 Edges.propTypes = {
     /**

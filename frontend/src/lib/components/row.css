@@ -38,6 +38,12 @@
     background: transparent;
 }
 
+.branch_space {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 .row_container {
     justify-content: space-around;
     background: transparent;

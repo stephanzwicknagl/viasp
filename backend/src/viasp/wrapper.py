@@ -1,6 +1,6 @@
 import json
 import sys
-import fileinput
+
 from inspect import signature
 from typing import List, Union
 

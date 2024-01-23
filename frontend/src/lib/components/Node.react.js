@@ -35,6 +35,7 @@ function NodeContent(props) {
     const { highlightedSymbol, toggleReasonOf } = useHighlightedSymbol();
     const standardNodeHeight = 80;
     const minimumNodeHeight = 34;
+    const belowLineMargin = 5;
 
     let contentToShow;
     if (state.show_all) {
@@ -69,7 +70,7 @@ function NodeContent(props) {
             }
             const childRect = childElement.getBoundingClientRect();
             const parentRect = parentElement.getBoundingClientRect();
-            return { "fittingHeight": childRect.bottom - parentRect.top, "isMarked": i !== -1 || j !== -1 };
+            return { "fittingHeight": childRect.bottom - parentRect.top + belowLineMargin, "isMarked": i !== -1 || j !== -1 };
         }
 
         var allHeights = contentToShow
@@ -92,7 +93,7 @@ function NodeContent(props) {
             }
             else { 
                 // marked node is not under the fold
-                setHeight(height => Math.max(height, Math.min(standardNodeHeight, maxSymbolHeight)));
+                setHeight(Math.min(standardNodeHeight, maxSymbolHeight));
                 setIsOverflowV(maxSymbolHeight > standardNodeHeight)
             }
         };
@@ -116,13 +117,13 @@ function NodeContent(props) {
     })
 
     const classNames2 = `set_value`
-    const containerNames = `set_container`
     const renderedSymbols = contentToShow.filter(symbol =>
         symbolShouldBeShown(symbol)).map(s => {
             return <Symbol key={JSON.stringify(s)} symbolIdentifier={s} isSubnode={isSubnode} handleClick={handleClick}/>
         })
 
-    return <div className={containerNames} style={{ "color": colorPalette.dark }}>
+    return <div className='set_container'
+                style={{"color": colorPalette.dark}}>
         <span className={classNames2}>{renderedSymbols.length > 0 ? renderedSymbols : ""}</span>
     </div>
 }
@@ -167,7 +168,7 @@ function RecursionButton(props) {
 
     return <div className={"recursion_button"} onClick={handleClick}>
         {!node.recursive ? null :
-            <div className={"recursion_button_text"} style={{ "backgroundColor": colorPalette.primary, "color": colorPalette.sixty.dark }}>
+            <div className={"recursion_button_text"} style={{ "backgroundColor": colorPalette.primary, "color": colorPalette.light }}>
                 <Suspense fallback={<div>R</div>}>
                     <IconWrapper icon={clockwiseVerticalArrows} width="9" height="9" />
                 </Suspense>
@@ -192,7 +193,7 @@ function OverflowButton(props) {
         setExpandNode(true);
     }
 
-    return <div style={{ "backgroundColor": colorPalette.primary, "color": colorPalette.sixty.dark }}
+    return <div style={{ "backgroundColor": colorPalette.primary, "color": colorPalette.light }}
                 className={"bauchbinde"} onClick={handleClick}>
         <div className={"bauchbinde_text"}>
             <Suspense fallback={<div>...</div>}>
@@ -250,35 +251,53 @@ export function Node(props) {
 
     const divID = `${node.uuid}_animate_height`;
 
-    return <div className={classNames}
-        style={{ "backgroundColor": colorPalette.light, "color": colorPalette.secondary }}
-        id={node.uuid}
-        onClick={(e) => { e.stopPropagation(); notifyClick(node) }}>
-        {showMini ?
-            <div style={{ "backgroundColor": colorPalette.primary, "color": colorPalette.primary }}
-                className={"mini"} /> :
-            <div className={"set_too_high"}  >
-                <AnimateHeight
-                    id={divID}
-                    duration={500}
-                    height={height}
-                    onHeightAnimationStart={startAnimationUpdater}
-                    onHeightAnimationEnd={stopAnimationUpdater}
-                    >
-                    <NodeContent
-                        node={node}
-                        setHeight={setHeight}
-                        parentID={divID}
-                        setIsOverflowV={setIsOverflowV}
-                        expandNode={expandNode}
-                        isSubnode={isSubnode} />
-                    <RecursionButton node={node} />
-                </AnimateHeight>
-            </div>
-        }
-        {!showMini && isOverflowV ?
-            <OverflowButton setExpandNode={setExpandNode} /> : null}
-    </div>
+    return (
+        <div
+            className={classNames}
+            style={{
+                backgroundColor: colorPalette.light,
+                color: colorPalette.primary,
+            }}
+            id={node.uuid}
+            onClick={(e) => {
+                e.stopPropagation();
+                notifyClick(node);
+            }}
+        >
+            {showMini ? (
+                <div
+                    style={{
+                        backgroundColor: colorPalette.primary,
+                        color: colorPalette.primary,
+                    }}
+                    className={'mini'}
+                />
+            ) : (
+                <div className={'set_too_high'}>
+                    <AnimateHeight
+                        id={divID}
+                        duration={500}
+                        height={height}
+                        onHeightAnimationStart={startAnimationUpdater}
+                        onHeightAnimationEnd={stopAnimationUpdater}
+                        >
+                        <NodeContent
+                            node={node}
+                            setHeight={setHeight}
+                            parentID={divID}
+                            setIsOverflowV={setIsOverflowV}
+                            expandNode={expandNode}
+                            isSubnode={isSubnode}
+                        />
+                        <RecursionButton node={node} />
+                    </AnimateHeight>
+                </div>
+            )}
+            {!showMini && isOverflowV ? (
+                <OverflowButton setExpandNode={setExpandNode} />
+            ) : null}
+        </div>
+    );
 }
 
 Node.propTypes = {
@@ -298,48 +317,55 @@ Node.propTypes = {
 
 
 export function RecursiveSuperNode(props) {
-    const { node, showMini } = props;
+    const {node, showMini} = props;
     const colorPalette = useColorPalette();
-    const { dispatch: dispatchShownNodes } = useShownNodes();
-    const classNames = useHighlightedNodeToCreateClassName(node);
-    const { setShownDetail } = useShownDetail();
+    const {dispatch: dispatchShownNodes} = useShownNodes();
+    const classNames = `node_border ${node.uuid}`;
+    const {setShownDetail} = useShownDetail();
 
     const dispatchShownNodesRef = React.useRef(dispatchShownNodes);
     const nodeuuidRef = React.useRef(node.uuid);
 
     const notifyClick = (node) => {
         setShownDetail(node.uuid);
-    }
+    };
 
     React.useEffect(() => {
         const dispatch = dispatchShownNodesRef.current;
-        const nodeuuid = nodeuuidRef.current
-        dispatch(showNode(nodeuuid))
+        const nodeuuid = nodeuuidRef.current;
+        dispatch(showNode(nodeuuid));
         return () => {
-            dispatch(hideNode(nodeuuid))
-        }
-    }, [])
-    React.useEffect(() => {
+            dispatch(hideNode(nodeuuid));
+        };
+    }, []);
+    React.useEffect(() => {});
 
-    })
-
-    return <div className={classNames}
-        style={{ "backgroundColor": colorPalette.fourty.dark, "color": colorPalette.fourty.bright }}
-        id={node.uuid}
-        onClick={(e) => { e.stopPropagation(); notifyClick(node) }} >
-        <RecursionButton node={node} />
-        {
-            node.recursive._graph.nodes.
-                map(e => e.id).
-                map(subnode => {
-                    return <Node key={subnode}
-                        node={subnode}
-                        notifyClick={notifyClick}
-                        showMini={showMini}
-                        isSubnode = {true} />
-                })
-        }
-    </div>
+    return (
+        <div
+            className={classNames}
+            style={{color: colorPalette.primary}}
+            id={node.uuid}
+            onClick={(e) => {
+                e.stopPropagation();
+                notifyClick(node);
+            }}
+        >
+            <RecursionButton node={node} />
+            {node.recursive._graph.nodes
+                .map((e) => e.id)
+                .map((subnode) => {
+                    return (
+                        <Node
+                            key={subnode.uuid}
+                            node={subnode}
+                            notifyClick={notifyClick}
+                            showMini={showMini}
+                            isSubnode={true}
+                        />
+                    );
+                })}
+        </div>
+    );
 }
 
 RecursiveSuperNode.propTypes = {

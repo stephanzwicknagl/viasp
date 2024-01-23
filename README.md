@@ -22,7 +22,13 @@ viASP allows you to explore the visualization in a variety of ways:
 
 ## Installation
 
-viASP is available on [PyPI](https://pypi.org/project/viasp/). You can install it with pip:
+viASP is available as a [conda package](https://anaconda.org/stephanzwicknagl/viasp). You can install it with:
+
+```bash
+conda install viasp -c potassco -c conda-forge -c stephanzwicknagl
+```
+
+Alternatively, viASP is also available on [PyPI](https://pypi.org/project/viasp/). You can install it with pip:
 
 ```bash
 pip install viasp

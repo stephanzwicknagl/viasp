@@ -2,19 +2,23 @@
 import networkx as nx
 from clingo import Symbol
 from clingo.ast import ASTType, AST
-from typing import List, Sequence, Tuple, Dict, Set, FrozenSet, Union
+from typing import List, Sequence, Tuple, Dict, Set, FrozenSet, Optional
 from ..shared.simple_logging import warn
 from ..shared.model import Node, SymbolIdentifier
 from ..shared.util import pairwise, get_root_node_from_graph
 from ..server.blueprints.dag_api import get_database
 
+
 def is_constraint(rule: AST) -> bool:
-    return rule.ast_type == ASTType.Rule and "atom" in rule.head.child_keys and rule.head.atom.ast_type == ASTType.BooleanConstant # type: ignore
+    return rule.ast_type == ASTType.Rule and "atom" in rule.head.child_keys and rule.head.atom.ast_type == ASTType.BooleanConstant  # type: ignore
 
 
 def merge_constraints(g: nx.Graph) -> nx.Graph:
     mapping = {}
-    constraints = frozenset([ruleset for ruleset in g.nodes for rule in ruleset if is_constraint(rule)])
+    constraints = frozenset([
+        ruleset for ruleset in g.nodes for rule in ruleset
+        if is_constraint(rule)
+    ])
     if constraints:
         merge_node = merge_nodes(constraints)
         mapping = {c: merge_node for c in constraints}
@@ -29,7 +33,7 @@ def merge_cycles(g: nx.Graph) -> Tuple[nx.Graph, FrozenSet[AST]]:
         merge_node = merge_nodes(cycle)
         mapping.update({old_node: merge_node for old_node in cycle})
     # which nodes were merged
-    for k,v in mapping.items():
+    for k, v in mapping.items():
         if k != v:
             where_recursion_happens.add(merge_node)
     return nx.relabel_nodes(g, mapping), frozenset(where_recursion_happens)
@@ -70,10 +74,11 @@ def rank_topological_sorts(all_sorts: List, rules: Sequence[AST]) -> List:
         rank = 0
         sort_rules = [rule for frznst in sort for rule in frznst]
         for i in range(len(sort_rules)):
-            rank -= (rules.index(sort_rules[i])+1)*(i+1)
+            rank -= (rules.index(sort_rules[i]) + 1) * (i + 1)
         ranked_sorts.append((sort, rank))
     ranked_sorts.sort(key=lambda x: x[1])
     return [x[0] for x in ranked_sorts]
+
 
 def insert_atoms_into_nodes(path: List[Node]) -> None:
     facts = path[0]
@@ -87,14 +92,13 @@ def insert_atoms_into_nodes(path: List[Node]) -> None:
         state = set(map(SymbolIdentifier, (s.symbol for s in state)))
 
 
-def identify_reasons(g: nx.DiGraph) -> nx.DiGraph:
+def identify_reasons(g: nx.DiGraph) -> None:
     """
     Identify the reasons for each symbol in the graph.
     Takes the Symbol from node.reason and overwrites the values of the Dict node.reason
     with the SymbolIdentifier of the corresponding symbol.
 
     :param g: The graph to identify the reasons for.
-    :return: The graph with the reasons identified.
     """
     # get fact node:
     root_node = get_root_node_from_graph(g)
@@ -115,22 +119,29 @@ def identify_reasons(g: nx.DiGraph) -> nx.DiGraph:
                     for new, rr in node.reason.items():
                         tmp_reason = []
                         for r in rr:
-                            tmp_reason.append(get_identifiable_reason(v.recursive, node, r, super_graph=g, super_node=v))
+                            tmp_reason.append(
+                                get_identifiable_reason(v.recursive,
+                                                        node,
+                                                        r,
+                                                        super_graph=g,
+                                                        super_node=v))
                         node.reason[str(new)] = tmp_reason
             for s in v.diff:
-                if str(s.symbol) in v.reason.keys() and len(v.reason[str(s.symbol)]) > 0:
+                if str(s.symbol) in v.reason.keys() and len(v.reason[str(
+                        s.symbol)]) > 0:
                     s.has_reason = True
             searched_nodes.add(v)
-            for w in g.successors(v): 
+            for w in g.successors(v):
                 children_next.add(w)
             children_next = children_next.difference(searched_nodes)
         children_current = list(children_next)
 
-    return g
 
-
-def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol,
-                    super_graph=None, super_node=None) -> Union[SymbolIdentifier, None]:
+def get_identifiable_reason(g: nx.DiGraph,
+                            v: Node,
+                            r: Symbol,
+                            super_graph=None,
+                            super_node=None) -> Optional[SymbolIdentifier]:
     """
     Returns the SymbolIdentifier that is the reason for the given Symbol r.
     If the reason is not in the node, it returns recursively calls itself with the predecessor.
@@ -141,12 +152,16 @@ def get_identifiable_reason(g: nx.DiGraph, v: Node, r: Symbol,
     :param r: The symbol that is the reason
     """
     if (r in v.diff): return next(s for s in v.atoms if s == r)
-    if (g.in_degree(v) != 0): 
+    if (g.in_degree(v) != 0):
         for u in g.predecessors(v):
-            return get_identifiable_reason(g, u, r, super_graph=super_graph, super_node=super_node)
+            return get_identifiable_reason(g,
+                                           u,
+                                           r,
+                                           super_graph=super_graph,
+                                           super_node=super_node)
     if (super_graph != None and super_node != None):
         return get_identifiable_reason(super_graph, super_node, r)
-    
+
     # stop criterion: v is the root node and there is no super_graph
     warn(f"An explanation could not be made")
     return None
@@ -172,3 +187,31 @@ def harmonize_uuids(g: nx.DiGraph) -> nx.DiGraph:
                     incoming.diff = pattern.diff
 
     return g
+
+
+def calculate_spacing_factor(g: nx.DiGraph) -> None:
+    """
+    Calculate the spacing factor for each node the graph.
+    This will make sure the branches of the graph are spaced out evenly.
+
+    :param g: The graph.
+    """
+    # get fact node:
+    root_node = get_root_node_from_graph(g)
+
+    # go through entire graph, starting at root_node and traveling down the graph via successors
+    children_next = []
+    searched_nodes = set()
+    children_current = [root_node]
+    while len(children_current) != 0:
+        for v in children_current:
+            successors: List[Node] = list(g.successors(v))
+            if len(successors) != 0:
+                for w in successors:
+                    w.space_multiplier = v.space_multiplier / len(successors)
+
+            searched_nodes.add(v)
+            for w in g.successors(v):
+                children_next.append(w)
+        children_current = children_next
+        children_next = []

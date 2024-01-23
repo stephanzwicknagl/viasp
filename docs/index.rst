@@ -31,4 +31,5 @@ viASP allows you to explore the visualization in a variety of ways:
    viasp/commandline
    viasp/usage
    viasp/api
+   viasp/colorPalette
    viasp/contributing

@@ -1,0 +1,103 @@
+name: Deploy conda packages
+
+on:
+  workflow_dispatch:    
+  release:
+    types: 
+      - published
+
+
+jobs:
+  backend:
+    name: Publish backend
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: setup miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        auto-update-conda: true
+        python-version: 3.11
+        activate-environment: build
+
+    - name: Install prerequisites
+      run: |
+        conda config --set anaconda_upload yes
+        conda install conda-build anaconda-client
+    - name: print info
+      shell: pwsh
+      run: |
+        conda info
+        conda list
+    - name: publish conda package backend
+      shell: pwsh
+      run: |
+        python .github/conda.py --package backend --release
+      env:
+        ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+
+  frontend:
+    name: Publish frontend
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: setup miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        auto-update-conda: true
+        python-version: 3.11
+        activate-environment: build
+
+    - name: Install prerequisites
+      run: |
+        conda config --set anaconda_upload yes
+        conda install conda-build anaconda-client
+    - name: print info
+      shell: pwsh
+      run: |
+        conda info
+        conda list
+    - name: publish conda package frontend
+      shell: pwsh
+      run: |
+        python .github/conda.py --package frontend --release
+      env:
+        ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_TOKEN }}
+
+  wrapper:
+    needs: [ frontend, backend ]
+    name: Publish container
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: setup miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: 3.11
+          activate-environment: build
+      - name: Install prerequisites
+        run: |
+          conda config --set anaconda_upload yes
+          conda install conda-build anaconda-client
+      - name: print info
+        shell: pwsh
+        run: |
+          conda info
+          conda list
+      - name: publish conda package wrapper
+        shell: pwsh
+        run: |
+          python .github/conda.py --package viasp --release
+        env:
+          ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_TOKEN }}

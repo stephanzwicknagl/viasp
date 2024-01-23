@@ -14,8 +14,8 @@ function DetailSymbolPill(props) {
     const colorPalette = useColorPalette();
     return <span className="detail_atom_view_content"
                  style={{
-                     backgroundColor: colorPalette.fifty.dark,
-                     color: colorPalette.thirty.bright
+                     backgroundColor: colorPalette.primary,
+                     color: colorPalette.light
                  }}>{make_atoms_string(symbol)}</span>
 
 }
@@ -96,7 +96,7 @@ export function Detail() {
         return () => { mounted = false };
     }, [shows])
 
-    return <div id="detailSidebar" style={{ backgroundColor: colorPalette.info, color: colorPalette.dark}}
+    return <div id="detailSidebar" style={{ backgroundColor: colorPalette.infoBackground, color: colorPalette.dark}}
                 className={shows === null ? `detail`:`detail detail-open`}>
         <h3><CloseButton onClick={clearDetail}/>{type}</h3>
         {data===null ? 

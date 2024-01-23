@@ -1,4 +1,3 @@
-import json
 import os
 from collections import defaultdict
 from typing import Union, Collection, Dict, List, Tuple
@@ -8,7 +7,6 @@ import networkx as nx
 import sqlite3
 import numpy as np
 from flask import Blueprint, request, jsonify, abort, Response, send_file, current_app, g
-from flask_cors import cross_origin
 from networkx import DiGraph
 
 from ...shared.defaults import GRAPH_PATH, STATIC_PATH
@@ -67,12 +65,12 @@ class GraphAccessor:
         """)
         result = self.cursor.fetchone()
         return result[0] if result is not None else ""
-    
+
     def set_current_graph(self, hash: str):
         self.cursor.execute("DELETE FROM current_graph")
         self.cursor.execute("INSERT INTO current_graph (hash) VALUES (?)", (hash,))
         self.conn.commit()
-    
+
     def load_json(self) -> dict:
         hash = self.get_current_graph()
 
@@ -185,35 +183,45 @@ def get_children(transformation_hash):
     raise NotImplementedError
 
 
-def get_src_tgt_mapping_from_graph(shown_nodes_ids=[], shown_recursive_ids=[]):
-    shown_nodes_ids = set(shown_nodes_ids)
-
+def get_src_tgt_mapping_from_graph(shown_recursive_ids=[], shown_clingraph=False):
     graph = get_graph()
-    nodes = graph.nodes
-    to_be_deleted = set(existing for existing in nodes if shown_nodes_ids is not None and existing.uuid not in shown_nodes_ids)
 
     to_be_added = []
+
+    for source, target in graph.edges:
+        to_be_added.append({"src": source.uuid,
+                            "tgt": target.uuid,
+                            "style": "solid"})
+
     for recursive_uuid in shown_recursive_ids:
-        node = next((n for n in nodes if n.uuid == recursive_uuid), None)
-        if node != None:
-            for source, target in node.recursive.edges:
-                to_be_added.append((source, target))
-        # TODO: keep recursion open after reordering
-    graph.add_edges_from(to_be_added)
+        # get node from graph where node attribute uuid is uuid
+        node = next(n for n in graph.nodes if n.uuid == recursive_uuid)
+        for source, target in node.recursive.edges:
+            to_be_added.append({"src": source.uuid,
+                                "tgt": target.uuid,
+                                "style": "solid"})
+        # add connections to outer node
+        first_nodes = [n for n in node.recursive.nodes if node.recursive.in_degree(n) == 0]
+        last_nodes = [n for n in node.recursive.nodes if node.recursive.out_degree(n) == 0]
+        to_be_added.extend([{"src": node.uuid,
+                            "tgt": first_node.uuid,
+                            "recursion": "in",
+                            "style": "solid"} for first_node in first_nodes])
+        to_be_added.extend([{"src": last_node.uuid,
+                            "tgt": node.uuid,
+                            "recursion": "out",
+                            "style": "solid"} for last_node in last_nodes])
 
-    for node in to_be_deleted:
-        for source, _, _ in graph.in_edges(node, data=True):
-            for _, target, _ in graph.out_edges(node, data=True):
-                graph.add_edge(source, target)
-        graph.remove_node(node)
-    return [{"src": src.uuid, "tgt": tgt.uuid} for src, tgt in graph.edges()]
-
-
-def get_src_tgt_mapping_from_clingraph(ids=None):
-    from .api import using_clingraph, last_nodes_in_graph
-    last = last_nodes_in_graph(get_graph())
-    imgs = using_clingraph
-    return [{"src": src, "tgt": tgt} for src, tgt in list(zip(last, imgs))]
+    if shown_clingraph:
+        from .api import using_clingraph
+        to_be_added += [
+                {"src": src,
+                "tgt": tgt,
+                "style": "dashed"}
+                for src, tgt in list(zip(
+                        last_nodes_in_graph(graph),
+                        using_clingraph))]
+    return to_be_added
 
 
 def find_reason_by_uuid(symbolid, nodeid):
@@ -234,6 +242,7 @@ def get_possible_transformation_orders():
         return "ok", 200
     elif request.method == "GET":
         sorts = get_all_sorts()
+        print(f"Getting {len(sorts)} sorts: {sorts}", flush=True)
         return jsonify(sorts)
     raise NotImplementedError
 
@@ -249,26 +258,13 @@ def get_edges():
     to_be_returned = []
     if request.method == "POST":
         if request.json is None:
-            return jsonify({'error': 'Missing JSON in request'}), 400
-        shown_nodes_ids = request.json["shownNodes"] if "shownNodes" in request.json else []
+            abort(Response("No json data provided.", 400))
         shown_recursive_ids = request.json["shownRecursion"] if "shownRecursion" in request.json else []
-        to_be_returned = get_src_tgt_mapping_from_graph(shown_nodes_ids, shown_recursive_ids)
+        shown_clingraph = request.json["usingClingraph"] if "usingClingraph" in request.json else False
+        to_be_returned = get_src_tgt_mapping_from_graph(shown_recursive_ids, shown_clingraph)
     elif request.method == "GET":
         to_be_returned = get_src_tgt_mapping_from_graph()
 
-    jsonified = jsonify(to_be_returned)
-    return jsonified
-
-
-@bp.route("/clingraph/edges", methods=["GET", "POST"])
-def get_clingraph_edges():
-    to_be_returned = []
-    if request.method == "POST":
-        if request.json is None:
-            return jsonify({'error': 'Missing JSON in request'}), 400
-        to_be_returned = get_src_tgt_mapping_from_clingraph(request.json)
-    elif request.method == "GET":
-        to_be_returned = get_src_tgt_mapping_from_clingraph()
     jsonified = jsonify(to_be_returned)
     return jsonified
 

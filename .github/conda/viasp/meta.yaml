@@ -1,0 +1,51 @@
+{% set name = "viasp" %}
+{% set version = environ.get('VERSION_NUMBER') %}
+{% set dev = not environ.get('BUILD_RELEASE', false) %}
+{% set revision = environ.get('GITHUB_SHA', 'wip') %}
+{% set build = environ.get('BUILD_NUMBER', "0") %}
+
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: ../../..
+
+build:
+  noarch: python
+  script: python -m pip install --no-deps --ignore-installed .
+  number: {{ build }}
+
+requirements:
+  host:
+    - python >=3.7
+    - setuptools >=42
+    - wheel
+    - pip
+  run:
+    - python >=3.7
+    - viasp-backend
+    - viasp-dash
+    - jupyter-server-proxy
+    - clingraph
+    - python-graphviz
+
+test:
+  imports:
+    - viasp
+  commands:
+    - viasp_server --help
+    - viasp --help
+
+
+about:
+
+  home: https://github.com/potassco/viasp
+  summary: a visualization tool for clingo.
+  license: MIT
+  license_file: LICENCE.md
+
+extra:
+  recipe-maintainers:
+    - stephanzwicknagl

@@ -23,11 +23,12 @@ from dash._jupyter import _jupyter_config
 from viasp import clingoApiClient
 from viasp.shared.defaults import (DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT,
                                    DEFAULT_BACKEND_PROTOCOL, CLINGRAPH_PATH, 
-                                   GRAPH_PATH, PROGRAM_STORAGE_PATH, STDIN_TMP_STORAGE_PATH)
+                                   GRAPH_PATH, PROGRAM_STORAGE_PATH, STDIN_TMP_STORAGE_PATH,
+                                   COLOR_PALETTE)
 
 
 
-def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT, colors=None):
+def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     """ create the dash app, set layout and start the backend on host:port """
        
     # if running in binder, get proxy information
@@ -63,7 +64,7 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT, colors=None):
     app.layout = viasp_dash.ViaspDash(
         id="myID",
         backendURL=backend_url,
-        colors=colors
+        colorPalette=COLOR_PALETTE
         )
     app.title = "viASP"
 
