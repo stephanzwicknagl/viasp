@@ -8,9 +8,8 @@ import { useEdges } from "../contexts/Edges";
 
 
 export function Edges(props) {
-    const {clingraphUsed} = useClingraph();
     const colorPalete = useColorPalette();
-    const { edges, clingraphEdges } = useEdges();
+    const { edges } = useEdges();
     const [value, , ,] = useAnimationUpdater();
 
 

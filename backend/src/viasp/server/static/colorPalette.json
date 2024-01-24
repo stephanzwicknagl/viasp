@@ -2,6 +2,8 @@
     "primary": "#879ee7",
     "light": "#F4F5FA",
     "dark": "#444",
+    "warn": "#FFC107",
+    "error": "#F44336",
     "infoBackground": "#B3BAC5",
     "rowShading": {
         "0": "#a9a9a92f",

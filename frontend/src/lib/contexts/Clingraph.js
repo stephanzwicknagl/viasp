@@ -5,11 +5,11 @@ import PropTypes from "prop-types";
 
 
 function loadClingraphUsed(backendURL) {
-    return fetch(`${backendURL("control/clingraph")}`).then(r => {
-        if (r.ok) {
-            return r.json()
+    return fetch(`${backendURL('control/clingraph')}`).then((r) => {
+        if (!r.ok) {
+            throw new Error(`Failed to get edges: ${r.status} ${r.statusText}`);
         }
-        throw new Error(r.statusText);
+        return r.json();
     });
 }
 
@@ -26,14 +26,17 @@ export const ClingraphProvider = ({ children }) => {
 
     React.useEffect(() => {
         let mounted = true;
-        loadClingraphUsed(backendUrlRef.current).catch(error => {
-            messageDispatchRef.current(showError(`Failed to get transformations: ${error}`))
-        })
-        .then(data => {
-            if (mounted) {
-                setClingraphUsed(data.using_clingraph)
-            }
-        }) 
+        loadClingraphUsed(backendUrlRef.current)
+            .then((data) => {
+                if (mounted) {
+                    setClingraphUsed(data.using_clingraph);
+                }
+            })
+            .catch((error) => {
+                messageDispatchRef.current(
+                    showError(`Failed to load clingraph info ${error}`)
+                );
+            });
         return () => { mounted = false };
     }, []);
 

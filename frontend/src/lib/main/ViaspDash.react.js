@@ -51,7 +51,7 @@ function postCurrentSort(backendURL, hash) {
 function GraphContainer(props) {
     const {notifyDash} = props;
     const {
-        state: {transformations, possibleSorts}, 
+        state: {transformations}, 
         dispatch: dispatchTransformation
     } = useTransformations()
     const { clingraphUsed } = useClingraph();
@@ -62,35 +62,46 @@ function GraphContainer(props) {
     const messageDispatchRef = React.useRef(message_dispatch);
     const graphContainerRef = React.useRef(null);
     const draggableListRef = React.useRef(null);
-
+    const {setHighlightedSymbol} = useHighlightedSymbol();
 
     function onMoveEnd(newList, movedItem, oldIndex, newIndex) {
         dispatchTransformation(setCurrentDragged(''));
-        computeSortHash(newList.map(t => t.transformation.hash)).then((newHash) => {
-            if (possibleSorts.includes(newHash)) {
-                postCurrentSort(backendUrlRef.current, newHash).catch(error => {
-                    messageDispatchRef.current(showError(`Failed to set new current graph: ${error}`))
-                })
-                dispatchTransformation(reorderTransformation(oldIndex, newIndex));
-                setShownRecursion([]);
-                return;
-            }
-        });
+        const indexOfOldItemAtNewIndex = oldIndex < newIndex ?
+            newIndex - 1 :
+            newIndex + 1;
+        const newHash = newList[indexOfOldItemAtNewIndex].canDrop;
+
+        if (newHash.length > 0) {
+            setShownRecursion([]);
+            setHighlightedSymbol([]);
+            postCurrentSort(backendUrlRef.current, newHash).catch((error) => {
+                messageDispatchRef.current(
+                    showError(`Failed to set new current graph: ${error}`)
+                    );
+                });
+            dispatchTransformation(reorderTransformation(oldIndex, newIndex));
+            return;
+        }
     }
 
-    return <div className="graph_container" ref={graphContainerRef}>
-        <Facts /><Suspense fallback={<div>Loading...</div>}><Settings /></Suspense>
-        <DraggableList
-            ref={draggableListRef}
-            itemKey="hash"
-            template={RowTemplate}
-            list={transformations}
-            onMoveEnd={onMoveEnd}
-            container={() => graphContainerRef.current}
-            padding = {0}
+    return (
+        <div className="graph_container" ref={graphContainerRef}>
+            <Facts />
+            <Suspense fallback={<div>Loading...</div>}>
+                <Settings />
+            </Suspense>
+            <DraggableList
+                ref={draggableListRef}
+                itemKey="hash"
+                template={RowTemplate}
+                list={transformations}
+                onMoveEnd={onMoveEnd}
+                container={() => graphContainerRef.current}
+                padding={0}
             />
-        { clingraphUsed ? <Boxrow /> : null}
+            {clingraphUsed ? <Boxrow /> : null}
         </div>
+    );
 }
 
 GraphContainer.propTypes = {

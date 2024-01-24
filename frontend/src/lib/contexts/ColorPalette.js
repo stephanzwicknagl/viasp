@@ -24,6 +24,8 @@ ColorPaletteProvider.propTypes = {
         primary: PropTypes.string,
         light: PropTypes.string,
         dark: PropTypes.string,
+        warn: PropTypes.string,
+        error: PropTypes.string,
         infoBackground: PropTypes.string,
         rowShading: PropTypes.objectOf(PropTypes.string),
         explanationSuccess: PropTypes.string,

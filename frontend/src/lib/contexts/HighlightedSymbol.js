@@ -79,7 +79,9 @@ export const HighlightedSymbolProvider = ({ children }) => {
             //     toggleShownRecursion(node.uuid);
             //     toggleHighlightedSymbol(reasons.map(tgt => { return { "src": src.uuid, "tgt": tgt.uuid } }), highlightedSymbol);
             // }
-            })
+            }).catch(e => {
+                console.log(e);
+            });
     }
 
 

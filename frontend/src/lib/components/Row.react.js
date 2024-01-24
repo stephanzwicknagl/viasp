@@ -8,40 +8,22 @@ import {
     setCurrentDragged,
     TransformationContext,
 } from '../contexts/transformations';
+import {showError, useMessages} from '../contexts/UserMessages';
 import {useSettings} from '../contexts/Settings';
 import {TRANSFORMATION, TRANSFORMATIONWRAPPER} from '../types/propTypes';
 import {ColorPaletteContext} from '../contexts/ColorPalette';
 import {useShownRecursion} from '../contexts/ShownRecursion';
 import {IconWrapper} from '../LazyLoader';
 import dragHandleRounded from '@iconify/icons-material-symbols/drag-handle-rounded';
-import {computeSortHash} from '../utils';
 
 function loadMyAsyncData(hash, backendURL) {
-    return fetch(`${backendURL('graph/children')}/${hash}`).then((r) =>
-        r.json()
-    );
+    return fetch(`${backendURL('graph/children')}/${hash}`).then(r => {
+        if (!r.ok) {
+            throw new Error(`${r.status} ${r.statusText}`);
+        }
+        return r.json()});
 }
 
-async function canBeDropped(
-    transformations,
-    possibleSorts,
-    currentDragged,
-    hash
-) {
-    if (currentDragged !== '' && transformations) {
-        const sort = transformations.map((t) => t.hash);
-        const oldIndex = sort.findIndex((h) => h === currentDragged);
-        const [removed] = sort.splice(oldIndex, 1);
-        let newIndex = sort.findIndex((h) => h === hash);
-        if (newIndex >= oldIndex) {
-            newIndex += 1;
-        }
-        sort.splice(newIndex, 0, removed);
-        const newHash = await computeSortHash(sort);
-        return possibleSorts?.includes(newHash);
-    }
-    return false;
-}
 
 export class DragHandle extends React.Component {
     constructor(props) {
@@ -90,7 +72,7 @@ export class RowTemplate extends React.Component {
 
     componentDidUpdate(prevProps, prevState) {
         if (
-            this.props.itemSelected > 0 &&
+            this.props.itemSelected > prevProps.itemSelected &&
             this.context.state.currentDragged !==
                 this.props.item.transformation.hash &&
             prevProps.itemSelected !== this.props.itemSelected
@@ -100,24 +82,12 @@ export class RowTemplate extends React.Component {
             );
         }
         if (
-            this.context.state.transformations !== prevState.transformations ||
-            this.context.state.possibleSorts !== prevState.possibleSorts ||
-            this.context.state.currentDragged !== prevState.currentDragged ||
-            prevProps.item.transformation.hash !==
-                this.props.item.transformation.hash
+            this.props.itemSelected < prevProps.itemSelected &&
+            this.context.state.currentDragged ===
+                this.props.item.transformation.hash &&
+            prevProps.itemSelected !== this.props.itemSelected
         ) {
-            canBeDropped(
-                    this.context.state.transformations,
-                    this.context.state.possibleSorts,
-                    this.context.state.currentDragged,
-                    this.props.item.transformation.hash
-                ).then((ans) => {
-                    if (this.state.canBeDropped !== ans) {
-                        this.setState({
-                            canBeDropped: ans,
-                        });
-                    }
-                });
+            this.context.dispatch(setCurrentDragged(''));
         }
     }
 
@@ -139,6 +109,7 @@ export class RowTemplate extends React.Component {
 
                     const containerStyle = {
                         position: 'relative',
+                        maxHeight: '100%',
                         transform: `scale(${scale})`,
                         zIndex: dragged ? 1 : 0,
                         transformOrigin: 'left',
@@ -147,9 +118,11 @@ export class RowTemplate extends React.Component {
                         }px 0px`,
                         background:
                             background[transformation.id % background.length],
-                        opacity: this.state.canBeDropped || itemSelected
-                            ? 1
-                            : 1 - opacityMultiplier * this.props.anySelected,
+                        opacity:
+                            item.canDrop.length > 0 || itemSelected
+                                ? 1
+                                : 1 -
+                                  opacityMultiplier * this.props.anySelected,
                     };
                     return (
                         <div
@@ -158,20 +131,12 @@ export class RowTemplate extends React.Component {
                             ref={this.rowRef}
                         >
                             {transformation === null ? null : (
-                                <>
-                                    {/* <HereDropSignaler
-                                        hash={transformation.hash}
-                                        itemSelected={itemSelected}
-                                        anySelected={anySelected}
-                                        rowRef={this.rowRef}
-                                    /> */}
-                                    <Row
-                                        key={transformation.hash}
-                                        transformation={transformation}
-                                        dragHandleProps={dragHandleProps}
-                                        itemSelected={itemSelected}
-                                    />
-                                </>
+                                <Row
+                                    key={transformation.hash}
+                                    transformation={transformation}
+                                    dragHandleProps={dragHandleProps}
+                                    itemSelected={itemSelected}
+                                />
                             )}
                         </div>
                     );
@@ -205,6 +170,7 @@ export function Row(props) {
     const {transformation, dragHandleProps, itemSelected} = props;
 
     const {backendURL} = useSettings();
+    const [, message_dispatch] = useMessages();
     const [nodes, setNodes] = React.useState(null);
     const [isOverflowH, setIsOverflowH] = React.useState(false);
     const [overflowBreakingPoint, setOverflowBreakingPoint] =
@@ -212,6 +178,7 @@ export function Row(props) {
     const rowbodyRef = useRef(null);
     const headerRef = useRef(null);
     const handleRef = useRef(null);
+    const messageDispatchRef = React.useRef(message_dispatch);
     const backendURLRef = React.useRef(backendURL);
     const transformationhashRef = React.useRef(transformation.hash);
     const {
@@ -230,14 +197,17 @@ export function Row(props) {
 
     React.useEffect(() => {
         let mounted = true;
-        loadMyAsyncData(
-            transformationhashRef.current,
-            backendURLRef.current
-        ).then((items) => {
-            if (mounted) {
-                setNodes(items);
-            }
-        });
+        loadMyAsyncData(transformationhashRef.current, backendURLRef.current)
+            .then((items) => {
+                if (mounted) {
+                    setNodes(items);
+                }
+            })
+            .catch((error) => {
+                messageDispatchRef.current(
+                    showError(`Failed to get stable model data ${error}`)
+                );
+            });
         return () => {
             mounted = false;
         };
@@ -295,8 +265,7 @@ export function Row(props) {
             {!showNodes ? null : (
                 <div ref={rowbodyRef} className="row_row">
                     {nodes.map((child) => {
-                        const space_multiplier = 25;
-                        // const space_multiplier = child.space_multiplier * 100;
+                        const space_multiplier = child.space_multiplier * 100;
                         if (
                             child.recursive &&
                             shownRecursion.indexOf(child.uuid) !== -1

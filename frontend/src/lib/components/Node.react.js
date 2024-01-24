@@ -44,6 +44,14 @@ function NodeContent(props) {
         contentToShow = node.diff;
     }
 
+    const isMounted = React.useRef(true);
+
+    React.useEffect(() => {
+        return () => {
+            isMounted.current = false;
+        };
+    }, []);
+
     const symbolShouldBeShown = React.useCallback((symbolId) => {
         return activeFilters.length === 0 || any(activeFilters.filter(filter => filter._type === "Signature")
             .map(filter => filter.name === symbolId.symbol.name && filter.args === symbolId.symbol.arguments.length));
@@ -102,7 +110,11 @@ function NodeContent(props) {
 
     React.useEffect(() => {
         visibilityManager();
-        onFullyLoaded(() => visibilityManager());
+        onFullyLoaded(() => {
+            if (isMounted.current) {
+                 visibilityManager()
+            }
+        });
     }, [visibilityManager, highlightedSymbol, state, expandNode, activeFilters])
 
 
@@ -113,7 +125,10 @@ function NodeContent(props) {
     }
     React.useEffect(() => {
         window.addEventListener('resize', visibilityManager);
-        return _ => window.removeEventListener('resize', visibilityManager)
+        return _ => {
+            window.removeEventListener('resize', visibilityManager)
+            isMounted.current = false;
+        }
     })
 
     const classNames2 = `set_value`

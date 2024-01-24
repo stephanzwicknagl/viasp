@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-from typing import Union, Collection, Dict, List, Tuple
+from typing import Union, Collection, Dict, List, cast
 
 import igraph
 import networkx as nx
@@ -8,6 +8,8 @@ import sqlite3
 import numpy as np
 from flask import Blueprint, request, jsonify, abort, Response, send_file, current_app, g
 from networkx import DiGraph
+
+from clingo import Symbol
 
 from ...shared.defaults import GRAPH_PATH, STATIC_PATH
 from ...shared.model import Transformation, Node, Signature
@@ -94,13 +96,13 @@ class GraphAccessor:
         result = self.cursor.fetchone()
         return current_app.json.loads(result[0]) if result is not None else ""
 
-    def load_all_sorts(self) -> List[Tuple[List[Transformation], str]]:
+    def load_all_sorts(self) -> List[str]:
         self.cursor.execute("""
-            SELECT sort, hash FROM graphs
+            SELECT hash FROM graphs
         """)
-        result: List[Tuple[str, str]] = self.cursor.fetchall()
-        loaded_sorts: List[Tuple[List[Transformation], str]] = [(current_app.json.loads(r[0]), r[1]) for r in result]
-        index_of_current_sort: int = [s[1] for s in loaded_sorts].index(self.get_current_graph())
+        result: List[str] = self.cursor.fetchall()
+        loaded_sorts: List[str] = [r[0] for r in result]
+        index_of_current_sort: int = loaded_sorts.index(self.get_current_graph())
         loaded_sorts = loaded_sorts[index_of_current_sort:] + loaded_sorts[:index_of_current_sort]
         return loaded_sorts
 
@@ -117,7 +119,7 @@ def get_graph() -> DiGraph:
 def get_graph_json() -> dict:
     return get_database().load_json()
 
-def get_all_sorts() -> List[Tuple[List[Transformation], str]]:
+def get_all_sorts() -> List[str]:
     return get_database().load_all_sorts()
 
 def set_current_graph(hash: str):
@@ -227,8 +229,13 @@ def get_src_tgt_mapping_from_graph(shown_recursive_ids=[], shown_clingraph=False
 def find_reason_by_uuid(symbolid, nodeid):
     node = find_node_by_uuid(nodeid)
 
-    symbolstr = str(getattr(next(filter(lambda x: x.uuid == symbolid, node.diff)), "symbol", ""))
-    reasonids = [getattr(r, "uuid", "") for r in node.reason.get(symbolstr, [])]
+    symbolstr = str(
+        getattr(next(filter(lambda x: x.uuid == symbolid, node.diff)),
+                "symbol", ""))
+    reasonids = [
+        getattr(r, "uuid", "")
+        for r in node.reason.get(symbolstr, [])
+    ]
     return reasonids
 
 
@@ -242,7 +249,6 @@ def get_possible_transformation_orders():
         return "ok", 200
     elif request.method == "GET":
         sorts = get_all_sorts()
-        print(f"Getting {len(sorts)} sorts: {sorts}", flush=True)
         return jsonify(sorts)
     raise NotImplementedError
 

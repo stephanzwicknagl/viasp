@@ -24,6 +24,27 @@ function fetchSorts(backendURL) {
     });
 }
 
+async function canBeDropped(
+    transformations,
+    possibleSorts,
+    currentDragged,
+    hash
+) {
+    if (currentDragged !== '') {
+        const sort = transformations.map((t) => t.hash);
+        const oldIndex = sort.findIndex((h) => h === currentDragged);
+        const [removed] = sort.splice(oldIndex, 1);
+        let newIndex = sort.findIndex((h) => h === hash);
+        if (newIndex >= oldIndex) {
+            newIndex += 1;
+        }
+        sort.splice(newIndex, 0, removed);
+        const newHash = await computeSortHash(sort);
+        return possibleSorts?.includes(newHash) ? newHash : '';
+    }
+    return '';
+}
+
 
 const initialState = {
     transformations: [],
@@ -49,14 +70,14 @@ const addTransformation = (t) => ({type: ADD_TRANSFORMATION, t})
 const addSort = (s) => ({ type: ADD_SORT, s })
 const setCurrentSort = (s) => ({ type: SET_CURRENT_SORT, s})
 const reorderTransformation = (oldIndex, newIndex) => ({type: REORDER_TRANSFORMATION, oldIndex, newIndex})
-const setCurrentDragged = (h) => ({type: SET_CURRENT_DRAGGED, h})
+const setCurrentDragged = (h) => ({type: SET_CURRENT_DRAGGED, h});
 const TransformationContext = React.createContext();
 
 const transformationReducer = (state = initialState, action) => {
     if (action.type === ADD_TRANSFORMATION) {
         return {
             ...state,
-            transformations: state.transformations.concat({transformation: action.t, shown: true, hash: action.t.hash})
+            transformations: state.transformations.concat({transformation: action.t, shown: true, hash: action.t.hash, canDrop: ''})
         }
     }
     if (action.type === SHOW_ONLY_TRANSFORMATION) {
@@ -103,7 +124,7 @@ const transformationReducer = (state = initialState, action) => {
         const [removed] = transformations.splice(action.oldIndex, 1);
         transformations.splice(action.newIndex, 0, removed);
         transformations = transformations.map((t,i) => {
-            return {transformation: {...t.transformation, id: i}, shown: t.shown, hash: t.hash}
+            return {transformation: {...t.transformation, id: i}, shown: t.shown, hash: t.hash, canDrop: ''}
         })
         return {
             ...state,
@@ -114,13 +135,13 @@ const transformationReducer = (state = initialState, action) => {
         if (state.currentSort === "") {
             return {
                 ...state,
-                possibleSorts: state.possibleSorts.concat([action.s[1]]),
-                currentSort: action.s[1]
+                possibleSorts: state.possibleSorts.concat([action.s]),
+                currentSort: action.s
             }
         }
         return {
             ...state,
-            possibleSorts: state.possibleSorts.concat([action.s[1]])
+            possibleSorts: state.possibleSorts.concat([action.s])
         }
     }
     if (action.type === SET_CURRENT_SORT) {
@@ -130,9 +151,22 @@ const transformationReducer = (state = initialState, action) => {
         }
     }
     if (action.type === SET_CURRENT_DRAGGED) {
+        const newTransformations = state.transformations.map(t => {
+            const newT = {...t};
+            canBeDropped(
+                    state.transformations,
+                    state.possibleSorts,
+                    action.h,
+                    t.hash
+                ).then((ans) => {
+                    newT.canDrop = ans;
+                });
+            return newT;
+        });
         return {
             ...state,
-            currentDragged: action.h
+            currentDragged: action.h,
+            transformations: newTransformations
         }
     }
     return {...state}

@@ -44,7 +44,7 @@ def pairwise(iterable: Iterable[T]) -> Iterable[Tuple[T, T]]:
     next(b, None)
     return zip(a, b)
 
-def DefaultMappingProxyType() -> MappingProxyType[Symbol, List]:
+def DefaultMappingProxyType() -> MappingProxyType[str, List]:
     return MappingProxyType(defaultdict())
 
 def is_recursive(node, graph):

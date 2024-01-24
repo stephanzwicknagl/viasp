@@ -4,9 +4,12 @@ import './boxrow.css';
 import { useSettings } from "../contexts/Settings";
 
 function loadClingraphChildren(backendURL) {
-    return fetch(`${backendURL("clingraph/children")}`).then(r => r.json());
+    return fetch(`${backendURL("clingraph/children")}`).then(r => {
+        if (!r.ok) {
+            throw new Error(`${r.status} ${r.statusText}`);
+        }
+        return r.json()});
 }
-
 export function Boxrow() {
     const [graphics, setGraphics] = React.useState(null);
     const [isOverflowH, setIsOverflowH] = React.useState(false);
@@ -14,6 +17,8 @@ export function Boxrow() {
     const boxrowRef = React.useRef(null);
     const { backendURL } = useSettings();
     const backendURLRef = React.useRef(backendURL);
+    const [, message_dispatch] = useMessages()
+    const messageDispatchRef = React.useRef(message_dispatch);
 
     React.useEffect(() => {
         let mounted = true;
@@ -23,6 +28,11 @@ export function Boxrow() {
                     setGraphics(items)
                 }
             })
+            .catch((error) => {
+                messageDispatchRef.current(
+                    showError(`Failed to get clingraph children: ${error}`)
+                );
+            });
         return () => { mounted = false };
     }, []);
 
