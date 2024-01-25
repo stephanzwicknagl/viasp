@@ -5,7 +5,7 @@ Installation
 Installing with conda 
 =====================
 
-The conda viasp package can be found `here <https://anaconda.org/stephanzwicknagl/viasp>`_.
+The conda viasp package can be found `here <https://anaconda.org/stephanzwicknagl/viasp>`__.
 
 .. code-block:: bash
 
@@ -13,12 +13,12 @@ The conda viasp package can be found `here <https://anaconda.org/stephanzwicknag
 
 
 .. warning:: 
-    To support the usage of clingraph in viASP, install `graphviz <https://www.graphviz.org/download/>`_  (version 2.50 or greater) manually.
+    To support the usage of clingraph in viASP, install `graphviz <https://www.graphviz.org/download/>`__  (version 2.50 or greater) manually.
 
 Installing with pip 
 ===================
 
-The python viasp package can be found `here <https://pypi.org/project/viasp/>`_.
+The python viasp package can be found `here <https://pypi.org/project/viasp/>`__.
 
 .. code-block:: bash
 
@@ -45,7 +45,7 @@ The project can also be installed from source. To do so, clone the repository at
 
     $ conda install pip
 
-3. install `graphviz <https://www.graphviz.org/download/>`_
+3. install `graphviz <https://www.graphviz.org/download/>`__
 4. use pip to install the project
 
 .. code-block:: bash
