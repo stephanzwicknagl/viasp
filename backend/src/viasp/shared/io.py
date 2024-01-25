@@ -74,34 +74,7 @@ def object_hook(obj):
     elif t == "SymbolIdentifier":
         return SymbolIdentifier(**obj)
     elif t == "Transformer":
-        # Reconstruct the class definition
-        # Get the path to the module containing MyClass
-        my_module_path = obj["Path"]
-        # Add the directory containing my_module to sys.path
-        my_module_dir = os.path.dirname(my_module_path)
-        sys.path.append(my_module_dir)
-        # Load the module containing MyClass
-        module_name = os.path.splitext(os.path.basename(my_module_path))[0]
-        module_spec = importlib.util.spec_from_file_location(module_name, my_module_path)
-        my_module = importlib.util.module_from_spec(module_spec)
-        module_spec.loader.exec_module(my_module)
-
-        # Create a temporary module to hold the class definition
-        module_name = '__temp_module__'
-        module = types.ModuleType(module_name)
-
-        # get the string
-        class_definition_str = obj["Imports"] + "\n" \
-                            + base64.b64decode(obj["Transformer_definition"])\
-                                    .decode('utf-8')
-
-        # Add the module's original package to sys.path
-        module.__file__ = my_module.__file__
-        sys.modules[module_name] = module
-
-        # Execute the class definition in the temporary module
-        exec(class_definition_str, module.__dict__)
-        return getattr(module, "Transformer")
+        return reconstruct_transformer(obj)
     return obj
 
 
@@ -301,3 +274,36 @@ def get_rules_from_input_program(rules) -> Sequence[str]:
             r += program[begin_line - 1][begin_colu - 1:end_colu]
         rules_from_input_program.append(r)
     return rules_from_input_program
+
+def reconstruct_transformer(obj: dict) -> TransformerTransport:
+    # Reconstruct the class definition
+    # Get the path to the module containing MyClass
+    my_module_path = obj["Path"]
+    # Add the directory containing my_module to sys.path
+    my_module_dir = os.path.dirname(my_module_path)
+    sys.path.append(my_module_dir)
+    # Load the module containing MyClass
+    module_name = os.path.splitext(os.path.basename(my_module_path))[0]
+    module_spec = importlib.util.spec_from_file_location(
+        module_name, my_module_path)
+    if module_spec is None or module_spec.loader is None:
+        raise Exception(f"Module {module_name} not found!")
+    my_module = importlib.util.module_from_spec(module_spec)
+    module_spec.loader.exec_module(my_module)
+
+    # Create a temporary module to hold the class definition
+    module_name = '__temp_module__'
+    module = types.ModuleType(module_name)
+
+    # get the string
+    class_definition_str = obj["Imports"] + "\n" \
+                        + base64.b64decode(obj["Transformer_definition"])\
+                                .decode('utf-8')
+
+    # Add the module's original package to sys.path
+    module.__file__ = my_module.__file__
+    sys.modules[module_name] = module
+
+    # Execute the class definition in the temporary module
+    exec(class_definition_str, module.__dict__)
+    return getattr(module, "Transformer")

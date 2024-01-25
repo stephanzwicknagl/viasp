@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-from typing import Union, Collection, Dict, List, cast
+from typing import Union, Collection, Dict, List
 
 import igraph
 import networkx as nx
@@ -8,8 +8,6 @@ import sqlite3
 import numpy as np
 from flask import Blueprint, request, jsonify, abort, Response, send_file, current_app, g
 from networkx import DiGraph
-
-from clingo import Symbol
 
 from ...shared.defaults import GRAPH_PATH, STATIC_PATH
 from ...shared.model import Transformation, Node, Signature

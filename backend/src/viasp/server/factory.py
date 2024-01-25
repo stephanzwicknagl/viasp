@@ -3,8 +3,6 @@ from werkzeug.utils import find_modules, import_string
 
 from flask_cors import CORS
 from viasp.shared.io import DataclassJSONProvider
-from ..shared.defaults import CLINGRAPH_PATH, GRAPH_PATH, PROGRAM_STORAGE_PATH, STDIN_TMP_STORAGE_PATH
-import os, shutil, atexit
 
 
 def register_blueprints(app):

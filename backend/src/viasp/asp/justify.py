@@ -1,6 +1,6 @@
 """This module is concerned with finding reasons for why a stable model is found."""
 from collections import defaultdict
-from typing import FrozenSet, List, Collection, Dict, Iterable, Union, cast
+from typing import List, Collection, Dict, Iterable, Union, cast
 
 import networkx as nx
 
@@ -94,10 +94,10 @@ def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_i
 
 
 def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
-                                            rule_mapping: Dict[int, Union[AST, str]],
+                                            rule_mapping: Dict[int, Transformation],
                                             fact_node: Node,
                                             h_symbols: List[Symbol],
-                                            recursive_transformations:frozenset,
+                                            recursive_transformations:set,
                                             h="h",
                                             analyzer: ProgramAnalyzer = ProgramAnalyzer(),
                                             pad=True) \
@@ -149,7 +149,7 @@ def append_noops(result_graph: DiGraph, analyzer: ProgramAnalyzer):
         noop_node = Node(frozenset(), next_transformation_id, leaf.atoms)
         result_graph.add_edge(leaf, noop_node,
                               transformation=Transformation(next_transformation_id,
-                                                            [str(pt) for pt in analyzer.pass_through]))
+                                                            tuple(analyzer.pass_through)))
 
 
 def build_graph(wrapped_stable_models: List[List[str]],
@@ -184,9 +184,9 @@ def build_graph(wrapped_stable_models: List[List[str]],
     result_graph.update(join_paths_with_facts(paths))
     if analyzer.pass_through:
         append_noops(result_graph, analyzer)
-    harmonize_uuids(result_graph)
     calculate_spacing_factor(result_graph)
     identify_reasons(result_graph)
+    harmonize_uuids(result_graph)
     return result_graph
 
 
@@ -246,8 +246,8 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
                                                         False))
                 dependant = ast.Literal(loc, ast.Sign.NoSign, symbol)
 
-            new_body: List[ast.Literal] = []
-            reason_literals: List[ast.Literal] = []
+            new_body: List[ast.Literal] = [] # type: ignore
+            reason_literals: List[ast.Literal] = [] # type: ignore
             _ = analyzer.visit_sequence(
                 rule.body, reasons=reason_literals, new_body=new_body, rename_variables=False)
             loc_fun = ast.Function(loc, n_str, [], False)
@@ -272,7 +272,9 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
             new_body = [x for i, x in enumerate(
                 new_body) if x not in new_body[:i]]
             # rename variables inside body aggregates
-            new_body = analyzer.visit_sequence(new_body, rename_variables=True)
+            new_body = list(
+                analyzer.visit_sequence(cast(ast.ASTSequence, new_body),
+                                        rename_variables=True))
             new_body = [ast.Function(loc, model_str, [bb], 0) for bb in filter(filter_body_aggregates,new_body)]
             new_body.append(ast.Function(loc, f"not {model_str}", [dependant], 0))
             justification_program += "\n".join(map(str, (ast.Rule(rule.location, new_head, new_body)

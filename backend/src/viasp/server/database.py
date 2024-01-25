@@ -1,5 +1,5 @@
 from os.path import join, dirname, abspath
-from typing import Optional, Set, List
+from typing import Set, List
 from uuid import UUID
 
 from ..shared.defaults import PROGRAM_STORAGE_PATH

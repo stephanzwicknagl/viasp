@@ -1,4 +1,4 @@
-from typing import Tuple, Any, Dict, Iterable, Collection, List
+from typing import Tuple, Any, Dict, Iterable, Collection, Optional, List
 
 from flask import request, Blueprint, jsonify, abort, Response, current_app
 from uuid import uuid4
@@ -21,8 +21,8 @@ from ...asp.replayer import apply_multiple
 bp = Blueprint("api", __name__, template_folder='../templates/')
 
 calls = CallCenter()
-ctl = None
-using_clingraph = []
+ctl: Optional[Control] = None
+using_clingraph: List[str] = []
 
 
 def handle_call_received(call: ClingoMethodCall) -> None:

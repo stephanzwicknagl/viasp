@@ -115,7 +115,7 @@ class Control:
             self.passed_control = kwargs['control']
             del kwargs['control']
         else:
-            self.passed_control = InnerControl(*args)
+            self.passed_control = InnerControl(args)
         self.viasp = ShowConnector(**kwargs)
 
         if "_viasp_client" in kwargs:

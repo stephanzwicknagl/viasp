@@ -4,12 +4,11 @@ from enum import Enum
 from inspect import Signature as inspect_Signature
 from typing import Any, Sequence, Dict, Union, FrozenSet, Collection, List, Tuple
 from types import MappingProxyType
-from collections import defaultdict
 from uuid import UUID, uuid4
 import networkx as nx
 
 from clingo import Symbol, ModelType
-from clingo.ast import AST, Transformer
+from clingo.ast import AST, Transformer, Rule
 from .util import DefaultMappingProxyType, hash_transformation_rules
 
 @dataclass()
@@ -37,7 +36,7 @@ class Node:
     rule_nr: int = field(hash=True)
     atoms: FrozenSet[SymbolIdentifier] = field(default_factory=frozenset, hash=True)
     reason: Union[
-        Dict[str, List[Symbol]], 
+        Dict[str, List[Symbol]],
         MappingProxyType[str, List[SymbolIdentifier]]] \
         = field(default_factory=DefaultMappingProxyType, hash=True)
     recursive: Union[bool, nx.DiGraph] = field(default=False, hash=False)
@@ -48,7 +47,10 @@ class Node:
         return hash((self.atoms, self.rule_nr, self.diff))
 
     def __eq__(self, o):
-        return isinstance(o, type(self)) and (self.atoms, self.rule_nr, self.diff, self.reason, self.space_multiplier) == (o.atoms, o.rule_nr, o.diff, o.reason, o.space_multiplier)
+        return isinstance(o, type(self)) and (
+            self.atoms, self.rule_nr, self.diff, self.reason,
+            self.space_multiplier) == (o.atoms, o.rule_nr, o.diff, o.reason,
+                                       o.space_multiplier)
 
     def __repr__(self):
         repr_reasons = []
@@ -63,7 +65,7 @@ class Node:
 @dataclass(frozen=False)
 class Transformation:
     id: int = field(hash=True)
-    rules: Tuple[AST, ...] = field(default_factory=tuple, hash=True)
+    rules: Tuple[Rule, ...] = field(default_factory=tuple, hash=True) # type: ignore
     hash: str = field(default="", hash=True)
 
     def __post_init__(self):
@@ -74,7 +76,7 @@ class Transformation:
 
     def __hash__(self):
         return hash(tuple(self.rules))
-    
+
     def __eq__(self, o):
         if not isinstance(o, type(self)):
             return False
@@ -86,7 +88,7 @@ class Transformation:
             if r not in self.rules:
                 return False
         return True
-    
+
     def __repr__(self):
         return f"Transformation(id={self.id}, rules={list(map(str,self.rules))}, hash={self.hash})"
 
@@ -101,7 +103,7 @@ class Signature:
 class ClingoMethodCall:
     name: str
     kwargs: Dict[str, Any]
-    uuid: Union[UUID, None] = field(default_factory=uuid4)
+    uuid: UUID = field(default_factory=uuid4)
 
     @classmethod
     def merge(cls, name: str, signature: inspect_Signature, args: Sequence[Any], kwargs: Dict[str, Any]):

@@ -7,11 +7,8 @@ from clingo import ast, Symbol
 from clingo.ast import (
     Transformer,
     parse_string,
-    Rule,
     ASTType,
     AST,
-    Literal,
-    Minimize,
 )
 
 from .utils import is_constraint, merge_constraints, rank_topological_sorts
@@ -31,7 +28,7 @@ def is_fact(rule, dependencies):
 
 
 def make_signature(literal: ast.Literal) -> Tuple[str, int]: # type: ignore
-    if literal.atom.ast_type in [ast.ASTType.BodyAggregate]:
+    if literal.atom.ast_type in [ASTType.BodyAggregate]:
         return literal, 0
     unpacked = literal.atom.symbol
     if hasattr(unpacked, "ast_type") and unpacked.ast_type == ASTType.Pool:
@@ -47,12 +44,12 @@ def filter_body_arithmetic(elem: ast.Literal): # type: ignore
     return elem_ast_type not in ARITH_TYPES
 
 
-def separate_body_conditionals(body: List[AST]) -> List[AST]:
+def separate_body_conditionals(body: Sequence[AST]) -> List[AST]:
     separated: List[AST] = []
     for body_elem in body:
         if body_elem.ast_type == ASTType.ConditionalLiteral:
-            separated.append(body_elem.literal)
-            separated.extend(body_elem.condition)
+            separated.append(cast(AST, body_elem.literal))
+            separated.extend(cast(Iterable[AST], body_elem.condition))
         else:
             separated.append(body_elem)
     return separated
@@ -104,7 +101,7 @@ class FilteredTransformer(Transformer):
 
 class DependencyCollector(Transformer):
 
-    def visit_Aggregate(self, aggregate: AST, **kwargs: Any) -> AST:
+    def visit_Aggregate(self, aggregate: ast.Aggregate, **kwargs: Any) -> AST: # type: ignore
         kwargs.update({"in_aggregate": True})
         new_body = kwargs.get("new_body", [])
 
@@ -113,7 +110,7 @@ class DependencyCollector(Transformer):
         new_body.append(aggregate_update)
         return aggregate_update
 
-    def visit_BodyAggregateElement(self, aggregate: AST, **kwargs: Any) -> AST:
+    def visit_BodyAggregateElement(self, aggregate: ast.BodyAggregateElement, **kwargs: Any) -> AST: # type: ignore
         # update flag
         kwargs.update({"in_aggregate": True})
 
@@ -122,7 +119,7 @@ class DependencyCollector(Transformer):
         conditions.extend(aggregate.condition)
         return aggregate.update(**self.visit_children(aggregate, **kwargs))
 
-    def visit_ConditionalLiteral(self, conditional_literal: AST,
+    def visit_ConditionalLiteral(self, conditional_literal: ast.ConditionalLiteral, # type: ignore
                                  **kwargs: Any) -> AST:
         deps = kwargs.get("deps", {})
         new_body = kwargs.get("new_body", [])
@@ -142,7 +139,7 @@ class DependencyCollector(Transformer):
         return conditional_literal.update(
             **self.visit_children(conditional_literal, **kwargs))
 
-    def visit_Literal(self, literal: AST, **kwargs: Any) -> AST:
+    def visit_Literal(self, literal: ast.Literal, **kwargs: Any) -> AST: # type: ignore
         reasons: List[AST] = kwargs.get("reasons", [])
         new_body: List[AST] = kwargs.get("new_body", [])
 
@@ -151,12 +148,12 @@ class DependencyCollector(Transformer):
 
         atom: AST = literal.atom
         if (literal.sign == ast.Sign.NoSign
-                and atom.ast_type == ast.ASTType.SymbolicAtom):
+                and atom.ast_type == ASTType.SymbolicAtom):
             reasons.append(atom)
         new_body.append(literal_update)
         return literal.update(**self.visit_children(literal, **kwargs))
 
-    def visit_Variable(self, variable: AST, **kwargs: Any) -> AST:
+    def visit_Variable(self, variable: ast.Variable, **kwargs: Any) -> AST: # type: ignore
         # rename if necessary
         rename_variables: bool = kwargs.get("rename_variables", False)
         in_aggregate: bool = kwargs.get("in_aggregate", False)
@@ -164,7 +161,7 @@ class DependencyCollector(Transformer):
             return ast.Variable(variable.location, f"_{variable.name}")
         return variable.update(**self.visit_children(variable, **kwargs))
 
-    def visit_BooleanConstant(self, boolean_constant: AST,
+    def visit_BooleanConstant(self, boolean_constant: ast.BooleanConstant, # type: ignore
                               **kwargs: Any) -> AST:
         new_body: List[AST] = kwargs.get("new_body", [])
         new_body.append(boolean_constant)
@@ -183,15 +180,15 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         self.dependencies = nx.DiGraph()
         self.dependants: Dict[Tuple[str, int], Set[AST]] = defaultdict(set)
         self.conditions: Dict[Tuple[str, int], Set[AST]] = defaultdict(set)
-        self.positive_conditions: Dict[Tuple[str,
-                                             int], Set[Rule]] = defaultdict(
-                                                 set)  # type: ignore
+        self.positive_conditions: Dict[Tuple[
+            str, int], Set[ast.Rule]] = defaultdict(  # type: ignore
+                set)
         self.rule2signatures = defaultdict(set)
         self.facts: Set[Symbol] = set()
         self.constants: Set[Symbol] = set()
         self.constraints: Set[Rule] = set()  # type: ignore
         self.pass_through: Set[AST] = set()
-        self.rules: List[Rule] = []  # type: ignore
+        self.rules: List[ast.Rule] = []  # type: ignore
         self.names: Set[str] = set()
 
     def _get_conflict_free_version_of_name(self, name: str) -> str:
@@ -364,20 +361,22 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     def get_constants(self):
         return list(self.constants)
 
-    def register_symbolic_dependencies(self, deps: Dict[Literal,
-                                                        List[Literal]]):
+    def register_symbolic_dependencies(
+            self, deps: Dict[ast.Literal, List[ast.Literal]]):  # type: ignore
         for u, conditions in deps.items():
             for v in conditions:
                 self.dependencies.add_edge(u, v)
 
-    def register_rule_conditions(self, rule: AST,
-                                 conditions: List[Literal]) -> None:
+    def register_rule_conditions(self, rule: ast.Rule, # type: ignore
+                                 conditions: List[ast.Literal]) -> None: # type: ignore
         for c in conditions:
             c_sig = make_signature(c)
             self.conditions[c_sig].add(rule)
 
-    def register_rule_dependencies(self, rule: Rule,
-                                   deps: Dict[Literal, List[Literal]]) -> None:
+    def register_rule_dependencies(
+            self, rule: ast.Rule, # type: ignore
+            deps: Dict[ast.Literal, # type: ignore
+                       List[ast.Literal]]) -> None:  # type: ignore
         for uu in deps.values():
             for u in filter(filter_body_arithmetic, uu):
                 u_sig = make_signature(u)
@@ -404,7 +403,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             v_sig = make_signature(v)
             self.dependants[v_sig].add(rule)
 
-    def visit_Rule(self, rule: Rule):
+    def visit_Rule(self, rule: ast.Rule): # type: ignore
         deps = defaultdict(list)
         _ = self.visit(rule.head, deps=deps, in_head=True)
         for b in rule.body:
@@ -451,7 +450,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         self.register_rule_dependencies(showTerm, deps)
         self.rules.append(showTerm)
 
-    def visit_Minimize(self, minimize: Minimize):
+    def visit_Minimize(self, minimize: ast.Minimize): # type: ignore
         deps = defaultdict(list)
         self.pass_through.add(minimize)
 
@@ -481,10 +480,10 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             for statement in new_program:
                 self.visit(statement)
         else:
-            parse_string(program, lambda statement: self.visit(statement))
+            parse_string(program, lambda statement: self.visit(statement) and None)
 
     def sort_program(self, program) -> List[Transformation]:
-        parse_string(program, lambda rule: self.visit(rule))
+        parse_string(program, lambda rule: self.visit(rule) and None)
         sorted_programs = self.sort_program_by_dependencies()
         return [
             Transformation(i, prg) for i, prg in enumerate(sorted_programs[0])
@@ -580,9 +579,9 @@ class ProgramReifier(DependencyCollector):
     def _nest_rule_head_in_h_with_explanation_tuple(
         self,
         loc: ast.Location,
-        dependant: ast.Literal,
-        conditions: List[ast.Literal],
-        reasons: List[ast.Literal],
+        dependant: ast.Literal, # type: ignore
+        conditions: List[ast.Literal], # type: ignore
+        reasons: List[ast.Literal], # type: ignore
         use_h_showTerm: bool = False,
     ):
         """
@@ -594,7 +593,7 @@ class ProgramReifier(DependencyCollector):
         loc_atm = ast.SymbolicAtom(loc_fun)
         loc_lit = ast.Literal(loc, ast.Sign.NoSign, loc_atm)
         for literal in conditions:
-            if literal.atom.ast_type == ast.ASTType.SymbolicAtom:
+            if literal.atom.ast_type == ASTType.SymbolicAtom:
                 reasons.append(literal.atom)
         reasons.reverse()
         reasons = [r for i, r in enumerate(reasons) if r not in reasons[:i]]
@@ -607,7 +606,7 @@ class ProgramReifier(DependencyCollector):
             ast.Function(loc, h_attribute, [loc_lit, dependant, reason_lit], 0)
         ]
 
-    def visit_Rule(self, rule: clingo.ast.Rule):
+    def visit_Rule(self, rule: ast.Rule) -> List[AST]: # type: ignore
         """
         Reify a rule into a set of new rules.
         Also replaces any interval in the head with a variable and adds it to the body.
@@ -628,13 +627,13 @@ class ProgramReifier(DependencyCollector):
         if not deps:
             # if it's a "simple head"
             deps[rule.head] = []
-        new_rules = []
+        new_rules: List[ast.Rule] = [] # type: ignore
         for dependant, conditions in deps.items():
             if has_an_interval(dependant):
                 # replace dependant with variable: e.g. (1..3) -> X
                 variables = [
                     ast.Variable(loc, self.get_conflict_free_variable())
-                    if arg.ast_type == ast.ASTType.Interval else arg
+                    if arg.ast_type == ASTType.Interval else arg
                     for arg in dependant.atom.symbol.arguments
                 ]
                 symbol = ast.SymbolicAtom(
@@ -642,8 +641,8 @@ class ProgramReifier(DependencyCollector):
                                  False))
                 dependant = ast.Literal(loc, ast.Sign.NoSign, symbol)
 
-            new_body: List[ast.Literal] = []
-            reason_literals: List[ast.Literal] = []
+            new_body: List[ast.Literal] = [] # type: ignore
+            reason_literals: List[ast.Literal] = [] # type: ignore
             _ = self.visit_sequence(
                 rule.body,
                 reasons=reason_literals,
@@ -660,9 +659,11 @@ class ProgramReifier(DependencyCollector):
                 x for i, x in enumerate(new_body) if x not in new_body[:i]
             ]
             # rename variables inside body aggregates
-            new_body = self.visit_sequence(new_body, rename_variables=True)
+            new_body = list(
+                self.visit_sequence(cast(ast.ASTSequence, new_body),
+                                    rename_variables=True))
             new_rules.extend([
-                Rule(rule.location, new_head, new_body)
+                ast.Rule(rule.location, new_head, new_body)
                 for new_head in new_head_s
             ])
 
@@ -679,7 +680,7 @@ class ProgramReifier(DependencyCollector):
             # replace dependant with variable: e.g. (1..3) -> X
             variables = [
                 ast.Variable(loc, self.get_conflict_free_variable())
-                if arg.ast_type == ast.ASTType.Interval else arg
+                if arg.ast_type == ASTType.Interval else arg
                 for arg in showTerm.term.atom.symbol.arguments
             ]
             symbol = ast.SymbolicAtom(
@@ -710,12 +711,11 @@ class ProgramReifier(DependencyCollector):
             if x not in new_body_literals[:i]
         ]
         # rename variables inside body aggregates
-        new_body_literals = cast(
-            List[AST],
+        new_body_literals = list(
             self.visit_sequence(cast(ast.ASTSequence, new_body_literals),
                                 rename_variables=True))
         new_rules.extend([
-            Rule(showTerm.location, new_head, new_body_literals)
+            ast.Rule(showTerm.location, new_head, new_body_literals)
             for new_head in new_head_s
         ])
 
@@ -743,9 +743,9 @@ def transform(program: str, visitor=None, **kwargs):
 
 def reify(transformation: Transformation, **kwargs):
     visitor = ProgramReifier(transformation.id, **kwargs)
-    result = []
+    result: List[AST] = []
     for rule in transformation.rules:
-        result.extend(visitor.visit(rule))
+        result.extend(cast(Iterable[AST], visitor.visit(rule)))
     return result
 
 
@@ -777,7 +777,7 @@ def has_an_interval(literal):
     """
     try:
         for arg in literal.atom.symbol.arguments:
-            if arg.ast_type == ast.ASTType.Interval:
+            if arg.ast_type == ASTType.Interval:
                 return True
     except AttributeError:
         return False

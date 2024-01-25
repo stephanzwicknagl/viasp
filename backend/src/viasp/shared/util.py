@@ -2,7 +2,6 @@ from itertools import tee
 from typing import Any, TypeVar, Iterable, Tuple, List
 from collections import defaultdict
 from types import MappingProxyType
-from clingo import Symbol
 from hashlib import sha1
 from flask import current_app
 

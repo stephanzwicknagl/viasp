@@ -8,6 +8,7 @@ class Level(Enum):
     INFO = 2
     DEBUG = 3
     TRACE = 4
+    PLAIN = 5
 
 
 def log(text: str, level=Level.INFO) -> None:

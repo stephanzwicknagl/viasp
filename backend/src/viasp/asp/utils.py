@@ -167,7 +167,7 @@ def get_identifiable_reason(g: nx.DiGraph,
     return None
 
 
-def harmonize_uuids(g: nx.DiGraph) -> nx.DiGraph:
+def harmonize_uuids(g: nx.DiGraph) -> None:
     """
     Harmonizes the uuids of the nodes in the graph with those of existing graphs of different sortings.
     """
@@ -185,8 +185,6 @@ def harmonize_uuids(g: nx.DiGraph) -> nx.DiGraph:
                     incoming.uuid = pattern.uuid
                     incoming.atoms = pattern.atoms
                     incoming.diff = pattern.diff
-
-    return g
 
 
 def calculate_spacing_factor(g: nx.DiGraph) -> None:
