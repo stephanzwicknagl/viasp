@@ -82,7 +82,7 @@ class ShowConnector:
         self._database.set_target_stable_model(self._marked)
         self._database._reconstruct()
         kwargs = {"head_name": head_name, "collect_variables": collect_variables}
-        
+
         relaxed_prg = self._database.relax_constraints(**kwargs)
         ctl = Control()
         ctl.add("base", [], relaxed_prg)
@@ -103,6 +103,9 @@ class ShowConnector:
 class Control:
     
     
+    
+
+    
     def __init__(self, *args, **kwargs):
         if 'files' in kwargs:
             # files is only passed to call InnerControl with only the options
@@ -115,15 +118,16 @@ class Control:
             self.passed_control = kwargs['control']
             del kwargs['control']
         else:
-            self.passed_control = InnerControl(args)
+            self.passed_control = InnerControl(*args) # type: ignore
         self.viasp = ShowConnector(**kwargs)
 
         if "_viasp_client" in kwargs:
             del kwargs["_viasp_client"]
         if "viasp_backend_url" in kwargs:
             del kwargs["viasp_backend_url"]
-        
-        self.viasp.register_function_call("__init__", signature(self.passed_control.__init__), args, kwargs)
+
+        self.viasp.register_function_call(
+            "__init__", signature(self.passed_control.__init__), args, kwargs)
 
     def load(self, path: str) -> None:
         if path == "-":
@@ -132,23 +136,36 @@ class Control:
             with open(path, "w", encoding="utf-8") as f:
                 f.writelines(tmp)
         else:
-            with open(path, "r", encoding="utf-8") as f, open(STDIN_TMP_STORAGE_PATH, "a", encoding="utf-8") as out:
+            with open(path, "r",
+                      encoding="utf-8") as f, open(STDIN_TMP_STORAGE_PATH,
+                                                   "a",
+                                                   encoding="utf-8") as out:
                 out.writelines(f.readlines())
-        self.viasp.register_function_call("load", signature(self.passed_control.load), [], kwargs={"path": path})
+        self.viasp.register_function_call("load",
+                                          signature(self.passed_control.load),
+                                          [],
+                                          kwargs={"path": path})
         self.passed_control.load(path=str(path))
 
     def add(self, *args, **kwargs):
-        self.viasp.register_function_call("add", signature(self.passed_control._add2), [], kwargs=dict(zip(['name', 'parameters', 'program'], args)))
+        self.viasp.register_function_call(
+            "add",
+            signature(self.passed_control._add2), [],
+            kwargs=dict(zip(['name', 'parameters', 'program'], args)))
         self.passed_control.add(*args, **kwargs)
 
     def __getattribute__(self, name):
         try:
             attr = object.__getattribute__(self, name)
         except AttributeError:
-            attr = self.passed_control.__getattribute__(name) 
-        if is_non_cython_function_call(attr) and name != "load" and name != "add":
+            attr = self.passed_control.__getattribute__(name)
+        if is_non_cython_function_call(
+                attr) and name != "load" and name != "add":
+
             def wrapper_func(*args, **kwargs):
-                self.viasp.register_function_call(attr.__name__, signature(attr), args, kwargs)
+                self.viasp.register_function_call(attr.__name__,
+                                                  signature(attr), args,
+                                                  kwargs)
                 result = attr(*args, **kwargs)
                 return result
 
