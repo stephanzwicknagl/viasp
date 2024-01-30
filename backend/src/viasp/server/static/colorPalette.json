@@ -7,12 +7,12 @@
         "0": "#a9a9a92f",
         "1": "#ffffff"
     },
-    "explanationSuccess": "#36B37E", 
+    "explanationSuccess": "#e2b38a", 
     "explanationHighlights": {
-        "0": "#d48521",
+        "0": "#98f4e2",
         "1": "#9a8298",
-        "2": "#e0e4ac",
-        "3": "#98f4e2",
-        "4": "#21d485"
+        "2": "#bbf9a9",
+        "3": "#14ceaf",
+        "4": "#e1ed5c"
     }
 }
