@@ -1,5 +1,6 @@
 import React from "react";
 import PropTypes from "prop-types";
+import { COLORPALETTE } from "../types/propTypes";
 
 const ColorPaletteContext = React.createContext([]);
 
@@ -20,13 +21,5 @@ ColorPaletteProvider.propTypes = {
     /**
      * The color palette to update the color palette with
      */
-    colorPalette: PropTypes.exact({
-        primary: PropTypes.string,
-        light: PropTypes.string,
-        dark: PropTypes.string,
-        infoBackground: PropTypes.string,
-        rowShading: PropTypes.objectOf(PropTypes.string),
-        explanationSuccess: PropTypes.string,
-        explanationHighlights: PropTypes.objectOf(PropTypes.string),
-    }),
+    colorPalette: COLORPALETTE
 };

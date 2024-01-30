@@ -10,7 +10,7 @@ export const useHighlightedSymbol = () => React.useContext(HighlightedSymbolCont
 export const HighlightedSymbolProvider = ({ children }) => {
     const [highlightedSymbol, setHighlightedSymbol] = React.useState(defaultHighlightedSymbol);
     const colorPalette = useColorPalette();
-    const colorArray = Object.values(colorPalette.explanationHighlights);
+    const colorArray = colorPalette.explanationHighlights;
 
     function getNextColor(l, arrowsColors){
         var c = JSON.stringify(colorArray[l % colorArray.length])

@@ -37,7 +37,7 @@ function GraphContainer(props) {
     const {state: {transformations}} = useTransformations()
     const lastNodeInGraph = transformations.length - 1;
     const colorPalette = useColorPalette();
-    const background = Object.values(colorPalette.rowShading);
+    const background = colorPalette.rowShading;
 
 
     return <div className="graph_container" >

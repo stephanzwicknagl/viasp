@@ -41,3 +41,12 @@ export const BOX = PropTypes.exact({
     _type: PropTypes.oneOf(['Box']),
     uuid: PropTypes.string
 })
+export const COLORPALETTE = PropTypes.exact({
+    primary: PropTypes.string,
+    light: PropTypes.string,
+    dark: PropTypes.string,
+    infoBackground: PropTypes.string,
+    rowShading: PropTypes.arrayOf(PropTypes.string),
+    explanationSuccess: PropTypes.string,
+    explanationHighlights: PropTypes.arrayOf(PropTypes.string),
+})

@@ -3,16 +3,16 @@
     "light": "#F4F5FA",
     "dark": "#444",
     "infoBackground": "#B3BAC5",
-    "rowShading": {
-        "0": "#a9a9a92f",
-        "1": "#ffffff"
-    },
+    "rowShading": [
+        "#a9a9a92f",
+        "#ffffff"
+    ],
     "explanationSuccess": "#e2b38a", 
-    "explanationHighlights": {
-        "0": "#98f4e2",
-        "1": "#9a8298",
-        "2": "#bbf9a9",
-        "3": "#14ceaf",
-        "4": "#e1ed5c"
-    }
+    "explanationHighlights": [
+        "#98f4e2",
+        "#9a8298",
+        "#bbf9a9",
+        "#14ceaf",
+        "#e1ed5c"
+    ]
 }
