@@ -29,7 +29,6 @@ export const TRANSFORMATIONWRAPPER = PropTypes.exact({
     transformation: TRANSFORMATION,
     shown: PropTypes.bool,
     hash: PropTypes.string,
-    canDrop: PropTypes.string
 })
 export const GRAPH = PropTypes.exact({
     _type: PropTypes.oneOf(['Graph']),

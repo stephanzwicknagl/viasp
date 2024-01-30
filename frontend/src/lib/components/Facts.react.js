@@ -1,45 +1,25 @@
 import "./facts.css";
 import React from "react";
-import PropTypes from "prop-types";
-import {showError, useMessages} from '../contexts/UserMessages';
-import {useSettings} from "../contexts/Settings";
 import {Node} from "./Node.react";
 import {useTransformations} from "../contexts/transformations";
-
-function loadFacts(backendURL) {
-    return fetch(`${backendURL('graph/facts')}`).then((r) => {
-        if (!r.ok) {
-            throw new Error(`${r.status} ${r.statusText}`);
-        }
-        return r.json();
-    });
-}
+import {make_default_nodes} from "../utils";
 
 export function Facts() {
-    const { backendURL} = useSettings();
-    const { state: {currentDragged} } = useTransformations();
-    const [, message_dispatch] = useMessages();
-    const messageDispatchRef = React.useRef(message_dispatch);
-    const backendURLRef = React.useRef(backendURL)
-    const [fact, setFact] = React.useState(null);
+    const { state: {currentDragged, transformationNodesMap} } = useTransformations();
+    const [fact, setFact] = React.useState(make_default_nodes()[0]);
     const [style, setStyle] = React.useState({opacity: 1.0});
     const opacityMultiplier = 0.8;
 
     React.useEffect(() => {
-        let mounted = true;
-        loadFacts(backendURLRef.current)
-            .then((items) => {
-                if (mounted) {
-                    setFact(items);
-                }
-            })
-            .catch((error) => {
-                messageDispatchRef.current(
-                    showError(`Failed to get facts ${error}`)
-                );
-            });
-        return () => { mounted = false };
-    }, []);
+        if (
+            transformationNodesMap &&
+            transformationNodesMap[-1]
+        ) {
+            setFact(transformationNodesMap[-1]);
+        } else {
+            setFact(oldFact => make_default_nodes([oldFact])[0]);
+        }
+    }, [transformationNodesMap]);
     
     React.useEffect(() => {
         if (currentDragged.length > 0) {
@@ -56,12 +36,11 @@ export function Facts() {
             </div>
         )
     }
-    return fact === null ? <div>Loading...</div> :
-        <div className="row_row" style={style}><Node 
+    return <div className="row_row" style={style}><Node 
                 key={fact.uuid} 
                 node={fact}
-                showMini={false}/></div>
-
+                showMini={false}/>
+        </div>
 }
 
 Facts.propTypes = {}

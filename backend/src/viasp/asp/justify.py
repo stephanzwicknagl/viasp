@@ -186,7 +186,6 @@ def build_graph(wrapped_stable_models: List[List[str]],
         append_noops(result_graph, analyzer)
     calculate_spacing_factor(result_graph)
     identify_reasons(result_graph)
-    harmonize_uuids(result_graph)
     return result_graph
 
 

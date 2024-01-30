@@ -17,6 +17,9 @@ import clockwiseVerticalArrows from '@iconify/icons-emojione-monotone/clockwise-
 import arrowDownDoubleFill from '@iconify/icons-ri/arrow-down-double-fill';
 import { IconWrapper } from '../LazyLoader';
 
+const minimumNodeHeight = 34;
+const standardNodeHeight = 80;
+
 function any(iterable) {
     for (let index = 0; index < iterable.length; index++) {
         if (iterable[index]) {
@@ -33,8 +36,6 @@ function NodeContent(props) {
     const colorPalette = useColorPalette();
     const [{ activeFilters },] = useFilters();
     const { highlightedSymbol, toggleReasonOf } = useHighlightedSymbol();
-    const standardNodeHeight = 80;
-    const minimumNodeHeight = 34;
     const belowLineMargin = 5;
 
     let contentToShow;
@@ -60,19 +61,19 @@ function NodeContent(props) {
     function handleClick(e, src) {
         e.stopPropagation();
         if (src.has_reason) {
-            toggleReasonOf(src.uuid, node.uuid)
+            toggleReasonOf(src.uuid, node.uuid, highlightedSymbol)
         }
     }
 
 
 
     const visibilityManager = React.useCallback(() => {
-        function symbolVisibilityManager(compareHighlightedSymbol, symbol) {
+        function symbolVisibilityManager(compareHighlightedSymbol, symbol, print) {
             const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol.uuid);
             const j = compareHighlightedSymbol.map(item => item.src).indexOf(symbol.uuid);
             const childElement = document.getElementById(symbol.uuid + `_${isSubnode ? "sub" : "main"}`);
             const parentElement = document.getElementById(parentID);
-
+            
             if (!childElement || !parentElement) {
                 return { "fittingHeight": 0, "isMarked": i !== -1 || j !== -1 };
             }
@@ -81,12 +82,24 @@ function NodeContent(props) {
             return { "fittingHeight": childRect.bottom - parentRect.top + belowLineMargin, "isMarked": i !== -1 || j !== -1 };
         }
 
+        
         var allHeights = contentToShow
-            .filter(symbol => symbolShouldBeShown(symbol))
-            .map(s => symbolVisibilityManager(highlightedSymbol, s));
+            .filter((symbol) => symbolShouldBeShown(symbol))
+            .map((s) =>
+                symbolVisibilityManager(
+                    highlightedSymbol,
+                    s,
+                    contentToShow.length === 1
+                )
+            );
         var markedItems = allHeights.filter(item => item.isMarked);
         var maxSymbolHeight = Math.max(minimumNodeHeight, ...allHeights.map(item => item.fittingHeight))
-
+        
+        if (node.uuid.includes('loading')) {
+            setHeight(Math.min(standardNodeHeight, maxSymbolHeight));
+            setIsOverflowV(false)
+            return;
+        }
         if (expandNode) {
             setHeight(maxSymbolHeight);
             setIsOverflowV(false)
@@ -105,14 +118,14 @@ function NodeContent(props) {
                 setIsOverflowV(maxSymbolHeight > standardNodeHeight)
             }
         };
-    }, [contentToShow, highlightedSymbol, setHeight, setIsOverflowV, standardNodeHeight, minimumNodeHeight, expandNode, symbolShouldBeShown, isSubnode, parentID])
+    }, [contentToShow, highlightedSymbol, setHeight, setIsOverflowV, expandNode, symbolShouldBeShown, isSubnode, parentID, node.uuid])
 
 
     React.useEffect(() => {
         visibilityManager();
         onFullyLoaded(() => {
             if (isMounted.current) {
-                 visibilityManager()
+                visibilityManager()
             }
         });
     }, [visibilityManager, highlightedSymbol, state, expandNode, activeFilters])
@@ -131,16 +144,24 @@ function NodeContent(props) {
         }
     })
 
-    const classNames2 = `set_value`
+    const classNames2 = `set_value`;
     const renderedSymbols = contentToShow.filter(symbol =>
         symbolShouldBeShown(symbol)).map(s => {
             return <Symbol key={JSON.stringify(s)} symbolIdentifier={s} isSubnode={isSubnode} handleClick={handleClick}/>
         })
 
-    return <div className='set_container'
-                style={{"color": colorPalette.dark}}>
-        <span className={classNames2}>{renderedSymbols.length > 0 ? renderedSymbols : ""}</span>
-    </div>
+    return (
+        <div
+            className={`set_container ${
+                node.uuid.includes('loading') ? 'hidden' : ''
+            }`}
+            style={{color: colorPalette.dark}}
+        >
+            <span className={classNames2}>
+                {renderedSymbols.length > 0 ? renderedSymbols : ''}
+            </span>
+        </div>
+    );
 }
 
 NodeContent.propTypes = {
@@ -243,7 +264,7 @@ export function Node(props) {
     const colorPalette = useColorPalette();
     const { dispatch: dispatchShownNodes } = useShownNodes();
     const classNames = useHighlightedNodeToCreateClassName(node);
-    const [height, setHeight] = React.useState(0);
+    const [height, setHeight] = React.useState(minimumNodeHeight);
     const [expandNode, setExpandNode] = React.useState(false);
     // state updater to force other components to update
     const [, , startAnimationUpdater, stopAnimationUpdater] = useAnimationUpdater();
@@ -288,7 +309,7 @@ export function Node(props) {
                     className={'mini'}
                 />
             ) : (
-                <div className={'set_too_high'}>
+                <div className={`set_too_high ${node.uuid.includes('loading') ? 'loading' : null}`}>
                     <AnimateHeight
                         id={divID}
                         duration={500}

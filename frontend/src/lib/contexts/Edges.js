@@ -34,7 +34,6 @@ const EdgeProvider = ({ children }) => {
     const { state: { transformations } } = useTransformations()
 
 
-    const { globalState: {shownNodes} } = useShownNodes();
     const [shownRecursion, ,] = useShownRecursion();
     const [{activeFilters},] = useFilters();
     const { clingraphUsed } = useClingraph();
@@ -59,7 +58,7 @@ const EdgeProvider = ({ children }) => {
 
     React.useEffect(() => {
         reloadEdges();
-    }, [reloadEdges, shownNodes, shownRecursion, activeFilters, transformations]);
+    }, [reloadEdges, shownRecursion, activeFilters, transformations]);
 
     return <EdgeContext.Provider value={{ edges, reloadEdges }}>{children}</EdgeContext.Provider>
 }

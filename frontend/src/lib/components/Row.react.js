@@ -15,15 +15,7 @@ import {ColorPaletteContext} from '../contexts/ColorPalette';
 import {useShownRecursion} from '../contexts/ShownRecursion';
 import {IconWrapper} from '../LazyLoader';
 import dragHandleRounded from '@iconify/icons-material-symbols/drag-handle-rounded';
-
-function loadMyAsyncData(hash, backendURL) {
-    return fetch(`${backendURL('graph/children')}/${hash}`).then(r => {
-        if (!r.ok) {
-            throw new Error(`${r.status} ${r.statusText}`);
-        }
-        return r.json()});
-}
-
+import {make_default_nodes} from '../utils';
 
 export class DragHandle extends React.Component {
     constructor(props) {
@@ -96,52 +88,68 @@ export class RowTemplate extends React.Component {
         const transformation = item.transformation;
 
         return (
-            <ColorPaletteContext.Consumer>
-                {({rowShading}) => {
-                    const scaleConstant = 0.02;
-                    const shadowConstant = 15;
-                    const opacityMultiplier = 0.8;
-                    const scale = itemSelected * scaleConstant + 1;
-                    const shadow = itemSelected * shadowConstant + 0;
-                    const dragged = itemSelected !== 0;
-                    const background = Object.values(rowShading);
-
-
-                    const containerStyle = {
-                        position: 'relative',
-                        maxHeight: '100%',
-                        transform: `scale(${scale})`,
-                        zIndex: dragged ? 1 : 0,
-                        transformOrigin: 'left',
-                        boxShadow: `rgba(0, 0, 0, 0.3) 0px ${shadow}px ${
-                            2 * shadow
-                        }px 0px`,
-                        background:
-                            background[transformation.id % background.length],
-                        opacity:
-                            item.canDrop.length > 0 || itemSelected
-                                ? 1
-                                : 1 -
-                                  opacityMultiplier * this.props.anySelected,
-                    };
+            <TransformationContext.Consumer>
+                {({state: {canDrop}}) => {
                     return (
-                        <div
-                            className="row_signal_container"
-                            style={containerStyle}
-                            ref={this.rowRef}
-                        >
-                            {transformation === null ? null : (
-                                <Row
-                                    key={transformation.hash}
-                                    transformation={transformation}
-                                    dragHandleProps={dragHandleProps}
-                                    itemSelected={itemSelected}
-                                />
-                            )}
-                        </div>
+                        <ColorPaletteContext.Consumer>
+                            {({rowShading}) => {
+                                const scaleConstant = 0.02;
+                                const shadowConstant = 15;
+                                const opacityMultiplier = 0.8;
+                                const scale = itemSelected * scaleConstant + 1;
+                                const shadow =
+                                    itemSelected * shadowConstant + 0;
+                                const dragged = itemSelected !== 0;
+                                const background = Object.values(rowShading);
+                                const thisCanDrop =
+                                    canDrop !== null
+                                        ? canDrop[item.transformation.hash] ||
+                                          ''
+                                        : '';
+
+                                const containerStyle = {
+                                    position: 'relative',
+                                    maxHeight: '100%',
+                                    transform: `scale(${scale})`,
+                                    zIndex: dragged ? 1 : 0,
+                                    transformOrigin: 'left',
+                                    boxShadow: `rgba(0, 0, 0, 0.3) 0px ${shadow}px ${
+                                        2 * shadow
+                                    }px 0px`,
+                                    background:
+                                        background[
+                                            transformation.id %
+                                                background.length
+                                        ],
+                                    opacity:
+                                        thisCanDrop.length > 0 || itemSelected
+                                            ? 1
+                                            : 1 -
+                                              opacityMultiplier *
+                                                  this.props.anySelected,
+                                };
+                                return (
+                                    <div
+                                        className="row_signal_container"
+                                        style={containerStyle}
+                                        ref={this.rowRef}
+                                    >
+                                        {transformation === null ? null : (
+                                            <Row
+                                                key={transformation.hash}
+                                                transformation={transformation}
+                                                dragHandleProps={
+                                                    dragHandleProps
+                                                }
+                                            />
+                                        )}
+                                    </div>
+                                );
+                            }}
+                        </ColorPaletteContext.Consumer>
                     );
                 }}
-            </ColorPaletteContext.Consumer>
+            </TransformationContext.Consumer>
         );
     }
 }
@@ -167,28 +175,24 @@ RowTemplate.propTypes = {
 };
 
 export function Row(props) {
-    const {transformation, dragHandleProps, itemSelected} = props;
+    const {transformation, dragHandleProps} = props;
 
-    const {backendURL} = useSettings();
-    const [, message_dispatch] = useMessages();
-    const [nodes, setNodes] = React.useState(null);
+    const {
+        state: {transformationNodesMap},
+    } = useTransformations();
+    const [nodes, setNodes] = React.useState(make_default_nodes());
     const [isOverflowH, setIsOverflowH] = React.useState(false);
     const [overflowBreakingPoint, setOverflowBreakingPoint] =
         React.useState(null);
     const rowbodyRef = useRef(null);
     const headerRef = useRef(null);
     const handleRef = useRef(null);
-    const messageDispatchRef = React.useRef(message_dispatch);
-    const backendURLRef = React.useRef(backendURL);
-    const transformationhashRef = React.useRef(transformation.hash);
     const {
-        state: {transformations, currentDragged},
-        dispatch: dispatchTransformation,
+        state: {transformations},
     } = useTransformations();
-    const dispatchTransformationRef = React.useRef(dispatchTransformation);
     const [shownRecursion, ,] = useShownRecursion();
 
-    useEffect(() => {
+    React.useEffect(() => {
         if (headerRef.current && handleRef.current) {
             const headerHeight = headerRef.current.offsetHeight;
             handleRef.current.style.top = `${headerHeight}px`;
@@ -196,22 +200,15 @@ export function Row(props) {
     }, []);
 
     React.useEffect(() => {
-        let mounted = true;
-        loadMyAsyncData(transformationhashRef.current, backendURLRef.current)
-            .then((items) => {
-                if (mounted) {
-                    setNodes(items);
-                }
-            })
-            .catch((error) => {
-                messageDispatchRef.current(
-                    showError(`Failed to get stable model data ${error}`)
-                );
-            });
-        return () => {
-            mounted = false;
-        };
-    }, [transformation.id]);
+        if (
+            transformationNodesMap &&
+            transformationNodesMap[transformation.id]
+        ) {
+            setNodes(transformationNodesMap[transformation.id]);
+        } else {
+            setNodes((oldNodes) => make_default_nodes(oldNodes));
+        }
+    }, [transformationNodesMap, transformation.id]);
 
     const checkForOverflow = useCallback(() => {
         if (rowbodyRef !== null && rowbodyRef.current) {
@@ -242,23 +239,15 @@ export function Row(props) {
         window.addEventListener('resize', checkForOverflow);
         return (_) => window.removeEventListener('resize', checkForOverflow);
     });
-    if (nodes === null) {
-        return (
-            <div>
-                <RowHeader transformation={transformation.rules} />
-                <div>Loading Transformations..</div>
-            </div>
-        );
-    }
+
     const showNodes =
         transformations.find(
             ({transformation: t, shown}) => transformation.id === t.id && shown
         ) !== null;
-    // const style1 = { "backgroundColor": background[transformation.id % background.length] };
 
     return (
         <div className="row_container">
-            <RowHeader transformation={transformation.rules} ref={headerRef} />
+            <RowHeader transformation={transformation.rules} />
             {dragHandleProps === null ? null : (
                 <DragHandle dragHandleProps={dragHandleProps} ref={handleRef} />
             )}
@@ -277,10 +266,10 @@ export function Row(props) {
                                     style={{flex: `0 0 ${space_multiplier}%`}}
                                 >
                                     <RecursiveSuperNode
-                                    key={child.uuid}
-                                    node={child}
-                                    showMini={isOverflowH}
-                                />
+                                        key={child.uuid}
+                                        node={child}
+                                        showMini={isOverflowH}
+                                    />
                                 </div>
                             );
                         }
@@ -297,7 +286,7 @@ export function Row(props) {
                                     isSubnode={false}
                                 />
                             </div>
-                            );
+                        );
                     })}
                 </div>
             )}

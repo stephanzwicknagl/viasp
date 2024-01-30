@@ -26,6 +26,48 @@ export function make_rules_string(rule) {
 
 export async function computeSortHash(hashes) {
     const hash_str = hashes.join("");
+    const hash_len = 16;
     const hash = await crypto.subtle.digest("SHA-1", new TextEncoder().encode(hash_str));
-    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(hash_len).padStart(2, '0')).join('');
+}
+
+export function make_default_nodes(oldNodes = []) {
+    if (oldNodes.length > 0) {
+        return oldNodes.map((node, i) => {
+            return {
+                ...node,
+                uuid: `${node.uuid}-loading-${i}`,
+            }
+        });
+    }
+    
+    const nodes = [];
+    const count = Math.floor(Math.random() * 2) + 1;
+    const symbolCount = Math.floor(Math.random() * 20) + 3; 
+    for (let i = 0; i < count; i++) {
+        const diff = Array.from({length: symbolCount}, (_, i) => {
+            return {
+                _type: 'SymbolIdentifier',
+                symbol: {
+                    _type: 'Function',
+                    arguments: [],
+                    name: `a(${i})`,
+                    positive: true,
+                },
+                has_reason: false,
+                uuid: `loading-${i}`,
+            };
+        });
+        nodes.push({
+            _type: 'Node',
+            recursive: false,
+            uuid: `loading-${i}`,
+            atoms: diff,
+            diff: diff,
+            rule_nr: 0,
+            reason: {},
+            space_multiplier: 0.5,
+        });
+    }
+    return nodes;
 }

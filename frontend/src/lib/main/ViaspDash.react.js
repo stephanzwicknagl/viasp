@@ -13,6 +13,7 @@ import {
     TransformationProvider,
     useTransformations,
     reorderTransformation,
+    setCurrentSort,
     setCurrentDragged,
 } from '../contexts/transformations';
 import { ClingraphProvider, useClingraph } from '../contexts/Clingraph';
@@ -29,7 +30,6 @@ import { HighlightedSymbolProvider, useHighlightedSymbol } from '../contexts/Hig
 import { ShownRecursionProvider, useShownRecursion } from '../contexts/ShownRecursion';
 import { AnimationUpdaterProvider } from '../contexts/AnimationUpdater';
 import DraggableList from 'react-draggable-list';
-import { computeSortHash } from '../utils';
 
 
 function postCurrentSort(backendURL, hash) {
@@ -51,7 +51,7 @@ function postCurrentSort(backendURL, hash) {
 function GraphContainer(props) {
     const {notifyDash} = props;
     const {
-        state: {transformations}, 
+        state: {transformations, canDrop}, 
         dispatch: dispatchTransformation
     } = useTransformations()
     const { clingraphUsed } = useClingraph();
@@ -60,7 +60,6 @@ function GraphContainer(props) {
     const [ ,,setShownRecursion ] = useShownRecursion();
     const backendUrlRef = React.useRef(backendURL);
     const messageDispatchRef = React.useRef(message_dispatch);
-    const graphContainerRef = React.useRef(null);
     const draggableListRef = React.useRef(null);
     const {setHighlightedSymbol} = useHighlightedSymbol();
 
@@ -69,23 +68,24 @@ function GraphContainer(props) {
         const indexOfOldItemAtNewIndex = oldIndex < newIndex ?
             newIndex - 1 :
             newIndex + 1;
-        const newHash = newList[indexOfOldItemAtNewIndex].canDrop;
+        const newHash = canDrop[newList[indexOfOldItemAtNewIndex].hash] || '';
 
         if (newHash.length > 0) {
             setShownRecursion([]);
             setHighlightedSymbol([]);
+            dispatchTransformation(reorderTransformation(oldIndex, newIndex));
             postCurrentSort(backendUrlRef.current, newHash).catch((error) => {
                 messageDispatchRef.current(
                     showError(`Failed to set new current graph: ${error}`)
                     );
                 });
-            dispatchTransformation(reorderTransformation(oldIndex, newIndex));
+            dispatchTransformation(setCurrentSort(newHash));
             return;
         }
     }
 
     return (
-        <div className="graph_container" ref={graphContainerRef}>
+        <div className="graph_container">
             <Facts />
             <Suspense fallback={<div>Loading...</div>}>
                 <Settings />
@@ -96,7 +96,8 @@ function GraphContainer(props) {
                 template={RowTemplate}
                 list={transformations}
                 onMoveEnd={onMoveEnd}
-                container={() => graphContainerRef.current}
+                container={() => document.body}
+                autoScrollRegionSize={200}
                 padding={0}
             />
             {clingraphUsed ? <Boxrow /> : null}
@@ -130,7 +131,7 @@ function MainWindow(props) {
     return <div><Detail />
         <div className="content">
         <Search />
-        <GraphContainer notifyDash={notifyDash} />
+        <GraphContainer notifyDash={notifyDash}/>
         {
             transformations.length === 0 ? null : <Edges />
         }
@@ -163,14 +164,14 @@ export default function ViaspDash(props) {
             <ColorPaletteProvider colorPalette={colorPalette}>
                 <SettingsProvider backendURL={backendURL}>
                     <HighlightedNodeProvider>
-                        <HighlightedSymbolProvider>
-                            <ShownRecursionProvider>
-                                <ShownDetailProvider>
-                                    <FilterProvider>
-                                        <AnimationUpdaterProvider>
-                                            <UserMessagesProvider>
-                                                <ShownNodesProvider>
-                                                    <TransformationProvider>
+                        <ShownRecursionProvider>
+                            <ShownDetailProvider>
+                                <FilterProvider>
+                                    <AnimationUpdaterProvider>
+                                        <UserMessagesProvider>
+                                            <ShownNodesProvider>
+                                                <TransformationProvider>
+                                                    <HighlightedSymbolProvider>
                                                         <EdgeProvider>
                                                             <ClingraphProvider>
                                                                 <div>
@@ -183,14 +184,14 @@ export default function ViaspDash(props) {
                                                                 </div>
                                                             </ClingraphProvider>
                                                         </EdgeProvider>
-                                                    </TransformationProvider>
-                                                </ShownNodesProvider>
-                                            </UserMessagesProvider>
-                                        </AnimationUpdaterProvider>
-                                    </FilterProvider>
-                                </ShownDetailProvider>
-                            </ShownRecursionProvider>
-                        </HighlightedSymbolProvider>
+                                                    </HighlightedSymbolProvider>
+                                                </TransformationProvider>
+                                            </ShownNodesProvider>
+                                        </UserMessagesProvider>
+                                    </AnimationUpdaterProvider>
+                                </FilterProvider>
+                            </ShownDetailProvider>
+                        </ShownRecursionProvider>
                     </HighlightedNodeProvider>
                 </SettingsProvider>
             </ColorPaletteProvider>
