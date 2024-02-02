@@ -12,6 +12,7 @@
     margin: 15px 5px 15px 5px;
     position: relative;
     height: max-content;
+    overflow: hidden;
 }
 
 .mouse_over_shadow:hover {
@@ -59,7 +60,7 @@
     width: -moz-fit-content;
     width: fit-content;
     margin: 6px 6px 5px 6px;
-    min-width: 15px;
+    min-width: 22px;
 
     align-items: flex-start;
     position: relative;
@@ -107,4 +108,24 @@
     vertical-align: middle;
     text-align: center;
     width: auto;
+}
+
+@keyframes loading {
+    0% {
+        background-position: -200px 0;
+    }
+
+    100% {
+        background-position: calc(200px + 100%) 0;
+    }
+}
+
+.loading {
+    background: linear-gradient(90deg, #f3f3f3 25%, #e0e0e0 50%, #f3f3f3 75%);
+    background-size: 200px 100%;
+    animation: loading 1.5s infinite;
+}
+
+.hidden {
+    visibility: hidden
 }

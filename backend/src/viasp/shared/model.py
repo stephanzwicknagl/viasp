@@ -2,19 +2,19 @@ from copy import copy
 from dataclasses import dataclass, field
 from enum import Enum
 from inspect import Signature as inspect_Signature
-from typing import Any, Sequence, Dict, Union, FrozenSet, Collection, List
+from typing import Any, Sequence, Dict, Union, FrozenSet, Collection, List, Tuple
 from types import MappingProxyType
-from collections import defaultdict
 from uuid import UUID, uuid4
 import networkx as nx
 
 from clingo import Symbol, ModelType
-from clingo.ast import AST, Transformer
-from .util import DefaultMappingProxyType
+from clingo.ast import AST, Transformer, Rule
+from .util import DefaultMappingProxyType, hash_transformation_rules
 
 @dataclass()
 class SymbolIdentifier:
     symbol: Symbol = field(hash=True)
+    has_reason: bool = field(default=False, hash=False)
     uuid: UUID = field(default_factory=uuid4, hash=False)
 
     def __eq__(self, other):
@@ -35,7 +35,10 @@ class Node:
     diff: FrozenSet[SymbolIdentifier] = field(hash=True)
     rule_nr: int = field(hash=True)
     atoms: FrozenSet[SymbolIdentifier] = field(default_factory=frozenset, hash=True)
-    reason: MappingProxyType = field(default_factory=DefaultMappingProxyType, hash=True) # type: MappingProxyType[str, List[SymbolIdentifier]]
+    reason: Union[
+        Dict[str, List[Symbol]],
+        MappingProxyType[str, List[SymbolIdentifier]]] \
+        = field(default_factory=DefaultMappingProxyType, hash=True)
     recursive: Union[bool, nx.DiGraph] = field(default=False, hash=False)
     space_multiplier: float = field(default=1.0, hash=False)
     uuid: UUID = field(default_factory=uuid4, hash=False)
@@ -44,7 +47,10 @@ class Node:
         return hash((self.atoms, self.rule_nr, self.diff))
 
     def __eq__(self, o):
-        return isinstance(o, type(self)) and (self.atoms, self.rule_nr, self.diff, self.reason, self.space_multiplier) == (o.atoms, o.rule_nr, o.diff, o.reason, o.space_multiplier)
+        return isinstance(o, type(self)) and (
+            self.atoms, self.rule_nr, self.diff, self.reason,
+            self.space_multiplier) == (o.atoms, o.rule_nr, o.diff, o.reason,
+                                       o.space_multiplier)
 
     def __repr__(self):
         repr_reasons = []
@@ -56,16 +62,49 @@ class Node:
         return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{', '.join(map(str,self.atoms))}}}, reasons={{{', '.join(repr_reasons)}}}, recursive={self.recursive}, space_multiplier={self.space_multiplier}, uuid={self.uuid})"
 
 
+@dataclass()
+class ClingraphNode:
+    uuid: UUID = field(default_factory=uuid4, hash=True)
+
+    def __hash__(self):
+        return hash(self.uuid)
+
+    def __eq__(self, o):
+        return isinstance(o, type(self)) and self.uuid == o.uuid
+    
+    def __repr__(self):
+        return f"ClingraphNode(uuid={self.uuid})"
+
+
 @dataclass(frozen=False)
 class Transformation:
-    id: int
-    rules: Sequence[str]
+    id: int = field(hash=True)
+    rules: Tuple[Rule, ...] = field(default_factory=tuple, hash=True) # type: ignore
+    hash: str = field(default="", hash=True)
+
+    def __post_init__(self):
+        if isinstance(self.rules, AST):
+            self.rules = (self.rules,)
+        if self.hash == "":
+            self.hash = hash_transformation_rules(self.rules)
 
     def __hash__(self):
         return hash(tuple(self.rules))
-    
+
+    def __eq__(self, o):
+        if not isinstance(o, type(self)):
+            return False
+        if self.id != o.id:
+            return False
+        if len(self.rules) != len(o.rules):
+            return False
+        for r in o.rules:
+            if r not in self.rules:
+                return False
+        return True
+
     def __repr__(self):
-        return f"Transformation(id={self.id}, rules={list(map(str,self.rules))})"
+        return f"Transformation(id={self.id}, rules={list(map(str,self.rules))}, hash={self.hash})"
 
 
 @dataclass(frozen=True)
@@ -78,7 +117,7 @@ class Signature:
 class ClingoMethodCall:
     name: str
     kwargs: Dict[str, Any]
-    uuid: Union[UUID, None] = field(default_factory=uuid4)
+    uuid: UUID = field(default_factory=uuid4)
 
     @classmethod
     def merge(cls, name: str, signature: inspect_Signature, args: Sequence[Any], kwargs: Dict[str, Any]):
@@ -126,29 +165,11 @@ class TransformationError:
     reason: FailedReason
 
 @dataclass
-class ReasonNode:
-    atoms: FrozenSet[Symbol] = field(default_factory=frozenset, hash=True)
-    reason: FrozenSet[Symbol] = field(default_factory=defaultdict, hash=False)
-    uuid: UUID = field(default_factory=uuid4, hash=False)
-
-    def __hash__(self):
-        return hash((self.atoms))
-
-    def __eq__(self, o):
-        return isinstance(o, type(self)) and (self.atoms, self.reason) == (o.atoms, o.reason)
-
-    def __repr__(self):
-        repr_reasons = []
-        for key, val in self.reason.items():
-            repr_reasons.append(f"{key}: {val}")
-        return f"Node(atoms={{{'. '.join(map(str, self.atoms))}}}, reasons={{{'. '.join(repr_reasons)}}}, uuid={self.uuid})"
-
-@dataclass
 class TransformerTransport:
-    transformer: Transformer
+    transformer: type[Transformer]
     imports: str
     path: str
 
     @classmethod
-    def merge(cls, transformer: Transformer, imports: str, path: str):
+    def merge(cls, transformer: type[Transformer], imports: str, path: str):
         return cls(transformer, imports, path)

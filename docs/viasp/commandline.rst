@@ -28,7 +28,7 @@ Loading Programs
 Loading from files
 ==================
 
-Consider the file `hamiltonian.lp <https://github.com/potassco/viasp/blob/main/examples/hamiltonian.lp>`_
+Consider the file `hamiltonian.lp <https://github.com/potassco/viasp/blob/main/examples/hamiltonian.lp>`__
 
 .. code-block:: prolog
 

@@ -25,22 +25,14 @@ export const nodeReducer = (state = initialState, action) => {
 }
 const ShownNodesContext = React.createContext([]);
 export const useShownNodes = () => React.useContext(ShownNodesContext);
-export const ShownNodesProvider = ({children, initialState, reducer}) => {
-    const [globalState, dispatch] = React.useReducer(reducer, initialState);
-    return <ShownNodesContext.Provider value={[globalState, dispatch]}>{children}</ShownNodesContext.Provider>
+export const ShownNodesProvider = ({children}) => {
+    const [globalState, dispatch] = React.useReducer(nodeReducer, initialState);
+    return <ShownNodesContext.Provider value={{globalState, dispatch}}>{children}</ShownNodesContext.Provider>
 }
 
 ShownNodesProvider.propTypes = {
     /**
      * The subtree that requires access to this context.
      */
-    children: PropTypes.array,
-    /**
-     * The nodes that are shown initially. Is empty I think.
-     */
-    initialState: PropTypes.object,
-    /**
-     * The reducer function (TODO: Why is this here?)
-     */
-    reducer: PropTypes.func
+    children: PropTypes.element,
 }

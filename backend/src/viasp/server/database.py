@@ -1,5 +1,5 @@
 from os.path import join, dirname, abspath
-from typing import Optional, Set, List
+from typing import Set, List
 from uuid import UUID
 
 from ..shared.defaults import PROGRAM_STORAGE_PATH
@@ -50,7 +50,7 @@ class CallCenter:
     def get_all(self) -> List[ClingoMethodCall]:
         return self.calls
 
-    def get_pending(self) -> Optional[List[ClingoMethodCall]]:
+    def get_pending(self) -> List[ClingoMethodCall]:
         return list(filter(lambda call: call.uuid not in self.used, self.calls))
 
     def mark_call_as_used(self, call: ClingoMethodCall):

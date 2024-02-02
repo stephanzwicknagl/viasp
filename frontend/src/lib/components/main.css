@@ -29,8 +29,9 @@ body {
 }
 
 .user_message_list {
-    position: absolute;
-    float: left;
+    position: fixed;
+    left: 0;
+    top: 0;
     z-index: 99;
 }
 

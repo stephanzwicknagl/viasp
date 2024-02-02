@@ -45,7 +45,7 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
 
         backend_url = _default_server_url+_default_requests_pathname_prefix
     elif 'google.colab' in sys.modules:
-        from google.colab.output import eval_js
+        from google.colab.output import eval_js # type: ignore
         backend_url=eval_js(f"google.colab.kernel.proxyPort({port})")
     else:
         backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
@@ -66,6 +66,7 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
         backendURL=backend_url,
         colorPalette=COLOR_PALETTE
         )
+    app.title = "viASP"
 
     # make sure the backend is up, before continuing with other modules
     t_start = time()

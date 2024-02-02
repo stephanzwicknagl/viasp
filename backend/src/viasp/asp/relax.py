@@ -1,6 +1,6 @@
 from clingo.ast import (AST, Transformer, SymbolicTerm, Function, Literal,
                     SymbolicAtom, parse_string, Sign)
-from clingo import Function as ClingoFunction
+from clingo import Function as ClingoFunction, ast
 from .utils import is_constraint
 from typing import List
 
@@ -11,14 +11,20 @@ class TermRelaxer(Transformer):
     If the variable is inside of an unwanted literal, it isn't collected.
     """
 
-    def visit_Variable(self, Variable: AST, **kwargs) -> AST:
+    def visit_Variable(
+            self,
+            Variable: ast.Variable,  # type: ignore
+            **kwargs) -> AST:
         """
         Visit a variable. Add it to the collector via the callback method adder in kwargs.
         """
         kwargs.get("adder", lambda x: None)(Variable)
         return Variable
-    
-    def visit_Literal(self, Literal: AST, **kwargs) -> AST:
+
+    def visit_Literal(
+            self,
+            Literal: ast.Literal,  # type: ignore
+            **kwargs) -> AST:
         """
         Visit a literal. If it is not positive, update the collect_bool to False.
         """
@@ -26,16 +32,28 @@ class TermRelaxer(Transformer):
             return Literal
         return Literal.update(**self.visit_children(Literal, **kwargs))
 
-    def visit_ConditionalLiteral(self, ConditionalLiteral: AST, **kwargs) -> AST:
+    def visit_ConditionalLiteral(
+            self,
+            ConditionalLiteral: ast.ConditionalLiteral,  # type: ignore
+            **kwargs) -> AST:
         return ConditionalLiteral
 
-    def visit_BooleanConstant(self, BooleanConstant: AST, **kwargs) -> AST:
+    def visit_BooleanConstant(
+            self,
+            BooleanConstant: ast.BooleanConstant,  # type: ignore
+            **kwargs) -> AST:
         return BooleanConstant
 
-    def visit_BodyAggregate(self, BodyAggregate: AST, **kwargs) -> AST:
+    def visit_BodyAggregate(
+            self,
+            BodyAggregate: ast.BodyAggregate,  # type: ignore
+            **kwargs) -> AST:
         return BodyAggregate
 
-    def visit_TheoryAtom(self, TheoryAtom: AST, **kwargs) -> AST:
+    def visit_TheoryAtom(
+            self,
+            TheoryAtom: ast.TheoryAtom,  # type: ignore
+            **kwargs) -> AST:
         return TheoryAtom
 
 
@@ -49,7 +67,7 @@ class ProgramRelaxer(TermRelaxer):
         self.collect_variables: bool = kwargs.get("collect_variables", True)
         self.constraint_counter: int = 1
 
-    def visit_Rule(self, rule: AST) -> AST:
+    def visit_Rule(self, rule: ast.Rule) -> AST: # type: ignore
         """
         Visit a rule. If it is an integrity constraint, make a new head literal.
         New head literals are either of the form

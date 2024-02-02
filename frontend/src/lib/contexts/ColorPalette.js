@@ -2,7 +2,7 @@ import React from "react";
 import PropTypes from "prop-types";
 import { COLORPALETTE } from "../types/propTypes";
 
-const ColorPaletteContext = React.createContext([]);
+export const ColorPaletteContext = React.createContext([]);
 
 export const useColorPalette = () => React.useContext(ColorPaletteContext);
 export const ColorPaletteProvider = ({children, colorPalette}) => {

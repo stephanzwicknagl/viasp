@@ -1,31 +1,25 @@
-import json
+import networkx as nx
+from networkx import node_link_data, node_link_graph
+from flask import current_app
 
 import clingo.ast
-import networkx as nx
 from clingo import Control, ModelType
-from networkx import node_link_data, node_link_graph
 
-from viasp.shared.io import DataclassJSONEncoder, DataclassJSONDecoder, clingo_model_to_stable_model
-from helper import get_stable_models_for_program
-from viasp.asp.justify import build_graph
-from viasp.asp.reify import ProgramAnalyzer, reify_list
+from viasp.shared.io import clingo_model_to_stable_model
 from viasp.shared.model import StableModel, ClingoMethodCall, Signature, Transformation, TransformationError, \
     FailedReason
 
 
-def test_networkx_graph_with_dataclasses_is_isomorphic_after_dumping_and_loading_again():
-    orig_program = "c(1). c(2). b(X) :- c(X). a(X) :- b(X)."
-    analyzer = ProgramAnalyzer()
-    sorted_program = analyzer.sort_program(orig_program)
-    saved_models = get_stable_models_for_program(orig_program)
-    reified = reify_list(sorted_program)
+def test_networkx_graph_with_dataclasses_is_isomorphic_after_dumping_and_loading_again(get_sort_program_and_get_graph):
+    program = "c(1). c(2). b(X) :- c(X). a(X) :- b(X)."
+    graph_info, _ = get_sort_program_and_get_graph(program)
+    graph = nx.node_link_graph(graph_info[0])
 
-    graph = build_graph(saved_models, reified, analyzer, set())
     assert len(graph.nodes()) > 0, "The graph to check serialization should contain nodes."
     assert len(graph.edges()) > 0, "The graph to check serialization should contain edges."
     serializable_graph = node_link_data(graph)
-    serialized_graph = json.dumps(serializable_graph, cls=DataclassJSONEncoder, ensure_ascii=False, indent=2)
-    loaded = json.loads(serialized_graph, cls=DataclassJSONDecoder)
+    serialized_graph = current_app.json.dumps(serializable_graph)
+    loaded = current_app.json.loads(serialized_graph)
     loaded_graph = node_link_graph(loaded)
     assert len(loaded_graph.nodes()) > 0, "The graph to check serialization should contain nodes."
     assert len(loaded_graph.edges()) > 0, "The graph to check serialization should contain edges."
@@ -33,55 +27,55 @@ def test_networkx_graph_with_dataclasses_is_isomorphic_after_dumping_and_loading
                             graph), "Serializing and unserializing a networkx graph should not change it"
 
 
-def test_serialization_model():
+def test_serialization_model(app_context):
     ctl = Control(["0"])
     ctl.add("base", [], "{a(1..2)}. b(X) :- a(X).")
 
     ctl.ground([("base", [])])
     saved = []
-    with ctl.solve(yield_=True) as h:
+    with ctl.solve(yield_=True) as h: # type: ignore
         for model in h:
             saved.append(clingo_model_to_stable_model(model))
-    serialized = json.dumps(saved, cls=DataclassJSONEncoder)
-    deserialized = json.loads(serialized, cls=DataclassJSONDecoder)
+    serialized = current_app.json.dumps(saved)
+    deserialized = current_app.json.loads(serialized)
     for model in deserialized:
         assert isinstance(model, StableModel)
 
 
-def test_serialization_calls(clingo_call_run_sample):
-    serialized = json.dumps(clingo_call_run_sample, cls=DataclassJSONEncoder)
-    deserialized = json.loads(serialized, cls=DataclassJSONDecoder)
+def test_serialization_calls(clingo_call_run_sample, app_context):
+    serialized = current_app.json.dumps(clingo_call_run_sample)
+    deserialized = current_app.json.loads(serialized)
     for model in deserialized:
         assert isinstance(model, ClingoMethodCall)
 
 
-def test_failed_reason():
+def test_failed_reason(app_context):
     object_to_serialize = FailedReason.FAILURE
-    serialized = json.dumps(object_to_serialize, cls=DataclassJSONEncoder)
+    serialized = current_app.json.dumps(object_to_serialize)
     assert serialized
 
 
-def test_transformation():
-    object_to_serialize = Transformation(1, [])
-    serialized = json.dumps(object_to_serialize, cls=DataclassJSONEncoder)
+def test_transformation(app_context):
+    object_to_serialize = Transformation(1, tuple())
+    serialized = current_app.json.dumps(object_to_serialize)
     assert serialized
 
 
-def test_transformation_error():
+def test_transformation_error(app_context):
     sample_data = []
     clingo.ast.parse_string("a.", lambda x: sample_data.append(x))
     object_to_serialize = TransformationError(sample_data[0], FailedReason.WARNING)
-    serialized = json.dumps(object_to_serialize, cls=DataclassJSONEncoder)
+    serialized = current_app.json.dumps(object_to_serialize)
     assert serialized
 
 
-def test_stable_model():
+def test_stable_model(app_context):
     object_to_serialize = StableModel([0], False, ModelType.StableModel, [], [], [], [])
-    serialized = json.dumps(object_to_serialize, cls=DataclassJSONEncoder)
+    serialized = current_app.json.dumps(object_to_serialize)
     assert serialized
 
 
-def test_signature():
+def test_signature(app_context):
     object_to_serialize = Signature("a", 1)
-    serialized = json.dumps(object_to_serialize, cls=DataclassJSONEncoder)
+    serialized = current_app.json.dumps(object_to_serialize)
     assert serialized

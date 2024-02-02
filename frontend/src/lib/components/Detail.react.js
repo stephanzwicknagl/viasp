@@ -2,7 +2,9 @@ import React from 'react';
 import {make_atoms_string} from "../utils/index";
 import './detail.css';
 import PropTypes from "prop-types";
+import {showError, useMessages} from '../contexts/UserMessages';
 import {useColorPalette} from "../contexts/ColorPalette";
+import { useShownDetail } from "../contexts/ShownDetail";
 import {useSettings} from "../contexts/Settings";
 import {SIGNATURE, SYMBOL} from "../types/propTypes";
 import {IoChevronDown, IoChevronForward, IoCloseSharp} from "react-icons/io5";
@@ -54,8 +56,16 @@ DetailForSignature.propTypes =
         symbols: PropTypes.arrayOf(SYMBOL)
     }
 
-function loadDataForDetail(uuid, url_provider) {
-    return fetch(`${url_provider("detail")}/${uuid}`).then(r => r.json())
+function loadDataForDetail(backendURL, uuid) {
+    return fetch(`${backendURL('detail')}/${uuid}`)
+        .then((r) => {
+            if (!r.ok) {
+                throw new Error(
+                    `${r.status} ${r.statusText}`
+                );
+            }
+            return r.json();
+        });
 }
 
 function CloseButton(props) {
@@ -71,16 +81,21 @@ CloseButton.propTypes =
         onClick: PropTypes.func
     }
 
-export function Detail(props) {
+export function Detail() {
     const [data, setData] = React.useState(null);
     const [type, setType] = React.useState("Model");
-    const {shows, clearDetail} = props;
     const {backendURL} = useSettings();
+    const [, message_dispatch] = useMessages();
+    const backendURLRef = React.useRef(backendURL);
+    const messageDispatchRef = React.useRef(message_dispatch);
     const colorPalette = useColorPalette();
+    const { shownDetail: shows, setShownDetail } = useShownDetail();
+    const clearDetail = () => setShownDetail(null);
+
     React.useEffect(() => {
         let mounted = true;
         if (shows !== null) {
-            loadDataForDetail(shows, backendURL)
+            loadDataForDetail(backendURLRef.current, shows)
                 .then(items => {
                     if (mounted) {
                         setData(items[1])
@@ -88,8 +103,12 @@ export function Detail(props) {
 
                     }
                 })
+                .catch((error) => { 
+                    messageDispatchRef.current(
+                        showError(`Failed to get stable model data ${error}`))
+                });
         }
-        return () => mounted = false;
+        return () => { mounted = false };
     }, [shows])
 
     return <div id="detailSidebar" style={{ backgroundColor: colorPalette.infoBackground, color: colorPalette.dark}}
@@ -103,16 +122,4 @@ export function Detail(props) {
     </div>
 }
 
-
-Detail.propTypes =
-    {
-        /**
-         * The node to show
-         */
-        shows: PropTypes.string,
-
-        /**
-         * The function that should be called to close the detail again.
-         */
-        clearDetail: PropTypes.func
-    }
+Detail.propTypes = {}

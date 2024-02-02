@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Sequence, Any, Dict, Collection
+from inspect import Signature as inspect_Signature
 
-from viasp.shared.model import Signature, StableModel
+from viasp.shared.model import StableModel
 
 
 class ViaspClient(ABC):
@@ -11,7 +12,8 @@ class ViaspClient(ABC):
         pass
 
     @abstractmethod
-    def register_function_call(self, name: str, sig: Signature, args: Sequence[Any], kwargs: Dict[str, Any]):
+    def register_function_call(self, name: str, sig: inspect_Signature,
+                               args: Sequence[Any], kwargs: Dict[str, Any]):
         pass
 
     @abstractmethod

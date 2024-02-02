@@ -3,7 +3,7 @@ node_modules/
 coverage/
 src/
 lib/
-.babelrc
+babel.config.json
 .builderrc
 .eslintrc
 .npmignore

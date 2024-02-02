@@ -2,7 +2,7 @@ from flask import Flask
 from werkzeug.utils import find_modules, import_string
 
 from flask_cors import CORS
-from viasp.shared.io import DataclassJSONEncoder, DataclassJSONDecoder
+from viasp.shared.io import DataclassJSONProvider
 
 
 def register_blueprints(app):
@@ -16,15 +16,10 @@ def register_blueprints(app):
 
 def create_app():
     app = Flask('api',static_url_path='/static', static_folder='/static')
-    app.json_encoder = DataclassJSONEncoder
-    app.json_decoder = DataclassJSONDecoder
+    app.json = DataclassJSONProvider(app)
     app.config['CORS_HEADERS'] = 'Content-Type'
 
     register_blueprints(app)
-    CORS(app)
+    CORS(app, resources={r"/*": {"origins": "*"}}, max_age=3600)
 
-    app.json_encoder = DataclassJSONEncoder
-    app.json_decoder = DataclassJSONDecoder
-
-    
     return app

@@ -1,8 +1,11 @@
 import json
-from enum import IntEnum
-from json import JSONEncoder, JSONDecoder
+
+from json import JSONDecoder, JSONEncoder
+# Legacy: To be deleted in Version 3.0
+# from enum import IntEnum
+from flask.json.provider import JSONProvider
 from dataclasses import is_dataclass
-from typing import Any, Union, Collection, Iterable, Dict, Sequence, cast
+from typing import Union, Collection, Iterable, Sequence, cast
 from pathlib import PosixPath
 from uuid import UUID
 import os
@@ -16,15 +19,22 @@ import types
 
 import clingo
 import networkx as nx
-from _clingo.lib import clingo_model_type_brave_consequences, clingo_model_type_cautious_consequences, \
-    clingo_model_type_stable_model
+# Legacy: To be deleted in Version 3.0
+# from _clingo.lib import clingo_model_type_brave_consequences, clingo_model_type_cautious_consequences, \
+#     clingo_model_type_stable_model
 from clingo import Model as clingo_Model, ModelType, Symbol, Application
-from clingo.ast import AST, Transformer
+from clingo.ast import AST
 
 from .interfaces import ViaspClient
-from .model import Node, Transformation, Signature, StableModel, ClingoMethodCall, TransformationError, FailedReason, SymbolIdentifier, TransformerTransport
+from .model import Node, ClingraphNode, Transformation, Signature, StableModel, ClingoMethodCall, TransformationError, FailedReason, SymbolIdentifier, TransformerTransport
 from ..server.database import ProgramDatabase
 
+class DataclassJSONProvider(JSONProvider):
+    def dumps(self, obj, **kwargs):
+        return json.dumps(obj, cls=DataclassJSONEncoder, **kwargs)
+
+    def loads(self, s, **kwargs):
+        return json.loads(s, cls=DataclassJSONDecoder, **kwargs)
 
 def model_to_json(model: Union[clingo_Model, Collection[clingo_Model]], *args, **kwargs) -> str:
     return json.dumps(model, *args, cls=DataclassJSONEncoder, **kwargs)
@@ -49,6 +59,8 @@ def object_hook(obj):
         obj['atoms'] = frozenset(obj['atoms'])
         obj['diff'] = frozenset(obj['diff'])
         return Node(**obj)
+    elif t == "ClingraphNode":
+        return ClingraphNode(**obj)
     elif t == "Transformation":
         return Transformation(**obj)
     elif t == "Signature":
@@ -64,34 +76,7 @@ def object_hook(obj):
     elif t == "SymbolIdentifier":
         return SymbolIdentifier(**obj)
     elif t == "Transformer":
-        # Reconstruct the class definition
-        # Get the path to the module containing MyClass
-        my_module_path = obj["Path"]
-        # Add the directory containing my_module to sys.path
-        my_module_dir = os.path.dirname(my_module_path)
-        sys.path.append(my_module_dir)
-        # Load the module containing MyClass
-        module_name = os.path.splitext(os.path.basename(my_module_path))[0]
-        module_spec = importlib.util.spec_from_file_location(module_name, my_module_path)
-        my_module = importlib.util.module_from_spec(module_spec)
-        module_spec.loader.exec_module(my_module)
-
-        # Create a temporary module to hold the class definition
-        module_name = '__temp_module__'
-        module = types.ModuleType(module_name)
-
-        # get the string
-        class_definition_str = obj["Imports"] + "\n" \
-                            + base64.b64decode(obj["Transformer_definition"])\
-                                    .decode('utf-8')
-        
-        # Add the module's original package to sys.path
-        module.__file__ = my_module.__file__
-        sys.modules[module_name] = module
-
-        # Execute the class definition in the temporary module
-        exec(class_definition_str, module.__dict__)
-        return getattr(module, "Transformer")
+        return reconstruct_transformer(obj)
     return obj
 
 
@@ -105,7 +90,7 @@ def dataclass_to_dict(o):
         sorted_atoms = sorted(o.atoms, key=lambda x: x.symbol)
         sorted_diff = sorted(o.diff, key=lambda x: x.symbol)
         sorted_reason = {} if len(o.reason) == 0 else o.reason
-        return {"_type": "Node", 
+        return {"_type": "Node",
                 "atoms": sorted_atoms,
                 "diff": sorted_diff,
                 "reason": sorted_reason,
@@ -113,14 +98,16 @@ def dataclass_to_dict(o):
                 "uuid": o.uuid,
                 "rule_nr": o.rule_nr,
                 "space_multiplier": o.space_multiplier}
+    elif isinstance(o, ClingraphNode):
+        return {"_type": "ClingraphNode", "uuid": o.uuid}
     elif isinstance(o, TransformationError):
         return {"_type": "TransformationError", "ast": o.ast, "reason": o.reason}
     elif isinstance(o, SymbolIdentifier):
-        return {"_type": "SymbolIdentifier", "symbol": o.symbol, "uuid": o.uuid}
+        return {"_type": "SymbolIdentifier", "symbol": o.symbol, "has_reason": o.has_reason, "uuid": o.uuid}
     elif isinstance(o, Signature):
         return {"_type": "Signature", "name": o.name, "args": o.args}
     elif isinstance(o, Transformation):
-        return {"_type": "Transformation", "id": o.id, "rules": get_rules_from_input_program(o.rules)}
+        return {"_type": "Transformation", "id": o.id, "rules": get_rules_from_input_program(o.rules), "hash": o.hash}
     elif isinstance(o, StableModel):
         return {"_type": "StableModel", "cost": o.cost, "optimality_proven": o.optimality_proven, "type": o.type,
                 "atoms": o.atoms, "terms": o.terms, "shown": o.shown, "theory": o.theory}
@@ -131,7 +118,7 @@ def dataclass_to_dict(o):
         class_definition = inspect.getsource(o.transformer)
         transformer_bytes = base64.b64encode(
             class_definition.encode('utf-8')).decode('utf-8')
-        
+
         o_json = {"_type": "Transformer",
                   "Transformer_definition": transformer_bytes,
                   "Imports": o.imports,
@@ -194,11 +181,11 @@ def model_to_dict(model: clingo_Model) -> dict:
 
 def clingo_model_to_stable_model(model: clingo_Model) -> StableModel:
     return StableModel(
-        model.cost, 
-        model.optimality_proven, 
-        model.type, 
+        model.cost,
+        model.optimality_proven,
+        model.type,
         cast(Collection[Symbol], encode_object(model.symbols(atoms=True))),
-        cast(Collection[Symbol], encode_object(model.symbols(terms=True))), 
+        cast(Collection[Symbol], encode_object(model.symbols(terms=True))),
         cast(Collection[Symbol], encode_object(model.symbols(shown=True))),
         cast(Collection[Symbol], encode_object(model.symbols(theory=True))),
         )
@@ -269,10 +256,6 @@ def symbol_to_dict(symbol: clingo.Symbol) -> dict:
 #         return super().default(o)
 
 
-def deserialize(data: str, *args, **kwargs):
-    return json.loads(data, *args, cls=DataclassJSONDecoder, **kwargs)
-
-
 def get_rules_from_input_program(rules) -> Sequence[str]:
     rules_from_input_program: Sequence[str] = []
     db = ProgramDatabase()
@@ -295,3 +278,36 @@ def get_rules_from_input_program(rules) -> Sequence[str]:
             r += program[begin_line - 1][begin_colu - 1:end_colu]
         rules_from_input_program.append(r)
     return rules_from_input_program
+
+def reconstruct_transformer(obj: dict) -> TransformerTransport:
+    # Reconstruct the class definition
+    # Get the path to the module containing MyClass
+    my_module_path = obj["Path"]
+    # Add the directory containing my_module to sys.path
+    my_module_dir = os.path.dirname(my_module_path)
+    sys.path.append(my_module_dir)
+    # Load the module containing MyClass
+    module_name = os.path.splitext(os.path.basename(my_module_path))[0]
+    module_spec = importlib.util.spec_from_file_location(
+        module_name, my_module_path)
+    if module_spec is None or module_spec.loader is None:
+        raise Exception(f"Module {module_name} not found!")
+    my_module = importlib.util.module_from_spec(module_spec)
+    module_spec.loader.exec_module(my_module)
+
+    # Create a temporary module to hold the class definition
+    module_name = '__temp_module__'
+    module = types.ModuleType(module_name)
+
+    # get the string
+    class_definition_str = obj["Imports"] + "\n" \
+                        + base64.b64decode(obj["Transformer_definition"])\
+                                .decode('utf-8')
+
+    # Add the module's original package to sys.path
+    module.__file__ = my_module.__file__
+    sys.modules[module_name] = module
+
+    # Execute the class definition in the temporary module
+    exec(class_definition_str, module.__dict__)
+    return getattr(module, "Transformer")

@@ -8,6 +8,7 @@ import {addSignature, clear, useFilters} from "../contexts/Filters";
 import {NODE, SIGNATURE, TRANSFORMATION} from "../types/propTypes";
 import {showOnlyTransformation, useTransformations} from "../contexts/transformations";
 import {useColorPalette} from "../contexts/ColorPalette";
+import { useShownDetail } from "../contexts/ShownDetail";
 
 
 const KEY_DOWN = 40;
@@ -65,30 +66,31 @@ ActiveFilter.propTypes = {
 }
 
 
-export function Search(props) {
-    const {setDetail} = props;
-
+export function Search() {
     const [activeSuggestion, setActiveSuggestion] = React.useState(0);
     const [filteredSuggestions, setFilteredSuggestions] = React.useState([]);
     const [showSuggestions, setShowSuggestions] = React.useState(false);
     const [userInput, setUserInput] = React.useState("");
     const [, setHighlightedNode] = useHighlightedNode();
+    const setHighlightedNodeRef = React.useRef(setHighlightedNode)
     const [, dispatch] = useFilters();
     const {dispatch: dispatchT} = useTransformations()
     const {backendURL} = useSettings();
     const colorPalette = useColorPalette();
+    const { setShownDetail } = useShownDetail();
+
     let suggestionsListComponent;
     React.useEffect(() => {
         const highlighted = filteredSuggestions[activeSuggestion]
 
         if (highlighted && highlighted._type === "Node") {
-            setHighlightedNode(highlighted.uuid);
+            setHighlightedNodeRef.current(highlighted.uuid);
         }
-    }, [activeSuggestion])
+    }, [activeSuggestion, filteredSuggestions])
 
     function onChange(e) {
         const userInput = e.currentTarget.value;
-        fetch(`${backendURL("query")}?q=` + userInput)
+        fetch(`${backendURL("query")}?q=${userInput}`)
             .then(r => r.json())
             .then(data => {
                 setActiveSuggestion(0)
@@ -109,7 +111,7 @@ export function Search(props) {
             dispatch(addSignature(selection));
         }
         if (selection._type === "Node") {
-            setDetail(selection.uuid);
+            setShownDetail(selection.uuid);
         }
         if (selection._type === "Transformation") {
             dispatchT(showOnlyTransformation(selection));
@@ -173,10 +175,4 @@ export function Search(props) {
 }
 
 
-Search.propTypes = {
-    /**
-     * If the detail component should be opened, set use this function to set the uuid
-     */
-    setDetail: PropTypes.func,
-
-}
+Search.propTypes = {}

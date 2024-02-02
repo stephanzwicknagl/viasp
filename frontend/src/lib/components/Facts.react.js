@@ -1,46 +1,45 @@
 import "./facts.css";
 import React from "react";
-import PropTypes from "prop-types";
-import {hideNode, showNode, useShownNodes} from "../contexts/ShownNodes";
-import {useColorPalette} from "../contexts/ColorPalette";
-import {useSettings} from "../contexts/Settings";
-import {NODE} from "../types/propTypes";
 import {Node} from "./Node.react";
+import {useTransformations} from "../contexts/transformations";
+import {make_default_nodes} from "../utils";
 
-function loadFacts(backendURL) {
-    return fetch(`${backendURL("graph/facts")}`).then(r => r.json());
-}
+export function Facts() {
+    const { state: {currentDragged, transformationNodesMap} } = useTransformations();
+    const [fact, setFact] = React.useState(make_default_nodes()[0]);
+    const [style, setStyle] = React.useState({opacity: 1.0});
+    const opacityMultiplier = 0.8;
 
-export function Facts(props) {
-    const {notifyClick} = props;
-    const {state, backendURL} = useSettings();
-    const [fact, setFact] = React.useState(null);
     React.useEffect(() => {
-        let mounted = true;
-        loadFacts(backendURL)
-            .then(items => {
-                if (mounted) {
-                    setFact(items)
-                }
-            })
-        return () => mounted = false;
-    }, [state.backend_url]);
+        if (
+            transformationNodesMap &&
+            transformationNodesMap["-1"]
+        ) {
+            setFact(transformationNodesMap["-1"]);
+        }
+    }, [transformationNodesMap]);
+    
+    React.useEffect(() => {
+        if (currentDragged.length > 0) {
+            setStyle(prevStyle => ({...prevStyle, opacity: 1 - opacityMultiplier}));
+        }
+        else {
+            setStyle(prevStyle => ({...prevStyle, opacity: 1.0}));
+        }
+    }, [currentDragged, opacityMultiplier]);
+
     if (fact === null) {
         return (
             <div className="row_container">
             </div>
         )
     }
-    return fact === null ? null :
-        <div className="row_row"><Node key={fact.uuid} node={fact}
-                                       showMini={false}
-                                       notifyClick={notifyClick}/></div>
-
+    return <div className="row_row" style={style}><Node 
+                key={fact.uuid} 
+                node={fact}
+                showMini={false}/>
+        </div>
 }
 
-Facts.propTypes = {
-    /**
-     * The function to be called if the facts are clicked on
-     */
-    notifyClick: PropTypes.func
-}
+Facts.propTypes = {}
+

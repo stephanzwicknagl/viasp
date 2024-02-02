@@ -30,12 +30,12 @@ def handles(*args):
 class ClingoReconstructor:
 
     def _get_handling_function(self, func_name: str) -> Optional[Callable]:
-        for func, responsive_for in self.handlers.items():
+        for func, responsive_for in self.handlers.items():  # type: ignore
             if func_name in responsive_for:
                 return func
 
     def apply(self, call: ClingoMethodCall, ctl: Control) -> Control:
-        func = self.handlers.get(call.name, None)
+        func = self.handlers.get(call.name, None)  # type: ignore
         if func is None:
             warn(f"No function for {call.name} found. Defaulting to NOOP.")
             return self.no_op(ctl, call)
@@ -80,13 +80,15 @@ class ClingoReconstructor:
 BOB_THE_BUILDER = ClingoReconstructor()
 
 
-def apply_multiple(calls: Sequence[ClingoMethodCall], ctl=None) -> Control:
+def apply_multiple(calls: Sequence[ClingoMethodCall], ctl: Optional[Control] = None) -> Control:
+    if ctl is None:
+        ctl = Control()
     for call in calls:
         ctl = apply(call, ctl)
     return ctl
 
 
-def apply(call: ClingoMethodCall, ctl=None):
+def apply(call: ClingoMethodCall, ctl: Control):
     result = BOB_THE_BUILDER.apply(call, ctl)
     publish(Event.CALL_EXECUTED, call=call)
     return result

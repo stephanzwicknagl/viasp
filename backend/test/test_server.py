@@ -1,8 +1,9 @@
-import json
-
+from flask import Flask
 from viasp.shared.model import ClingoMethodCall
-from viasp.shared.io import DataclassJSONEncoder
+from viasp.shared.io import DataclassJSONProvider
 
+app = Flask(__name__)
+app.json = DataclassJSONProvider(app)
 
 def create_empty_call() -> ClingoMethodCall:
     return ClingoMethodCall("", {})
@@ -10,7 +11,7 @@ def create_empty_call() -> ClingoMethodCall:
 
 def test_registering_valid_call_should_return_ok(client):
     valid = create_empty_call()
-    rv = client.post("/control/add_call", data=json.dumps(valid, cls=DataclassJSONEncoder),
+    rv = client.post("/control/add_call", data=app.json.dumps(valid),
                      headers={'Content-Type': 'application/json'})
     assert rv.status == "200 OK"
     assert rv.data.decode("utf-8") == "ok"

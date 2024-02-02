@@ -1,82 +1,107 @@
 import React, {Suspense} from 'react';
 import PropTypes from 'prop-types';
-import {Row, Boxrow} from "../components/Row.react";
+import { RowTemplate } from "../components/Row.react";
+import { Boxrow } from "../components/BoxRow.react";
 import "../components/main.css";
 import {Detail} from "../components/Detail.react";
 import {Search} from "../components/Search.react";
 import {Facts} from "../components/Facts.react";
 import { Edges } from "../components/Edges.react";
 import { Arrows } from "../components/Arrows.react";
-import {initialState, nodeReducer, ShownNodesProvider} from "../contexts/ShownNodes";
-import {TransformationProvider, useTransformations} from "../contexts/transformations";
-import { ColorPaletteProvider, useColorPalette } from "../contexts/ColorPalette"; 
+import { ShownNodesProvider } from "../contexts/ShownNodes";
+import {
+    TransformationProvider,
+    useTransformations,
+    reorderTransformation,
+    setCurrentSort,
+    setCurrentDragged,
+} from '../contexts/transformations';
+import { ColorPaletteProvider } from "../contexts/ColorPalette"; 
 import {HighlightedNodeProvider} from "../contexts/HighlightedNode";
 import {showError, useMessages, UserMessagesProvider} from "../contexts/UserMessages";
+import { EdgeProvider } from '../contexts/Edges';
+import { ShownDetailProvider } from '../contexts/ShownDetail';
 import { Settings } from '../LazyLoader';
 import {UserMessages} from "../components/messages";
 import {DEFAULT_BACKEND_URL, SettingsProvider, useSettings} from "../contexts/Settings";
 import {FilterProvider} from "../contexts/Filters";
-import { HighlightedSymbolProvider } from '../contexts/HighlightedSymbol';
-import { useHighlightedSymbol } from '../contexts/HighlightedSymbol';
-import { ShownRecursionProvider } from '../contexts/ShownRecursion';
+import { HighlightedSymbolProvider, useHighlightedSymbol } from '../contexts/HighlightedSymbol';
+import { ShownRecursionProvider, useShownRecursion } from '../contexts/ShownRecursion';
 import { AnimationUpdaterProvider } from '../contexts/AnimationUpdater';
+import DraggableList from 'react-draggable-list';
 
 
-
-function loadClingraphUsed(backendURL) {
-    return fetch(`${backendURL("control/clingraph")}`).then(r => {
+function postCurrentSort(backendURL, hash) {
+    return fetch(`${backendURL("graph/sorts")}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ hash: hash })
+    }).then(r => {
         if (r.ok) {
-            return r.json()
+            return r
         }
         throw new Error(r.statusText);
     });
 }
 
+
 function GraphContainer(props) {
-    const {setDetail, notifyDash, usingClingraph} = props;
-    const {state: {transformations}} = useTransformations()
-    const lastNodeInGraph = transformations.length - 1;
-    const colorPalette = useColorPalette();
-    const background = colorPalette.rowShading;
+    const {notifyDash} = props;
+    const {
+        state: {transformations, canDrop, clingraphGraphics}, 
+        dispatch: dispatchTransformation
+    } = useTransformations()
+    const [, message_dispatch] = useMessages()
+    const { backendURL } = useSettings();
+    const [ ,,setShownRecursion ] = useShownRecursion();
+    const backendUrlRef = React.useRef(backendURL);
+    const messageDispatchRef = React.useRef(message_dispatch);
+    const draggableListRef = React.useRef(null);
+    const {setHighlightedSymbol} = useHighlightedSymbol();
+    const clingraphUsed = clingraphGraphics !== null;
 
+    function onMoveEnd(newList, movedItem, oldIndex, newIndex) {
+        dispatchTransformation(setCurrentDragged(''));
+        const indexOfOldItemAtNewIndex = oldIndex < newIndex ?
+            newIndex - 1 :
+            newIndex + 1;
+        const newHash = canDrop[newList[indexOfOldItemAtNewIndex].hash] || '';
 
-    return <div className="graph_container" >
-        <Facts notifyClick={(clickedOn) => {
-            notifyDash(clickedOn)
-            setDetail(clickedOn.uuid)
-            }}
-        /><Suspense fallback={<div>Loading...</div>}><Settings /></Suspense>
-        {transformations.map(({transformation}, i) => {
-            if (i === lastNodeInGraph && usingClingraph) {
-                return <div key={`transformation_wrapper_${i}`}>
-                        <Row
-                            key={transformation.id}
-                            transformation={transformation}
-                            notifyClick={(clickedOn) => {
-                                notifyDash(clickedOn)
-                                setDetail(clickedOn.uuid)
-                            }}
-                            color={background[i % background.length]}
-                        />
-                        <Boxrow
-                            key={transformation.id+1}
-                            transformation={transformation}
-                        />
-                        </div>
-            }
-            else {
-                return <Row
-                    key={transformation.id}
-                    transformation={transformation}
-                    notifyClick={(clickedOn) => {
-                        notifyDash(clickedOn)
-                        setDetail(clickedOn.uuid)
-                    }}
-                    color={background[i % background.length]}
-                    />
-            }
-        })}
+        if (newHash.length > 0) {
+            setShownRecursion([]);
+            setHighlightedSymbol([]);
+            dispatchTransformation(reorderTransformation(oldIndex, newIndex));
+            postCurrentSort(backendUrlRef.current, newHash).catch((error) => {
+                messageDispatchRef.current(
+                    showError(`Failed to set new current graph: ${error}`)
+                    );
+                });
+            dispatchTransformation(setCurrentSort(newHash));
+            return;
+        }
+    }
+
+    return (
+        <div className="graph_container">
+            <Facts />
+            <Suspense fallback={<div>Loading...</div>}>
+                <Settings />
+            </Suspense>
+            <DraggableList
+                ref={draggableListRef}
+                itemKey="hash"
+                template={RowTemplate}
+                list={transformations}
+                onMoveEnd={onMoveEnd}
+                container={() => document.body}
+                autoScrollRegionSize={200}
+                padding={0}
+            />
+            {clingraphUsed ? <Boxrow /> : null}
         </div>
+    );
 }
 
 GraphContainer.propTypes = {
@@ -84,54 +109,34 @@ GraphContainer.propTypes = {
      * Objects passed to this functions will be available to Dash callbacks.
      */
     notifyDash: PropTypes.func,
-    /**
-     * If the detail component should be opened, set use this function to set the uuid
-     */
-    setDetail: PropTypes.func,
-    /**
-     * UsingClingraph is a boolean that is set to true if the backend is using clingraph
-     */
-    usingClingraph: PropTypes.bool
 }
 
 function MainWindow(props) {
     const {notifyDash} = props;
-    const [detail, setDetail] = React.useState(null)
     const {backendURL} = useSettings();
     const {state: {transformations}} = useTransformations()
-    const [usingClingraph, setUsingClingraph] = React.useState(false)
-    const [highlightedSymbol,,] = useHighlightedSymbol();
-
-    React.useEffect(() => {
-        let mounted = true;
-        loadClingraphUsed(backendURL)
-            .then(data => {
-                if (mounted) {
-                    setUsingClingraph(data.using_clingraph)
-                }
-            });
-        return () => mounted = false;
-    }, []);
-
+    const { highlightedSymbol } = useHighlightedSymbol();
     const [, dispatch] = useMessages()
+    const backendURLRef = React.useRef(backendURL)
+    const dispatchRef = React.useRef(dispatch)
+
+
     React.useEffect(() => {
-        fetch(backendURL("graph/transformations")).catch(() => {
-            dispatch(showError(`Couldn't connect to server at ${backendURL("")}`))
+        fetch(backendURLRef.current("graph/sorts")).catch(() => {
+            dispatchRef.current(showError(`Couldn't connect to server at ${backendURLRef.current("")}`))
         })
     }, [])
 
-    return <div><Detail shows={detail} clearDetail={() => setDetail(null)}/>
+    return <div><Detail />
         <div className="content">
-            <ShownNodesProvider initialState={initialState} reducer={nodeReducer}>
-                <Search setDetail={setDetail}/>
-                <GraphContainer setDetail={setDetail} notifyDash={notifyDash} usingClingraph={usingClingraph}/>
-                {
-                    transformations.length === 0 ? null : <Edges usingClingraph={usingClingraph}/>
-                }
-                {
-                    highlightedSymbol.length === 0 ? null : <Arrows />
-                }
-            </ShownNodesProvider>
+        <Search />
+        <GraphContainer notifyDash={notifyDash}/>
+        {
+            transformations.length === 0 ? null : <Edges />
+        }
+        {
+            highlightedSymbol.length === 0 ? null : <Arrows />
+        }
         </div>
     </div>
 }
@@ -156,28 +161,36 @@ export default function ViaspDash(props) {
     return (
         <div id={id}>
             <ColorPaletteProvider colorPalette={colorPalette}>
-                <HighlightedNodeProvider>
-                    <HighlightedSymbolProvider>
+                <SettingsProvider backendURL={backendURL}>
+                    <HighlightedNodeProvider>
                         <ShownRecursionProvider>
-                            <FilterProvider>
-                                <AnimationUpdaterProvider>
-                                    <SettingsProvider backendURL={backendURL}>
+                            <ShownDetailProvider>
+                                <FilterProvider>
+                                    <AnimationUpdaterProvider>
                                         <UserMessagesProvider>
-                                            <TransformationProvider>
-                                                <div>
-                                                    <UserMessages />
-                                                    <MainWindow
-                                                        notifyDash={notifyDash}
-                                                    />
-                                                </div>
-                                            </TransformationProvider>
+                                            <ShownNodesProvider>
+                                                    <TransformationProvider>
+                                                        <HighlightedSymbolProvider>
+                                                            <EdgeProvider>
+                                                                <div>
+                                                                    <UserMessages />
+                                                                    <MainWindow
+                                                                        notifyDash={
+                                                                            notifyDash
+                                                                        }
+                                                                    />
+                                                                </div>
+                                                            </EdgeProvider>
+                                                        </HighlightedSymbolProvider>
+                                                    </TransformationProvider>
+                                            </ShownNodesProvider>
                                         </UserMessagesProvider>
-                                    </SettingsProvider>
-                                </AnimationUpdaterProvider>
-                            </FilterProvider>
+                                    </AnimationUpdaterProvider>
+                                </FilterProvider>
+                            </ShownDetailProvider>
                         </ShownRecursionProvider>
-                    </HighlightedSymbolProvider>
-                </HighlightedNodeProvider>
+                    </HighlightedNodeProvider>
+                </SettingsProvider>
             </ColorPaletteProvider>
         </div>
     );

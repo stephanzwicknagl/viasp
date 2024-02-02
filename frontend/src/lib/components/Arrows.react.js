@@ -6,12 +6,12 @@ import { useAnimationUpdater } from "../contexts/AnimationUpdater";
 import PropTypes from 'prop-types'
 
 export function Arrows() {
-    const [highlightedSymbol, ,] = useHighlightedSymbol();
+    const { highlightedSymbol } = useHighlightedSymbol();
     const [shownRecursion, , ] = useShownRecursion(); 
     // state to update Arrows after height animation of node
     const [value, , ,] = useAnimationUpdater();
 
-    function calculateArrows() {
+    const calculateArrows = React.useCallback(() => {
         return highlightedSymbol.map(arrow => {
             const suffix1 = `_${document.getElementById(arrow.src+"_main")?"main":"sub"}`;
             const suffix2 = `_${document.getElementById(arrow.tgt+"_main")?"main":"sub"}`;
@@ -23,16 +23,16 @@ export function Arrows() {
             return <Xarrow
                 key={arrow.src + "-" + arrow.tgt} start={arrow.src} end={arrow.tgt} startAnchor={"top"} endAnchor={"bottom"} color={arrow.color} strokeWidth={2} headSize={5} zIndex={10} />
         })
-    }
+    }, [highlightedSymbol]);
 
-    let arrows = calculateArrows();
+    const arrows = calculateArrows();
 
 
-    React.useEffect(() => {
-        // arrows = [];
-        arrows = calculateArrows();
-        onFullyLoaded(() => {arrows = calculateArrows()});
-    }, [ highlightedSymbol, shownRecursion ])
+    // React.useEffect(() => {
+    //     // arrows = [];
+    //     arrows = calculateArrows();
+    //     onFullyLoaded(() => {arrows = calculateArrows()});
+    // }, [ highlightedSymbol, shownRecursion ])
 
     function onFullyLoaded(callback) {
         setTimeout(function () {

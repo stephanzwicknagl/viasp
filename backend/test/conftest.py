@@ -1,12 +1,11 @@
 from inspect import signature
-from typing import Dict, List
+from typing import List, Generator, Any, Mapping, Tuple, Callable
 from uuid import uuid4
 
 import networkx as nx
 import pytest
 from clingo import Control
-from clingo.symbol import Function, Number
-from flask import Flask
+from flask import Flask, json
 from flask.testing import FlaskClient
 from networkx import node_link_data
 
@@ -16,8 +15,9 @@ from viasp.asp.reify import ProgramAnalyzer, reify_list
 from viasp.server.blueprints.api import bp as api_bp
 from viasp.server.blueprints.app import bp as app_bp
 from viasp.server.blueprints.dag_api import bp as dag_bp
-from viasp.shared.io import DataclassJSONEncoder, DataclassJSONDecoder, clingo_model_to_stable_model
-from viasp.shared.model import ClingoMethodCall, Node, StableModel, SymbolIdentifier
+from viasp.shared.io import DataclassJSONProvider, clingo_model_to_stable_model
+from viasp.shared.util import hash_from_sorted_transformations
+from viasp.shared.model import ClingoMethodCall, Node, StableModel, SymbolIdentifier, Transformation
 from viasp.server.database import ProgramDatabase
 from viasp.shared.defaults import CLINGRAPH_PATH, GRAPH_PATH, PROGRAM_STORAGE_PATH, STDIN_TMP_STORAGE_PATH
 
@@ -26,9 +26,7 @@ def create_app_with_registered_blueprints(*bps) -> Flask:
     for bp in bps:
         app.register_blueprint(bp)
 
-    app.json_encoder = DataclassJSONEncoder
-    app.json_decoder = DataclassJSONDecoder
-
+    app.json = DataclassJSONProvider(app)
     return app
 
 
@@ -41,40 +39,136 @@ def single_node_graph(a_1):
 
 
 @pytest.fixture
-def a_1() -> Function:
-    # loc = Location(Position("str",1,1), Position("str",1,1))
-    return Function("A", [Number(1)])
-
+def a_1() -> str:
+    return "a(1)."
 
 @pytest.fixture
-def serializable_graph() -> Dict:
-    program = "a(1..2). {b(X)} :- a(X). c(X) :- b(X)."
-    db = ProgramDatabase()
-    db.clear_program()
-    db.add_to_program(program)
-    analyzer = ProgramAnalyzer()
-    analyzer.add_program(program)
-    sorted_program = analyzer.get_sorted_program()
-    saved_models = get_stable_models_for_program(program)
-    reified = reify_list(sorted_program)
-
-    g = build_graph(saved_models, reified, analyzer, set())
-
-    serializable_graph = node_link_data(g)
-    return serializable_graph
-
-
-@pytest.fixture
-def client_with_a_graph(serializable_graph) -> FlaskClient:
+def app_context():
+    """Create an app context, so tests can use Flask features like current_app, g, etc."""
     app = create_app_with_registered_blueprints(app_bp, api_bp, dag_bp)
 
-    with app.test_client() as client:
-        client.post("graph", json=serializable_graph)
-        yield client
+    with app.app_context():
+        yield app
+
+@pytest.fixture
+def load_analyzer(app_context) -> Callable[[str], ProgramAnalyzer]:
+    def c(program: str) -> ProgramAnalyzer:
+        db = ProgramDatabase()
+        db.clear_program()
+        db.add_to_program(program)
+        analyzer = ProgramAnalyzer()
+        analyzer.add_program(db.get_program())
+        return analyzer
+    return c
+
+@pytest.fixture
+def get_sort_program(load_analyzer) -> Callable[[str], Tuple[List[Transformation], ProgramAnalyzer]]:
+    def c(program: str):
+        analyzer = load_analyzer(program)
+        return next(analyzer.get_sorted_program()), analyzer
+    return c
+
+@pytest.fixture
+def get_sort_program_all_sorts(load_analyzer) -> Callable[[str], Tuple[List[List[Transformation]], ProgramAnalyzer]]:
+    def c(program: str):
+        analyzer = load_analyzer(program)
+        return list(analyzer.get_sorted_program()), analyzer
+    return c
+
+@pytest.fixture
+def get_sort_program_and_get_graph(get_sort_program_all_sorts) -> Callable[[str], Tuple[Tuple[Mapping, str, str, int], ProgramAnalyzer]]:
+    def c(program: str):
+        """
+        Returning a Tuple containing 
+            * the graph, 
+            * the hash of the sorted program,
+            * the sorted program as json string
+            * the number of possible sorts
+        """
+        sorted_programs, analyzer = get_sort_program_all_sorts(program)
+        sorted_program =sorted_programs[0]
+
+        saved_models = get_stable_models_for_program(program)
+        reified = reify_list(sorted_program)
+        recursion_rules = analyzer.check_positive_recursion()
+        g = build_graph(saved_models, reified, sorted_program, analyzer, recursion_rules)
+        return (node_link_data(g), hash_from_sorted_transformations(sorted_program), json.dumps(sorted_program), len(sorted_programs)), analyzer
+    return c
+
+@pytest.fixture
+def get_sort_program_and_get_all_graphs(get_sort_program_all_sorts) -> Callable[[str], Tuple[List[Tuple[Mapping, str, str, int]], ProgramAnalyzer]]:
+    def c(program: str):
+        """
+        Returning List of Tuples containing 
+            * the graph, 
+            * the hash of the sorted program,
+            * the sorted program as json string
+            * the number of possible sorts
+        """
+        serializable_graphs = []
+        sorted_programs, analyzer = get_sort_program_all_sorts(program)
+
+
+        saved_models = get_stable_models_for_program(program)
+        recursion_rules = analyzer.check_positive_recursion()
+        for sorted_program in sorted_programs:
+            reified = reify_list(sorted_program)
+            g = build_graph(saved_models, reified, sorted_program, analyzer, recursion_rules)
+            serializable_graphs.append((node_link_data(g), hash_from_sorted_transformations(sorted_program), json.dumps(sorted_program), len(sorted_programs)))
+
+        return serializable_graphs, analyzer
+    return c
 
 
 @pytest.fixture
-def client() -> FlaskClient:
+def program_simple() -> str:
+    return "a(1..2). {b(X)} :- a(X). c(X) :- b(X)."
+
+@pytest.fixture
+def program_multiple_sorts() -> str:
+    return "a(1..2). {b(X)} :- a(X). c(X) :- a(X)."
+
+@pytest.fixture
+def program_recursive() -> str:
+    return "j(X, X+1) :- X=0..5.j(X,  Y) :- j(X,Z), j(Z,Y)."
+
+
+@pytest.fixture
+def client_with_a_single_node_graph(get_sort_program_and_get_all_graphs, a_1) -> Generator[Tuple[FlaskClient, ProgramAnalyzer, List[Tuple[Mapping, str, str, int]], str], Any, Any]:
+    app = create_app_with_registered_blueprints(app_bp, api_bp, dag_bp)
+
+    program = a_1
+    serializable_graphs, analyzer = get_sort_program_and_get_all_graphs(program)
+    with app.test_client() as client:
+        for serializable_graph, hash, sorted_program, _ in serializable_graphs:
+            client.post("graph", json={"data": serializable_graph, "hash": hash, "sort": sorted_program})
+        yield client, analyzer, serializable_graphs, program
+
+
+@pytest.fixture(params=["program_simple", "program_multiple_sorts", "program_recursive"])
+def client_with_a_graph(request, get_sort_program_and_get_all_graphs) -> Generator[Tuple[FlaskClient, ProgramAnalyzer, List[Tuple[Mapping, str, str, int]], str], Any, Any]:
+    app = create_app_with_registered_blueprints(app_bp, api_bp, dag_bp)
+
+    program = request.getfixturevalue(request.param)
+    serializable_graphs, analyzer = get_sort_program_and_get_all_graphs(program)
+    with app.test_client() as client:
+        for serializable_graph, hash, sorted_program, _ in serializable_graphs:
+            client.post("graph", json={"data": serializable_graph, "hash": hash, "sort": sorted_program})
+        yield client, analyzer, serializable_graphs, program
+
+@pytest.fixture
+def client_with_a_clingraph(client_with_a_graph, get_clingo_stable_models) -> Generator[Tuple[FlaskClient, ProgramAnalyzer, List[Tuple[Mapping, str, str, int]], str], Any, Any]:
+    client, analyzer, serializable_graphs, program = client_with_a_graph
+
+    _ = client.delete("/control/clingraph")
+    serialized = get_clingo_stable_models(program)
+    _ = client.post("/control/models", json=serialized, headers={'Content-Type': 'application/json'})
+
+    yield client, analyzer, serializable_graphs, program
+
+
+@pytest.fixture
+def client() -> Generator[FlaskClient, Any, Any]:
     app = create_app_with_registered_blueprints(app_bp, api_bp, dag_bp)
 
     with app.test_client() as client:
@@ -94,43 +188,19 @@ def clingo_call_run_sample():
 
 
 @pytest.fixture
-def clingo_stable_models() -> List[StableModel]:
-    ctl = Control(["0"])
-    ctl.add("base", [], "{b;c}.")
-    ctl.ground([("base", [])])
-    models = []
-    with ctl.solve(yield_=True) as h:
-        for m in h:
-            models.append(clingo_model_to_stable_model(m))
-    return models
+def get_clingo_stable_models() -> Callable[[str], List[StableModel]]:
+    def c(program: str) -> List[StableModel]:
+        wrapped_models = []
 
+        ctl = Control(["0"])
+        ctl.add("base", [], program)
+        ctl.ground([("base", [])])
+        with ctl.solve(yield_=True) as handle: # type: ignore
+            for model in handle:
+                wrapped_models.append(clingo_model_to_stable_model(model))
+        return wrapped_models
+    return c
 
-@pytest.fixture
-def serializable_recursive_graph() -> Dict:
-    program = "j(X, X+1) :- X=0..5.j(X,  Y) :- j(X,Z), j(Z,Y)."
-    db = ProgramDatabase()
-    db.clear_program()
-    db.add_to_program(program)
-    analyzer = ProgramAnalyzer()
-    analyzer.add_program(program)
-    recursion_rules = analyzer.check_positive_recursion()
-    saved_models = get_stable_models_for_program(program)
-    reified = reify_list(analyzer.get_sorted_program(),
-                         h=analyzer.get_conflict_free_h(),
-                         model=analyzer.get_conflict_free_model())
-    g = build_graph(saved_models, reified, analyzer, recursion_rules)
-
-    serializable_recursive_graph = node_link_data(g)
-    return serializable_recursive_graph
-
-
-@pytest.fixture
-def client_with_a_recursive_graph(serializable_recursive_graph) -> FlaskClient:
-    app = create_app_with_registered_blueprints(app_bp, api_bp, dag_bp)
-
-    with app.test_client() as client:
-        client.post("graph", json=serializable_recursive_graph)
-        yield client
 
 @pytest.fixture(scope="session", autouse=True)
 def cleanup(request):
