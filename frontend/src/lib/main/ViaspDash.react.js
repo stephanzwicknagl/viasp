@@ -16,7 +16,6 @@ import {
     setCurrentSort,
     setCurrentDragged,
 } from '../contexts/transformations';
-import { ClingraphProvider, useClingraph } from '../contexts/Clingraph';
 import { ColorPaletteProvider } from "../contexts/ColorPalette"; 
 import {HighlightedNodeProvider} from "../contexts/HighlightedNode";
 import {showError, useMessages, UserMessagesProvider} from "../contexts/UserMessages";
@@ -51,10 +50,9 @@ function postCurrentSort(backendURL, hash) {
 function GraphContainer(props) {
     const {notifyDash} = props;
     const {
-        state: {transformations, canDrop}, 
+        state: {transformations, canDrop, clingraphGraphics}, 
         dispatch: dispatchTransformation
     } = useTransformations()
-    const { clingraphUsed } = useClingraph();
     const [, message_dispatch] = useMessages()
     const { backendURL } = useSettings();
     const [ ,,setShownRecursion ] = useShownRecursion();
@@ -62,6 +60,7 @@ function GraphContainer(props) {
     const messageDispatchRef = React.useRef(message_dispatch);
     const draggableListRef = React.useRef(null);
     const {setHighlightedSymbol} = useHighlightedSymbol();
+    const clingraphUsed = clingraphGraphics !== null;
 
     function onMoveEnd(newList, movedItem, oldIndex, newIndex) {
         dispatchTransformation(setCurrentDragged(''));
@@ -170,10 +169,9 @@ export default function ViaspDash(props) {
                                     <AnimationUpdaterProvider>
                                         <UserMessagesProvider>
                                             <ShownNodesProvider>
-                                                <TransformationProvider>
-                                                    <HighlightedSymbolProvider>
-                                                        <EdgeProvider>
-                                                            <ClingraphProvider>
+                                                    <TransformationProvider>
+                                                        <HighlightedSymbolProvider>
+                                                            <EdgeProvider>
                                                                 <div>
                                                                     <UserMessages />
                                                                     <MainWindow
@@ -182,10 +180,9 @@ export default function ViaspDash(props) {
                                                                         }
                                                                     />
                                                                 </div>
-                                                            </ClingraphProvider>
-                                                        </EdgeProvider>
-                                                    </HighlightedSymbolProvider>
-                                                </TransformationProvider>
+                                                            </EdgeProvider>
+                                                        </HighlightedSymbolProvider>
+                                                    </TransformationProvider>
                                             </ShownNodesProvider>
                                         </UserMessagesProvider>
                                     </AnimationUpdaterProvider>

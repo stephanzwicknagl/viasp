@@ -2,7 +2,7 @@ import React from "react";
 import {showError, useMessages} from "./UserMessages";
 import {useSettings} from "./Settings";
 import PropTypes from "prop-types";
-import { computeSortHash } from "../utils/index";
+import { computeSortHash, make_default_nodes, make_default_clingraph_nodes } from "../utils/index";
 
 function fetchTransformations(backendURL) {
     return fetch(`${backendURL("graph/transformations")}`).then(r => {
@@ -43,6 +43,16 @@ function loadNodeData(hash, backendURL) {
     });
 }
 
+
+function loadClingraphChildren(backendURL) {
+    return fetch(`${backendURL('clingraph/children')}`).then((r) => {
+        if (!r.ok) {
+            throw new Error(`${r.status} ${r.statusText}`);
+        }
+        return r.json();
+    });
+}
+
 async function canBeDropped(
     transformations,
     possibleSorts,
@@ -72,6 +82,7 @@ const initialState = {
     currentDragged: '',
     canDrop: null,
     transformationNodesMap: null,
+    clingraphGraphics: null,
 };
 
 const HIDE_TRANSFORMATION = 'APP/TRANSFORMATIONS/HIDE';
@@ -87,6 +98,8 @@ const REORDER_TRANSFORMATION = 'APP/TRANSFORMATIONS/REORDER';
 const SET_CURRENT_DRAGGED = 'APP/TRANSFORMATIONS/SETDRAGGED';
 const SET_NODES = 'APP/NODES/SET';
 const CLEAR_NODES = 'APP/NODES/CLEAR';
+const SET_CLINGRAPH_GRAPHICS = 'APP/CLINGRAPH/SETGRAPHICS';
+const CLEAR_CLINGRAPH_GRAHICS = 'APP/CLINGRAPH/CLEAR';
 const hideTransformation = (t) => ({type: HIDE_TRANSFORMATION, t})
 const showTransformation = (t) => ({type: SHOW_TRANSFORMATION, t})
 const toggleTransformation = (t) => ({type: TOGGLE_TRANSFORMATION, t})
@@ -100,6 +113,8 @@ const reorderTransformation = (oldIndex, newIndex) => ({type: REORDER_TRANSFORMA
 const setCurrentDragged = (h) => ({type: SET_CURRENT_DRAGGED, h});
 const setNodes = (t) => ({type: SET_NODES, t});
 const clearNodes = () => ({type: CLEAR_NODES});
+const setClingraphGraphics = (g) => ({type: SET_CLINGRAPH_GRAPHICS, g});
+const clearClingraphGraphics = () => ({type: CLEAR_CLINGRAPH_GRAHICS});
 const TransformationContext = React.createContext();
 
 const transformationReducer = (state = initialState, action) => {
@@ -216,9 +231,53 @@ const transformationReducer = (state = initialState, action) => {
         };
     }
     if (action.type === CLEAR_NODES) {
+        if (state.transformationNodesMap === null) {
+            return {
+                ...state,
+                transformationNodesMap: state.transformations.map((n) => {
+                    return make_default_nodes();
+                }),
+            }
+        }
         return {
             ...state,
-            transformationNodesMap: null,
+            transformationNodesMap:  Object.keys(
+                state.transformationNodesMap
+            )
+            .reduce((obj, key) => {
+                if (key === "-1") {
+                    obj[key] = make_default_nodes(
+                        state.transformationNodesMap[key]
+                    )[0];
+                    return obj;
+                }
+                obj[key] = make_default_nodes(
+                    state.transformationNodesMap[key]
+                );
+                return obj;
+            }, {}),
+        };
+    }
+    if (action.type === SET_CLINGRAPH_GRAPHICS) {
+        return {
+            ...state,
+            clingraphGraphics: action.g.map((n) => {
+                n.loading = false;
+                return n;
+            }),
+        };
+    }
+    if (action.type === CLEAR_CLINGRAPH_GRAHICS) {
+        if (state.clingraphGraphics === null) {
+            return {
+                ...state,
+            };
+        }
+        return {
+            ...state,
+            clingraphGraphics: make_default_clingraph_nodes(
+                state.clingraphGraphics
+            ),
         };
     }
     return {...state}
@@ -245,25 +304,33 @@ const TransformationProvider = ({children}) => {
         }, []);
         
     const loadtransformationNodesMap = React.useCallback((items) => {
-        dispatch(clearNodes())
+        dispatch(clearNodes());
+        dispatch(clearClingraphGraphics());
         const transformations = items.map((t) => ({id: t.id, hash: t.hash}));
         const promises = transformations.map(t =>
-            loadNodeData(t.hash, backendUrlRef.current))
+            loadNodeData(t.hash, backendUrlRef.current));
 
-        promises.push(loadFacts(backendUrlRef.current))
-        transformations.push({id: -1})
+        // load facts
+        promises.push(loadFacts(backendUrlRef.current));
+        transformations.push({id: -1});
+        // load clingraph
+        promises.push(loadClingraphChildren(backendUrlRef.current));
             
         // Wait for all promises to resolve
         Promise.all(promises)
             .then((allItems) => {
-                const transformationNodesMap = allItems.reduce(
+                const nodesRes = allItems.slice(0, allItems.length -1)
+                const clingraphNodes = allItems[allItems.length - 1]
+
+                const transformationNodesMap = nodesRes.reduce(
                     (map, items, i) => {
                         map[transformations[i].id] = items;
                         return map;
                     },
                     {}
                 );
-                dispatch(setNodes(transformationNodesMap))
+                dispatch(setNodes(transformationNodesMap));
+                dispatch(setClingraphGraphics(clingraphNodes));
             })
             .catch((error) => {
                 messageDispatchRef.current(
@@ -272,10 +339,9 @@ const TransformationProvider = ({children}) => {
             });
     }, [])
 
-
     React.useEffect(() => {
         let mounted = true;
-        if (state.currentSort !== "") {   
+        if (state.currentSort !== '') {
             fetchTransformations(backendUrlRef.current)
                 .catch((error) => {
                     messageDispatchRef.current(

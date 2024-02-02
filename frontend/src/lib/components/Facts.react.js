@@ -13,11 +13,9 @@ export function Facts() {
     React.useEffect(() => {
         if (
             transformationNodesMap &&
-            transformationNodesMap[-1]
+            transformationNodesMap["-1"]
         ) {
-            setFact(transformationNodesMap[-1]);
-        } else {
-            setFact(oldFact => make_default_nodes([oldFact])[0]);
+            setFact(transformationNodesMap["-1"]);
         }
     }, [transformationNodesMap]);
     

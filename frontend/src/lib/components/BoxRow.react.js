@@ -1,40 +1,30 @@
 import React, { useCallback } from "react";
 import { Box } from "./Box.react";
 import './boxrow.css';
-import { useSettings } from "../contexts/Settings";
+import { useTransformations } from "../contexts/transformations";
 
-function loadClingraphChildren(backendURL) {
-    return fetch(`${backendURL("clingraph/children")}`).then(r => {
-        if (!r.ok) {
-            throw new Error(`${r.status} ${r.statusText}`);
-        }
-        return r.json()});
-}
 export function Boxrow() {
-    const [graphics, setGraphics] = React.useState(null);
     const [isOverflowH, setIsOverflowH] = React.useState(false);
     const [overflowBreakingPoint, setOverflowBreakingPoint] = React.useState(null);
     const boxrowRef = React.useRef(null);
-    const { backendURL } = useSettings();
-    const backendURLRef = React.useRef(backendURL);
-    const [, message_dispatch] = useMessages()
-    const messageDispatchRef = React.useRef(message_dispatch);
+    const {
+        state: {currentDragged, clingraphGraphics},
+    } = useTransformations();
+    const [clingraphNodes, setClingraphNodes] = React.useState([]);
+    const [style, setStyle] = React.useState({opacity: 1.0});
+    const opacityMultiplier = 0.8;
 
     React.useEffect(() => {
-        let mounted = true;
-        loadClingraphChildren(backendURLRef.current)
-            .then(items => {
-                if (mounted) {
-                    setGraphics(items)
-                }
-            })
-            .catch((error) => {
-                messageDispatchRef.current(
-                    showError(`Failed to get clingraph children: ${error}`)
-                );
-            });
-        return () => { mounted = false };
-    }, []);
+        if (currentDragged.length > 0) {
+            setStyle((prevStyle) => ({
+                ...prevStyle,
+                opacity: 1 - opacityMultiplier,
+            }));
+        } else {
+            setStyle((prevStyle) => ({...prevStyle, opacity: 1.0}));
+        }
+    }, [currentDragged, opacityMultiplier]);
+
 
     const checkForOverflow = useCallback(() => {
         if (boxrowRef !== null && boxrowRef.current) {
@@ -58,19 +48,29 @@ export function Boxrow() {
     }, [boxrowRef, isOverflowH, overflowBreakingPoint]);
 
     React.useEffect(() => {
-        checkForOverflow()
-    }, [checkForOverflow, graphics])
+        checkForOverflow();
+    }, [checkForOverflow, clingraphGraphics]);
+
+    React.useEffect(() => {
+        if (clingraphGraphics.length > 0) {
+            setClingraphNodes(clingraphGraphics);
+        }
+    }, [clingraphGraphics]);
 
     React.useEffect(() => {
         window.addEventListener('resize', checkForOverflow)
         return _ => window.removeEventListener('resize', checkForOverflow)
     })
 
-    return <div className="boxrow_container">
-        {graphics === null ? <div>Loading Clingraph..</div> : <div ref={boxrowRef} className="boxrow_row">
-            {graphics.map((child) => 
-                <Box key={child} uuid={child} />)}</div>}
-    </div>
+    return (
+        <div className="boxrow_container" style={style}>
+            <div ref={boxrowRef} className="boxrow_row">
+                {clingraphGraphics.map((child) => (
+                    <Box key={child.uuid} node={child} />
+                ))}
+            </div>
+        </div>
+    );
 }
 
 

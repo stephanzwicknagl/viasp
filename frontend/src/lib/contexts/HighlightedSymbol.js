@@ -3,8 +3,6 @@ import PropTypes from "prop-types";
 import { useSettings } from "./Settings";
 import { useColorPalette } from "../contexts/ColorPalette";
 import { useMessages, showError } from "./UserMessages";
-import {useShownNodes} from '../contexts/ShownNodes';
-import { useClingraph } from "../contexts/Clingraph";
 import { useFilters } from "../contexts/Filters";
 import { useShownRecursion } from "../contexts/ShownRecursion";
 import {useTransformations} from '../contexts/transformations';

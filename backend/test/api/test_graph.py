@@ -45,11 +45,9 @@ def test_graph_entries(client_with_a_graph):
     _, _, _, length = serializable_graphs[0]
     res = client.get("graph/sorts")
     assert res.status_code == 200
+    assert type(res.json) == list
     assert len(res.json) == length
-    assert type(res.json[0]) == list
-    assert type(res.json[0][0]) == list
-    assert type(res.json[0][0][0]) == Transformation
-    assert type(res.json[0][1]) == str
+    assert type(res.json[0]) == str
 
 
 def test_get_node(client, single_node_graph):
@@ -98,8 +96,8 @@ def test_get_edges(client_with_a_graph):
     res = client.get(f"/graph/edges")
     assert res.status_code == 200
     assert type(res.json) == list
-    uuids = [node.uuid for node in client_with_a_graph.get("/graph").json]
-    res = client_with_a_graph.post("/graph/edges", json={"shownRecursion": []})
+    uuids = [node.uuid for node in client.get("/graph").json]
+    res = client.post("/graph/edges", json={"shownRecursion": []})
     assert res.status_code == 200
     assert type(res.json) == list
     if "{b(X)}" in program:
@@ -111,7 +109,7 @@ def test_get_edges(client_with_a_graph):
         res = client.post(f"/graph/edges", json={"shownNodes": uuids, "shownRecursion": [uuids[-1]]})
         assert res.status_code == 200
         assert type(res.json) == list
-        assert len(res.json) == 4
+        assert len(res.json) == 6
 
 def test_get_transformations(client_with_a_graph):
     client, _, _, _ = client_with_a_graph

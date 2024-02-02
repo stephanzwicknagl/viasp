@@ -205,8 +205,6 @@ export function Row(props) {
             transformationNodesMap[transformation.id]
         ) {
             setNodes(transformationNodesMap[transformation.id]);
-        } else {
-            setNodes((oldNodes) => make_default_nodes(oldNodes));
         }
     }, [transformationNodesMap, transformation.id]);
 

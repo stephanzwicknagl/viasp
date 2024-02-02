@@ -80,7 +80,7 @@ class ClingoReconstructor:
 BOB_THE_BUILDER = ClingoReconstructor()
 
 
-def apply_multiple(calls: Sequence[ClingoMethodCall], ctl: Optional[Control]) -> Control:
+def apply_multiple(calls: Sequence[ClingoMethodCall], ctl: Optional[Control] = None) -> Control:
     if ctl is None:
         ctl = Control()
     for call in calls:

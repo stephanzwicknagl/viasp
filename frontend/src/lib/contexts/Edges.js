@@ -3,9 +3,7 @@ import { showError, useMessages } from "./UserMessages";
 import { useSettings } from "./Settings";
 import PropTypes from "prop-types";
 import { useShownRecursion } from "../contexts/ShownRecursion";
-import { useShownNodes } from "../contexts/ShownNodes";
 import { useFilters } from "../contexts/Filters";
-import { useClingraph } from "../contexts/Clingraph";
 import { useTransformations } from "../contexts/transformations";
 
 
@@ -31,19 +29,21 @@ const EdgeProvider = ({ children }) => {
     const backendUrlRef = React.useRef(backendURL);
     const [, message_dispatch] = useMessages()
     const messageDispatchRef = React.useRef(message_dispatch);
-    const { state: { transformations } } = useTransformations()
+    const {
+        state: {clingraphGraphics, transformationNodesMap},
+    } = useTransformations();
 
 
     const [shownRecursion, ,] = useShownRecursion();
     const [{activeFilters},] = useFilters();
-    const { clingraphUsed } = useClingraph();
+    const clingraphUsed = clingraphGraphics !== null;   
     
     const [edges, setEdges] = React.useState(initialState);
     
     const reloadEdges = React.useCallback(() => {
         const nodeInfo = {
             shownRecursion: shownRecursion,
-            usingClingraph: clingraphUsed,
+            usingClingraph: clingraphUsed
         }
         loadEdges(nodeInfo, backendUrlRef.current)
             .then((items) => {
@@ -58,7 +58,12 @@ const EdgeProvider = ({ children }) => {
 
     React.useEffect(() => {
         reloadEdges();
-    }, [reloadEdges, shownRecursion, activeFilters, transformations]);
+    }, [
+        reloadEdges,
+        shownRecursion,
+        activeFilters,
+        transformationNodesMap,
+    ]);
 
     return <EdgeContext.Provider value={{ edges, reloadEdges }}>{children}</EdgeContext.Provider>
 }

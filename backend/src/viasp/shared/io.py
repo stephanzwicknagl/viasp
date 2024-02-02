@@ -26,7 +26,7 @@ from clingo import Model as clingo_Model, ModelType, Symbol, Application
 from clingo.ast import AST
 
 from .interfaces import ViaspClient
-from .model import Node, Transformation, Signature, StableModel, ClingoMethodCall, TransformationError, FailedReason, SymbolIdentifier, TransformerTransport
+from .model import Node, ClingraphNode, Transformation, Signature, StableModel, ClingoMethodCall, TransformationError, FailedReason, SymbolIdentifier, TransformerTransport
 from ..server.database import ProgramDatabase
 
 class DataclassJSONProvider(JSONProvider):
@@ -59,6 +59,8 @@ def object_hook(obj):
         obj['atoms'] = frozenset(obj['atoms'])
         obj['diff'] = frozenset(obj['diff'])
         return Node(**obj)
+    elif t == "ClingraphNode":
+        return ClingraphNode(**obj)
     elif t == "Transformation":
         return Transformation(**obj)
     elif t == "Signature":
@@ -96,6 +98,8 @@ def dataclass_to_dict(o):
                 "uuid": o.uuid,
                 "rule_nr": o.rule_nr,
                 "space_multiplier": o.space_multiplier}
+    elif isinstance(o, ClingraphNode):
+        return {"_type": "ClingraphNode", "uuid": o.uuid}
     elif isinstance(o, TransformationError):
         return {"_type": "TransformationError", "ast": o.ast, "reason": o.reason}
     elif isinstance(o, SymbolIdentifier):

@@ -136,7 +136,7 @@ def program_recursive() -> str:
 @pytest.fixture
 def client_with_a_single_node_graph(get_sort_program_and_get_all_graphs, a_1) -> Generator[Tuple[FlaskClient, ProgramAnalyzer, List[Tuple[Mapping, str, str, int]], str], Any, Any]:
     app = create_app_with_registered_blueprints(app_bp, api_bp, dag_bp)
-    
+
     program = a_1
     serializable_graphs, analyzer = get_sort_program_and_get_all_graphs(program)
     with app.test_client() as client:
@@ -148,7 +148,7 @@ def client_with_a_single_node_graph(get_sort_program_and_get_all_graphs, a_1) ->
 @pytest.fixture(params=["program_simple", "program_multiple_sorts", "program_recursive"])
 def client_with_a_graph(request, get_sort_program_and_get_all_graphs) -> Generator[Tuple[FlaskClient, ProgramAnalyzer, List[Tuple[Mapping, str, str, int]], str], Any, Any]:
     app = create_app_with_registered_blueprints(app_bp, api_bp, dag_bp)
-    
+
     program = request.getfixturevalue(request.param)
     serializable_graphs, analyzer = get_sort_program_and_get_all_graphs(program)
     with app.test_client() as client:
@@ -196,37 +196,11 @@ def get_clingo_stable_models() -> Callable[[str], List[StableModel]]:
         ctl.add("base", [], program)
         ctl.ground([("base", [])])
         with ctl.solve(yield_=True) as handle: # type: ignore
-            for model in handle: 
+            for model in handle:
                 wrapped_models.append(clingo_model_to_stable_model(model))
         return wrapped_models
     return c
 
-@pytest.fixture
-def serializable_recursive_graph() -> Dict:
-    program = "j(X, X+1) :- X=0..5.j(X,  Y) :- j(X,Z), j(Z,Y)."
-    db = ProgramDatabase()
-    db.clear_program()
-    db.add_to_program(program)
-    analyzer = ProgramAnalyzer()
-    analyzer.add_program(program)
-    recursion_rules = analyzer.check_positive_recursion()
-    saved_models = get_stable_models_for_program(program)
-    reified = reify_list(analyzer.get_sorted_program(),
-                         h=analyzer.get_conflict_free_h(),
-                         model=analyzer.get_conflict_free_model())
-    g = build_graph(saved_models, reified, analyzer, recursion_rules)
-
-    serializable_recursive_graph = node_link_data(g)
-    return serializable_recursive_graph
-
-
-@pytest.fixture
-def client_with_a_recursive_graph(serializable_recursive_graph) -> FlaskClient:
-    app = create_app_with_registered_blueprints(app_bp, api_bp, dag_bp)
-
-    with app.test_client() as client:
-        client.post("graph", json=serializable_recursive_graph)
-        yield client
 
 @pytest.fixture(scope="session", autouse=True)
 def cleanup(request):

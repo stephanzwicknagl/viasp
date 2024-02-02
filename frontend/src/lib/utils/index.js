@@ -41,9 +41,10 @@ export function make_default_nodes(oldNodes = []) {
         });
     }
     
+    const nodeSymbolUpperBound = 20;
     const nodes = [];
     const count = Math.floor(Math.random() * 2) + 1;
-    const symbolCount = Math.floor(Math.random() * 20) + 3; 
+    const symbolCount = Math.floor(Math.random() * nodeSymbolUpperBound) + 3; 
     for (let i = 0; i < count; i++) {
         const diff = Array.from({length: symbolCount}, (_, i) => {
             return {
@@ -67,6 +68,29 @@ export function make_default_nodes(oldNodes = []) {
             rule_nr: 0,
             reason: {},
             space_multiplier: 0.5,
+        });
+    }
+    return nodes;
+}
+
+export function make_default_clingraph_nodes(oldNodes = []) {
+    if (oldNodes.length > 0) {
+        return oldNodes.map((node, i) => {
+            return {
+                ...node,
+                uuid: `${node.uuid}`,
+                loading: true,
+            };
+        });
+    }
+
+    const nodes = [];
+    const count = Math.floor(Math.random() * 2) + 1;
+    for (let i = 0; i < count; i++) {
+        nodes.push({
+            _type: 'ClingraphNode',
+            uuid: `loading-${i}`,
+            loading: true
         });
     }
     return nodes;

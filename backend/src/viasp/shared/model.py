@@ -62,6 +62,20 @@ class Node:
         return f"Node(diff={{{'. '.join(map(str, self.diff))}}}, rule_nr={self.rule_nr}, atoms={{{', '.join(map(str,self.atoms))}}}, reasons={{{', '.join(repr_reasons)}}}, recursive={self.recursive}, space_multiplier={self.space_multiplier}, uuid={self.uuid})"
 
 
+@dataclass()
+class ClingraphNode:
+    uuid: UUID = field(default_factory=uuid4, hash=True)
+
+    def __hash__(self):
+        return hash(self.uuid)
+
+    def __eq__(self, o):
+        return isinstance(o, type(self)) and self.uuid == o.uuid
+    
+    def __repr__(self):
+        return f"ClingraphNode(uuid={self.uuid})"
+
+
 @dataclass(frozen=False)
 class Transformation:
     id: int = field(hash=True)

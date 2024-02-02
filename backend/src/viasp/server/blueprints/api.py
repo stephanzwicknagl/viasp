@@ -9,7 +9,7 @@ from clingo.ast import AST
 from clingraph.graphviz import compute_graphs, render
 from ...shared.defaults import CLINGRAPH_PATH
 
-from .dag_api import save_graph
+from .dag_api import save_graph, save_clingraph, clear_clingraph, load_clingraph_names
 from ..database import CallCenter, ProgramDatabase
 from ...asp.justify import build_graph
 from ...asp.reify import ProgramAnalyzer, reify_list
@@ -125,7 +125,7 @@ def set_transformer():
 
 
 def wrap_marked_models(marked_models: Iterable[StableModel],
-                       conflict_free_showTerm: str = "ShowTerm")  -> List[List[str]]:
+                       conflict_free_showTerm: str = "showTerm")  -> List[List[str]]:
     result = []
     for model in marked_models:
         wrapped = []
@@ -139,11 +139,6 @@ def wrap_marked_models(marked_models: Iterable[StableModel],
 
 def _set_warnings(warnings):
     dc.warnings = warnings
-
-def used_clingraph():
-    global using_clingraph
-    return using_clingraph
-
 
 @bp.route("/control/warnings", methods=["POST", "DELETE", "GET"])
 def set_warnings():
@@ -198,17 +193,16 @@ def transform_relax():
 
 @bp.route("/control/clingraph", methods=["POST", "GET", "DELETE"])
 def clingraph_generate():
-    global using_clingraph
-
     if request.method == "POST":
         marked_models = dc.models
         marked_models = wrap_marked_models(marked_models)
         if request.json is None:
             return "Invalid request", 400
-        viz_encoding = request.json["viz-encoding"] if "viz-encoding" in request.json else ""
+        viz_encoding = request.json[
+            "viz-encoding"] if "viz-encoding" in request.json else ""
         engine = request.json["engine"] if "engine" in request.json else "dot"
-        graphviz_type = request.json["graphviz-type"] if "graphviz-type" in request.json else "digraph"
-
+        graphviz_type = request.json[
+            "graphviz-type"] if "graphviz-type" in request.json else "digraph"
 
         # for every model that was maked
         for model in marked_models:
@@ -217,21 +211,25 @@ def clingraph_generate():
             control.add("base", [], ''.join(model))
             control.add("base", [], viz_encoding)
             control.ground([("base", [])])
-            with control.solve(yield_=True) as handle: # type: ignore
+            with control.solve(yield_=True) as handle:  # type: ignore
                 for m in handle:
                     fb = Factbase.from_model(m, default_graph="base")
                     graphs = compute_graphs(fb, graphviz_type)
 
                     filename = uuid4().hex
                     if len(graphs) > 0:
-                        render(graphs, format="png", directory=CLINGRAPH_PATH, name_format=filename, engine=engine)
-                        using_clingraph.append(filename)
+                        render(graphs,
+                               format="png",
+                               directory=CLINGRAPH_PATH,
+                               name_format=filename,
+                               engine=engine)
+                        save_clingraph(filename)
     if request.method == "GET":
-        if len(using_clingraph) > 0:
+        if len(load_clingraph_names()) > 0:
             return jsonify({"using_clingraph": True}), 200
         return jsonify({"using_clingraph": False}), 200
     if request.method == "DELETE":
-        using_clingraph = []
+        clear_clingraph()
     return "ok", 200
 
 def stringify_reified(reified: List[Collection[AST]]) -> str:

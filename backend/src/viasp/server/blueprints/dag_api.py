@@ -16,10 +16,12 @@ from ...shared.util import get_start_node_from_graph, is_recursive
 bp = Blueprint("dag_api", __name__, template_folder='../templates', static_folder='../static/',
                static_url_path='/static')
 
+
 class GraphAccessor:
 
     def __init__(self):
-        self.dbpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), GRAPH_PATH)
+        self.dbpath = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   GRAPH_PATH)
         self.conn = sqlite3.connect(self.dbpath)
         self.cursor = self.conn.cursor()
         self.cursor.execute("""
@@ -35,6 +37,12 @@ class GraphAccessor:
                 FOREIGN KEY(hash) REFERENCES graphs(hash)
             )
         """)
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS clingraph (
+                filename TEXT PRIMARY KEY
+            )
+        """)
+        self.conn.commit()
 
     def save(self, graph: Union[nx.Graph, dict], hash: str, sort: str = ""):
         if isinstance(graph, nx.Graph):
@@ -42,12 +50,21 @@ class GraphAccessor:
         else:
             serializable_graph = graph
 
-        self.cursor.execute("""
+        self.cursor.execute(
+            """
             INSERT OR REPLACE INTO graphs (hash, data, sort) VALUES (?, ?, ?)
-        """, (hash,  current_app.json.dumps(serializable_graph), sort))
+        """, (hash, current_app.json.dumps(serializable_graph), sort))
 
-        if self.cursor.execute("SELECT COUNT(*) FROM current_graph").fetchone()[0] == 0:
+        if self.cursor.execute(
+                "SELECT COUNT(*) FROM current_graph").fetchone()[0] == 0:
             self.set_current_graph(hash)
+        self.conn.commit()
+
+    def save_clingraph(self, filename: str):
+        self.cursor.execute(
+            """
+            INSERT OR REPLACE INTO clingraph (filename) VALUES (?)
+        """, (filename, ))
         self.conn.commit()
 
     def clear(self):
@@ -56,6 +73,12 @@ class GraphAccessor:
         """)
         self.cursor.execute("""
             DELETE FROM current_graph
+        """)
+        self.conn.commit()
+
+    def clear_clingraph(self):
+        self.cursor.execute("""
+            DELETE FROM clingraph
         """)
         self.conn.commit()
 
@@ -68,29 +91,34 @@ class GraphAccessor:
 
     def set_current_graph(self, hash: str):
         self.cursor.execute("DELETE FROM current_graph")
-        self.cursor.execute("INSERT INTO current_graph (hash) VALUES (?)", (hash,))
+        self.cursor.execute("INSERT INTO current_graph (hash) VALUES (?)",
+                            (hash, ))
         self.conn.commit()
 
     def load_json(self) -> dict:
         hash = self.get_current_graph()
 
-        self.cursor.execute("""
+        self.cursor.execute(
+            """
             SELECT data FROM graphs WHERE hash = ?
-        """, (hash,))
+        """, (hash, ))
         result = self.cursor.fetchone()
 
-        return current_app.json.loads(result[0]) if result is not None else dict()
+        return current_app.json.loads(
+            result[0]) if result is not None else dict()
 
     def load(self) -> nx.DiGraph:
         graph_json = self.load_json()
-        loaded_graph = nx.node_link_graph(graph_json) if len(graph_json) > 0 else nx.DiGraph()
+        loaded_graph = nx.node_link_graph(graph_json) if len(
+            graph_json) > 0 else nx.DiGraph()
         return loaded_graph
 
     def get_current_sort(self) -> str:
         hash = self.get_current_graph()
-        self.cursor.execute("""
+        self.cursor.execute(
+            """
             SELECT sort FROM graphs WHERE hash = ?
-        """, (hash,))
+        """, (hash, ))
         result = self.cursor.fetchone()
         return current_app.json.loads(result[0]) if result is not None else ""
 
@@ -100,9 +128,18 @@ class GraphAccessor:
         """)
         result: List[str] = self.cursor.fetchall()
         loaded_sorts: List[str] = [r[0] for r in result]
-        index_of_current_sort: int = loaded_sorts.index(self.get_current_graph())
-        loaded_sorts = loaded_sorts[index_of_current_sort:] + loaded_sorts[:index_of_current_sort]
+        index_of_current_sort: int = loaded_sorts.index(
+            self.get_current_graph())
+        loaded_sorts = loaded_sorts[
+            index_of_current_sort:] + loaded_sorts[:index_of_current_sort]
         return loaded_sorts
+
+    def load_all_clingraphs(self) -> List[str]:
+        self.cursor.execute("""
+            SELECT filename FROM clingraph
+        """)
+        result = self.cursor.fetchall()
+        return [r[0] for r in result]
 
 
 def get_database():
@@ -213,14 +250,12 @@ def get_src_tgt_mapping_from_graph(shown_recursive_ids=[], shown_clingraph=False
                             "style": "solid"} for last_node in last_nodes])
 
     if shown_clingraph:
-        from .api import using_clingraph
-        to_be_added += [
-                {"src": src,
-                "tgt": tgt,
-                "style": "dashed"}
-                for src, tgt in list(zip(
-                        last_nodes_in_graph(graph),
-                        using_clingraph))]
+        clingraph = load_clingraph_names()
+        to_be_added += [{
+            "src": src,
+            "tgt": tgt,
+            "style": "dashed"
+        } for src, tgt in list(zip(last_nodes_in_graph(graph), clingraph))]
     return to_be_added
 
 
@@ -323,6 +358,18 @@ def save_graph(data: DiGraph, hash: str, sort: str):
     database = get_database()
     database.save(data, hash, sort)
 
+def save_clingraph(filename: str):
+    database = get_database()
+    database.save_clingraph(filename)
+
+def clear_clingraph():
+    database = get_database()
+    database.clear_clingraph()
+
+def load_clingraph_names():
+    database = get_database()
+    return database.load_all_clingraphs()
+
 
 def get_atoms_in_path_by_signature(uuid: str):
     signature_to_atom_mapping = defaultdict(set)
@@ -424,8 +471,11 @@ def last_nodes_in_graph(graph):
 @bp.route("/clingraph/children", methods=["POST", "GET"])
 def get_clingraph_children():
     if request.method == "GET":
-        from .api import using_clingraph
-        to_be_returned = using_clingraph[::-1]
+        using_clingraph = load_clingraph_names()
+        to_be_returned = [{
+            "_type": "ClingraphNode",
+            "uuid": c
+        } for c in using_clingraph[::-1]]
         return jsonify(to_be_returned)
     raise NotImplementedError
 
