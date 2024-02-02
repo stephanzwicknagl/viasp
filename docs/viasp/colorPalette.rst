@@ -2,7 +2,7 @@
 Color Palette
 =================
 
-The color Palette of viASP's frontend is defined by the file `/server/static/colorPalette.json`.
+The color Palette of viASP's frontend is defined by the file `/server/colorPalette.json`.
 
 The default file contains the following JSON object:
 

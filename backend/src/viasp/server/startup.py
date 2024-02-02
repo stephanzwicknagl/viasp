@@ -15,6 +15,7 @@ import atexit
 import shutil
 from subprocess import Popen
 from time import time
+import json
 
 import viasp_dash
 from dash import Dash, jupyter_dash
@@ -22,15 +23,15 @@ from dash._jupyter import _jupyter_config
 
 from viasp import clingoApiClient
 from viasp.shared.defaults import (DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT,
-                                   DEFAULT_BACKEND_PROTOCOL, CLINGRAPH_PATH, 
-                                   GRAPH_PATH, PROGRAM_STORAGE_PATH, STDIN_TMP_STORAGE_PATH,
-                                   COLOR_PALETTE)
+                                   DEFAULT_BACKEND_PROTOCOL, CLINGRAPH_PATH,
+                                   GRAPH_PATH, PROGRAM_STORAGE_PATH,
+                                   STDIN_TMP_STORAGE_PATH, COLOR_PALETTE_PATH)
 
 
 
 def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     """ create the dash app, set layout and start the backend on host:port """
-       
+
     # if running in binder, get proxy information
     # and set the backend URL, which will be used
     # by the frontend
@@ -40,16 +41,15 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
         _default_server_url = _jupyter_config['server_url']
 
         _default_requests_pathname_prefix = (
-            _jupyter_config['base_subpath'].rstrip('/') + '/proxy/' + str(port)
-        )
+            _jupyter_config['base_subpath'].rstrip('/') + '/proxy/' +
+            str(port))
 
-        backend_url = _default_server_url+_default_requests_pathname_prefix
+        backend_url = _default_server_url + _default_requests_pathname_prefix
     elif 'google.colab' in sys.modules:
-        from google.colab.output import eval_js # type: ignore
-        backend_url=eval_js(f"google.colab.kernel.proxyPort({port})")
+        from google.colab.output import eval_js  # type: ignore
+        backend_url = eval_js(f"google.colab.kernel.proxyPort({port})")
     else:
         backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
-
 
     command = ["viasp_server", "--host", host, "--port", str(port)]
 
@@ -60,12 +60,12 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     log = open('viasp.log', 'w', encoding="utf-8")
     viasp_backend = Popen(command, stdout=log, stderr=log)
 
+    color_palette = json.load(
+        open(COLOR_PALETTE_PATH, "r"))
     app = Dash(__name__)
-    app.layout = viasp_dash.ViaspDash(
-        id="myID",
-        backendURL=backend_url,
-        colorPalette=COLOR_PALETTE
-        )
+    app.layout = viasp_dash.ViaspDash(id="myID",
+                                      backendURL=backend_url,
+                                      colorPalette=color_palette)
     app.title = "viASP"
 
     # make sure the backend is up, before continuing with other modules

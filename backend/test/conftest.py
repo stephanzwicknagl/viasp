@@ -146,23 +146,40 @@ def client_with_a_single_node_graph(get_sort_program_and_get_all_graphs, a_1) ->
 
 
 @pytest.fixture(params=["program_simple", "program_multiple_sorts", "program_recursive"])
-def client_with_a_graph(request, get_sort_program_and_get_all_graphs) -> Generator[Tuple[FlaskClient, ProgramAnalyzer, List[Tuple[Mapping, str, str, int]], str], Any, Any]:
+def client_with_a_graph(
+    request, get_sort_program_and_get_all_graphs
+) -> Generator[Tuple[FlaskClient, ProgramAnalyzer, List[Tuple[
+        Mapping, str, str, int]], str], Any, Any]:
     app = create_app_with_registered_blueprints(app_bp, api_bp, dag_bp)
 
     program = request.getfixturevalue(request.param)
-    serializable_graphs, analyzer = get_sort_program_and_get_all_graphs(program)
+    serializable_graphs, analyzer = get_sort_program_and_get_all_graphs(
+        program)
     with app.test_client() as client:
         for serializable_graph, hash, sorted_program, _ in serializable_graphs:
-            client.post("graph", json={"data": serializable_graph, "hash": hash, "sort": sorted_program})
+            client.post("graph",
+                        json={
+                            "data": serializable_graph,
+                            "hash": hash,
+                            "sort": sorted_program
+                        })
         yield client, analyzer, serializable_graphs, program
+        _ = client.delete("/control/clingraph")
+        _ = client.post("/control/models/clear")
+        _ = client.delete("/graph/clear")
 
 @pytest.fixture
-def client_with_a_clingraph(client_with_a_graph, get_clingo_stable_models) -> Generator[Tuple[FlaskClient, ProgramAnalyzer, List[Tuple[Mapping, str, str, int]], str], Any, Any]:
+def client_with_a_clingraph(
+    client_with_a_graph, get_clingo_stable_models
+) -> Generator[Tuple[FlaskClient, ProgramAnalyzer, List[Tuple[
+        Mapping, str, str, int]], str], Any, Any]:
     client, analyzer, serializable_graphs, program = client_with_a_graph
 
-    _ = client.delete("/control/clingraph")
     serialized = get_clingo_stable_models(program)
-    _ = client.post("/control/models", json=serialized, headers={'Content-Type': 'application/json'})
+    print(f"Marking models: {serialized}", flush=True)
+    _ = client.post("/control/models",
+                    json=serialized,
+                    headers={'Content-Type': 'application/json'})
 
     yield client, analyzer, serializable_graphs, program
 

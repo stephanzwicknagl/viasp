@@ -1,6 +1,5 @@
 import pathlib
 import os
-import json
 
 DEFAULT_BACKEND_PROTOCOL = "http"
 DEFAULT_BACKEND_HOST = "localhost"
@@ -9,8 +8,9 @@ DEFAULT_FRONTEND_PORT = 8050
 DEFAULT_BACKEND_URL = f"{DEFAULT_BACKEND_PROTOCOL}://{DEFAULT_BACKEND_HOST}:{DEFAULT_BACKEND_PORT}"
 SHARED_PATH = pathlib.Path(__file__).parent.resolve()
 GRAPH_PATH = SHARED_PATH / "viasp_graph_storage.db"
-STATIC_PATH =  pathlib.Path(__file__).parent.parent.resolve() / "server/static/"
+SERVER_PATH =  pathlib.Path(__file__).parent.parent.resolve() / "server/"
+STATIC_PATH =  os.path.join(SERVER_PATH, "static")
 CLINGRAPH_PATH = os.path.join(STATIC_PATH, "clingraph")
 PROGRAM_STORAGE_PATH = SHARED_PATH / "prg.lp"
 STDIN_TMP_STORAGE_PATH = SHARED_PATH / "viasp_stdin_tmp.lp"
-COLOR_PALETTE = json.load(open(os.path.join(STATIC_PATH, "colorPalette.json"), "r"))
+COLOR_PALETTE_PATH = SERVER_PATH / "colorPalette.json"

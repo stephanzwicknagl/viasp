@@ -1,6 +1,6 @@
 /* eslint no-magic-numbers: 0 */
 import React from 'react';
-import colorPaletteData from '../../../backend/src/viasp/server/static/colorPalette.json';
+import colorPaletteData from '../../../backend/src/viasp/server/colorPalette.json';
 
 import { ViaspDash } from '../lib';
 

@@ -19,6 +19,10 @@ def main():
             ctl.viasp.mark(m)
         print(handle.get())
     ctl.viasp.show()
+    ctl.viasp.clingraph(viz_encoding="viz_hamiltonian.lp",
+                        engine="dot",
+                        graphviz_type="graph")
+
 
 
 app = startup.run()

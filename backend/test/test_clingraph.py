@@ -98,13 +98,15 @@ def test_clingraph_edges(client_with_a_clingraph):
     assert res.status_code == 200
     assert res.data == b'ok'
 
+    res = client.post(f"/graph/edges",
+                        json={
+                            "shownRecursion": [],
+                            "usingClingraph": "true"
+                        })
+    assert res.status_code == 200
+    assert type(res.json) == list
     if "{b(X)}" in program:
-        res = client.post(f"/graph/edges",
-                          json={
-                              "shownRecursion": [],
-                              "usingClingraph": "true"
-                          })
-        assert res.status_code == 200
-        assert type(res.json) == list
         # program_simple and program_multiple_sorts
         assert len(res.json) == 12
+    else:
+        assert len(res.json) == 2
