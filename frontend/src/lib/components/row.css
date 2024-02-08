@@ -4,6 +4,7 @@
     font-size: 12pt;
     border-radius: 0 8px 8px 0;
     width: fit-content;
+    max-width: 95%;
     position: relative;
     padding: 8px 8px 8px 16px;
     z-index: 8;
