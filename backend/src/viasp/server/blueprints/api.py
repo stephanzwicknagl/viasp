@@ -170,6 +170,7 @@ def show_selected_models():
                 h_showTerm=analyzer.get_conflict_free_h_showTerm(),
                 model=analyzer.get_conflict_free_model(),
                 get_conflict_free_variable=analyzer.get_conflict_free_variable,
+                clear_temp_names=analyzer.clear_temp_names,
                 conflict_free_showTerm=analyzer.get_conflict_free_showTerm())
             g = build_graph(marked_models, reified, sorted_program, analyzer,
                             recursion_rules)

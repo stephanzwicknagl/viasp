@@ -190,12 +190,13 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         self.pass_through: Set[AST] = set()
         self.rules: List[ast.Rule] = []  # type: ignore
         self.names: Set[str] = set()
+        self.temp_names: Set[str] = set()
 
     def _get_conflict_free_version_of_name(self, name: str) -> str:
-        candidates = self.names
+        anti_candidates = self.names.union(self.temp_names)
         current_best = name
         for _ in range(10):
-            if current_best in candidates:
+            if current_best in anti_candidates:
                 current_best = f"{current_best}_"
             else:
                 return current_best
@@ -220,8 +221,11 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         By a new conflict free (unique) variable.
         The new variable is added to the set of known variables.
         """
-        new_var = self._get_conflict_free_version_of_name("X")
-        self.names = self.names.union({new_var})
+        try:
+            new_var = self._get_conflict_free_version_of_name("X")
+        except ValueError:
+            new_var = self._get_conflict_free_version_of_name("Y")
+        self.temp_names.add(new_var)
         return new_var
 
     def get_conflict_free_iterindex(self):
@@ -230,6 +234,9 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         transformations.
         """
         return self._get_conflict_free_version_of_name("n")
+
+    def clear_temp_names(self):
+        self.temp_names = set()
 
     def visit_Variable(
             self,
@@ -367,8 +374,10 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             for v in conditions:
                 self.dependencies.add_edge(u, v)
 
-    def register_rule_conditions(self, rule: ast.Rule, # type: ignore
-                                 conditions: List[ast.Literal]) -> None: # type: ignore
+    def register_rule_conditions(
+            self,
+            rule: ast.Rule,  # type: ignore
+            conditions: List[ast.Literal]) -> None:  # type: ignore
         for c in conditions:
             c_sig = make_signature(c)
             self.conditions[c_sig].add(rule)
@@ -403,7 +412,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             v_sig = make_signature(v)
             self.dependants[v_sig].add(rule)
 
-    def visit_Rule(self, rule: ast.Rule): # type: ignore
+    def visit_Rule(self, rule: ast.Rule):  # type: ignore
         deps = defaultdict(list)
         _ = self.visit(rule.head, deps=deps, in_head=True)
         for b in rule.body:
@@ -450,7 +459,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         self.register_rule_dependencies(showTerm, deps)
         self.rules.append(showTerm)
 
-    def visit_Minimize(self, minimize: ast.Minimize): # type: ignore
+    def visit_Minimize(self, minimize: ast.Minimize):  # type: ignore
         deps = defaultdict(list)
         self.pass_through.add(minimize)
 
@@ -480,7 +489,8 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             for statement in new_program:
                 self.visit(statement)
         else:
-            parse_string(program, lambda statement: self.visit(statement) and None)
+            parse_string(program,
+                         lambda statement: self.visit(statement) and None)
 
     def sort_program(self, program) -> List[Transformation]:
         parse_string(program, lambda rule: self.visit(rule) and None)
@@ -568,12 +578,14 @@ class ProgramReifier(DependencyCollector):
                  h_showTerm="h_showTerm",
                  model="model",
                  get_conflict_free_variable=lambda s: s,
+                 clear_temp_names=lambda: None,
                  conflict_free_showTerm: str = "ShowTerm"):
         self.rule_nr = rule_nr
         self.h = h
         self.h_showTerm = h_showTerm
         self.model = model
         self.get_conflict_free_variable = get_conflict_free_variable
+        self.clear_temp_names = clear_temp_names
         self.conflict_free_showTerm = conflict_free_showTerm
 
     def _nest_rule_head_in_h_with_explanation_tuple(
@@ -605,6 +617,9 @@ class ProgramReifier(DependencyCollector):
         return [
             ast.Function(loc, h_attribute, [loc_lit, dependant, reason_lit], 0)
         ]
+
+    def post_rule_creation(self):
+        self.clear_temp_names()
 
     def visit_Rule(self, rule: ast.Rule) -> List[AST]: # type: ignore
         """
@@ -666,6 +681,7 @@ class ProgramReifier(DependencyCollector):
                 ast.Rule(rule.location, new_head, new_body)
                 for new_head in new_head_s
             ])
+            self.post_rule_creation()
 
         return new_rules
 
@@ -718,6 +734,7 @@ class ProgramReifier(DependencyCollector):
             ast.Rule(showTerm.location, new_head, new_body_literals)
             for new_head in new_head_s
         ])
+        self.post_rule_creation()
 
         return new_rules
 
