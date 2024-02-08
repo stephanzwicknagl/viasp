@@ -1,6 +1,6 @@
 """This module is concerned with finding reasons for why a stable model is found."""
 from collections import defaultdict
-from typing import List, Collection, Dict, Iterable, Union, cast
+from typing import List, Collection, Dict, Iterable, Union, Set, cast
 
 import networkx as nx
 
@@ -141,15 +141,17 @@ def make_transformation_mapping(transformations: Iterable[Transformation]):
     return {t.id: t for t in transformations}
 
 
-def append_noops(result_graph: DiGraph, analyzer: ProgramAnalyzer):
-    next_transformation_id = max(t.id for t in next(analyzer.get_sorted_program())) + 1
+def append_noops(result_graph: DiGraph,
+                 sorted_program: Iterable[Transformation],
+                 pass_through: Set[AST]):
+    next_transformation_id = max(t.id for t in sorted_program) + 1
     leaves = list(get_leafs_from_graph(result_graph))
     leaf: Node
     for leaf in leaves:
         noop_node = Node(frozenset(), next_transformation_id, leaf.atoms)
         result_graph.add_edge(leaf, noop_node,
                               transformation=Transformation(next_transformation_id,
-                                                            tuple(analyzer.pass_through)))
+                                                            tuple(pass_through)))
 
 
 def build_graph(wrapped_stable_models: List[List[str]],
@@ -183,7 +185,7 @@ def build_graph(wrapped_stable_models: List[List[str]],
     result_graph = nx.DiGraph()
     result_graph.update(join_paths_with_facts(paths))
     if analyzer.pass_through:
-        append_noops(result_graph, analyzer)
+        append_noops(result_graph, sorted_program, analyzer.pass_through)
     calculate_spacing_factor(result_graph)
     identify_reasons(result_graph)
     return result_graph
