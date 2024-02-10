@@ -195,11 +195,13 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     def _get_conflict_free_version_of_name(self, name: str) -> str:
         anti_candidates = self.names.union(self.temp_names)
         current_best = name
-        for _ in range(10):
-            if current_best in anti_candidates:
-                current_best = f"{current_best}_"
-            else:
-                return current_best
+        for i in range(10):
+            for _ in range(10):
+                if current_best in anti_candidates:
+                    current_best = f"{current_best}_"
+                else:
+                    return current_best
+            current_best = f"{name}{i}"
         raise ValueError(
             f"Could not create conflict free variable name for {name}!")
 
@@ -215,16 +217,13 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     def get_conflict_free_h_showTerm(self):
         return self._get_conflict_free_version_of_name("h_showTerm")
 
-    def get_conflict_free_variable(self):
+    def get_conflict_free_variable(self, name: str = "X"):
         """
         For use in the replacement of Intervals.
         By a new conflict free (unique) variable.
         The new variable is added to the set of known variables.
         """
-        try:
-            new_var = self._get_conflict_free_version_of_name("X")
-        except ValueError:
-            new_var = self._get_conflict_free_version_of_name("Y")
+        new_var = self._get_conflict_free_version_of_name(name)
         self.temp_names.add(new_var)
         return new_var
 
@@ -383,9 +382,12 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             self.conditions[c_sig].add(rule)
 
     def register_rule_dependencies(
-            self, rule: ast.Rule, # type: ignore
-            deps: Dict[ast.Literal, # type: ignore
-                       List[ast.Literal]]) -> None:  # type: ignore
+        self,
+        rule: ast.Rule,  # type: ignore
+        deps: Dict[
+            ast.Literal,  # type: ignore
+            List[ast.Literal]]  # type: ignore
+    ) -> None:  # type: ignore
         for uu in deps.values():
             for u in filter(filter_body_arithmetic, uu):
                 u_sig = make_signature(u)
@@ -591,9 +593,9 @@ class ProgramReifier(DependencyCollector):
     def _nest_rule_head_in_h_with_explanation_tuple(
         self,
         loc: ast.Location,
-        dependant: ast.Literal, # type: ignore
-        conditions: List[ast.Literal], # type: ignore
-        reasons: List[ast.Literal], # type: ignore
+        dependant: ast.Literal,  # type: ignore
+        conditions: List[ast.Literal],  # type: ignore
+        reasons: List[ast.Literal],  # type: ignore
         use_h_showTerm: bool = False,
     ):
         """
@@ -621,7 +623,7 @@ class ProgramReifier(DependencyCollector):
     def post_rule_creation(self):
         self.clear_temp_names()
 
-    def visit_Rule(self, rule: ast.Rule) -> List[AST]: # type: ignore
+    def visit_Rule(self, rule: ast.Rule) -> List[AST]:  # type: ignore
         """
         Reify a rule into a set of new rules.
         Also replaces any interval in the head with a variable and adds it to the body.
@@ -642,7 +644,7 @@ class ProgramReifier(DependencyCollector):
         if not deps:
             # if it's a "simple head"
             deps[rule.head] = []
-        new_rules: List[ast.Rule] = [] # type: ignore
+        new_rules: List[ast.Rule] = []  # type: ignore
         for dependant, conditions in deps.items():
             if has_an_interval(dependant):
                 # replace dependant with variable: e.g. (1..3) -> X
@@ -656,14 +658,16 @@ class ProgramReifier(DependencyCollector):
                                  False))
                 dependant = ast.Literal(loc, ast.Sign.NoSign, symbol)
 
-            new_body: List[ast.Literal] = [] # type: ignore
-            reason_literals: List[ast.Literal] = [] # type: ignore
+            new_body: List[ast.Literal] = []  # type: ignore
+            reason_literals: List[ast.Literal] = []  # type: ignore
             _ = self.visit_sequence(
                 rule.body,
                 reasons=reason_literals,
                 new_body=new_body,
                 rename_variables=False,
             )
+            self.replace_anon_variables(conditions)
+            self.replace_anon_variables(new_body)
             new_head_s = self._nest_rule_head_in_h_with_explanation_tuple(
                 rule.location, dependant, conditions, reason_literals)
 
@@ -712,6 +716,7 @@ class ProgramReifier(DependencyCollector):
             new_body=new_body_literals,
             rename_variables=False,
         )
+        self.replace_anon_variables(new_body_literals)
         new_head_s = self._nest_rule_head_in_h_with_explanation_tuple(
             showTerm.location, showTerm.term, [], reason_literals, True)
 
@@ -737,6 +742,23 @@ class ProgramReifier(DependencyCollector):
         self.post_rule_creation()
 
         return new_rules
+
+    def replace_anon_variables(self,
+                               ast: List[ast.Literal]) -> None:  # type: ignore
+        """
+        Replaces all anonymous variables in the literals with a new variable.
+        """
+        try:
+            for l in ast:
+                if l.ast_type == ASTType.Literal:
+                    for arg in l.atom.symbol.arguments:
+                        if arg.ast_type == ASTType.Variable and arg.name == "_":
+                            arg.name = self.get_conflict_free_variable(
+                                f"ANON_{l.location.begin.line}{l.location.begin.column}_{l.location.end.line}{l.location.end.column}_"
+                            )
+        except AttributeError:
+            return
+
 
 
 def register_rules(rule_or_list_of_rules, rulez):
@@ -787,7 +809,7 @@ def extract_symbols(facts, constants=None):
     return result
 
 
-def has_an_interval(literal):
+def has_an_interval(literal: ast.Literal) -> bool:  # type: ignore
     """
     Checks if a literal has an interval as one of its symbols.
     Returns false if an attribute error occurs.
