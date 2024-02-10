@@ -57,6 +57,8 @@ export const COLORPALETTE = PropTypes.exact({
     primary: PropTypes.string,
     light: PropTypes.string,
     dark: PropTypes.string,
+    warn: PropTypes.string,
+    error: PropTypes.string,
     infoBackground: PropTypes.string,
     rowShading: PropTypes.arrayOf(PropTypes.string),
     explanationSuccess: PropTypes.string,

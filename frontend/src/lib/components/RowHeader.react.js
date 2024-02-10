@@ -17,7 +17,7 @@ export function RowHeader(props) {
         >
             {transformation.map((rule) => (
                 <div
-                    className="rule"
+                    key={rule}
                     style={{whiteSpace: 'pre-wrap', padding: '4px 0'}}
                     dangerouslySetInnerHTML={{
                         __html: rule
