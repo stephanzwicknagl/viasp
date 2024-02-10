@@ -247,10 +247,9 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
                                                         False))
                 dependant = ast.Literal(loc, ast.Sign.NoSign, symbol)
 
-            new_body: List[ast.Literal] = [] # type: ignore
             reason_literals: List[ast.Literal] = [] # type: ignore
             _ = analyzer.visit_sequence(
-                rule.body, reasons=reason_literals, new_body=new_body, rename_variables=False)
+                rule.body, reasons=reason_literals, conditions=conditions, rename_variables=False)
             loc_fun = ast.Function(loc, n_str, [], False)
             loc_atm = ast.SymbolicAtom(loc_fun)
             loc_lit = ast.Literal(loc, ast.Sign.NoSign, loc_atm)
@@ -267,19 +266,20 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
                              [loc_lit, dependant, reason_lit], 0)
             ]
 
-            # new_body.insert(0, dependant)
-            new_body.extend(conditions)
+            conditions.extend(conditions)
             # Remove duplicates but preserve order
-            new_body = [x for i, x in enumerate(
-                new_body) if x not in new_body[:i]]
-            # rename variables inside body aggregates
-            new_body = list(
-                analyzer.visit_sequence(cast(ast.ASTSequence, new_body),
-                                        rename_variables=True))
-            new_body = [ast.Function(loc, model_str, [bb], 0) for bb in filter(filter_body_aggregates,new_body)]
-            new_body.append(ast.Function(loc, f"not {model_str}", [dependant], 0))
-            justification_program += "\n".join(map(str, (ast.Rule(rule.location, new_head, new_body)
-                            for new_head in new_head_s)))
+            conditions = [
+                x for i, x in enumerate(conditions) if x not in conditions[:i]
+            ]
+            conditions = [
+                ast.Function(loc, model_str, [bb], 0)
+                for bb in filter(filter_body_aggregates, conditions)
+            ]
+            conditions.append(
+                ast.Function(loc, f"not {model_str}", [dependant], 0))
+            justification_program += "\n".join(
+                map(str, (ast.Rule(rule.location, new_head, conditions)
+                          for new_head in new_head_s)))
     # TODO: add proper edge generation
 
     justification_program += f"{model_str}(@new())."
