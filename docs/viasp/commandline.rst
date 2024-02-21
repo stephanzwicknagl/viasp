@@ -90,6 +90,19 @@ To load a program from stdin, use `-` as the file path.
     $ cat hamiltonian.lp | viasp -
 
 
+************
+Optimization
+************
+
+The viASP command line passes on any optimization settings to the clingo backend, so that the optimization can be performed as usual.
+
+To specify the optimization mode, use the ``--opt-mode`` option. The optimization mode can be one of ``opt``, ``enum``, ``optN``, or ``ignore``.
+
+.. code-block:: bash
+
+    $ viasp encoding.lp --opt-mode=optN
+
+
 
 *********
 Clingraph
