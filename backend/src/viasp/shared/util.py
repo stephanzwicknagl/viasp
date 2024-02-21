@@ -3,7 +3,8 @@ from typing import Any, TypeVar, Iterable, Tuple, List
 from collections import defaultdict
 from types import MappingProxyType
 from hashlib import sha1
-from flask import current_app
+from flask import current_app, session
+from uuid import uuid4
 
 import networkx as nx
 
@@ -60,7 +61,7 @@ def is_recursive(node, graph):
         for n in nn:
             if n.recursive != False and node in set(n.recursive.nodes):
                 return True
-            
+
 
 def hash_from_sorted_transformations(sorted_program: List[Any]) -> str:
     hashes = [s.hash for s in sorted_program]
@@ -75,3 +76,12 @@ def hash_transformation_rules(rules: Tuple[Any, ...]) -> str:
         rule_hash = sha1(rule_str.encode()).hexdigest()
         hash_object.update(rule_hash.encode())
     return hash_object.hexdigest()
+
+
+def get_or_create_encoding_id() -> str:
+    # TODO
+    # if 'encoding_id' not in session:
+    #     session['encoding_id'] = uuid4().hex
+    # print(f"Returing encoding id {session['encoding_id']}", flush=True)
+    # return session['encoding_id']
+    return "0"

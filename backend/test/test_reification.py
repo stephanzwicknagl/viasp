@@ -114,43 +114,67 @@ def test_head_aggregate_is_transformed_correctly():
 def test_conditional_with_interval_transformed_correctly():
     rule = "{a(X) : b(X), X=1..3 }:- f(X)."
     expected = """#program base.
-    h(1, a(X), (b(X),f(X))) :- a(X), f(X), b(X), X=1..3."""
+    h(1, a(X), (f(X),b(X))) :- a(X), b(X), X=1..3, f(X)."""
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
 def test_head_aggregate_groups_is_transformed_correctly():
     rule = "{a(X) : b(X), c(X); d(X) : e(X), X=1..3 }:- f(X)."
     expected = """#program base.
-    h(1, d(X), (e(X),f(X))) :- d(X), f(X), e(X), X=1..3.
-    h(1, a(X), (c(X),b(X),f(X))) :- a(X), f(X), b(X), c(X)."""
+    h(1, d(X), (f(X),e(X))) :- d(X), e(X), X=1..3, f(X).
+    h(1, a(X), (f(X),c(X),b(X))) :- a(X), b(X), c(X), f(X)."""
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
 def test_aggregate_choice_is_transformed_correctly():
     rule = "1{a(X) : b(X), c(X); d(X) : e(X), X=1..3 }1:- f(X)."
     expected = """#program base.
-    h(1, d(X), (e(X),f(X))) :- d(X), f(X), e(X), X=1..3.
-    h(1, a(X), (c(X),b(X),f(X))) :- a(X), f(X), b(X), c(X)."""
+    h(1, d(X), (f(X),e(X))) :- d(X), e(X), X=1..3, f(X).
+    h(1, a(X), (f(X),c(X),b(X))) :- a(X), b(X), c(X), f(X)."""
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
 def test_multiple_conditional_groups_in_head():
     rule = "1 #sum { X,Y : a(X,Y) : b(Y), c(X) ; X,Z : b(X,Z) : e(Z) }  :- c(X)."
     expected = """#program base.
-    h(1, a(X,Y), (c(X),b(Y))) :- a(X,Y), c(X), b(Y). 
-    h(1, b(X,Z), (e(Z), c(X))) :- b(X,Z), c(X), e(Z). 
+    h(1, a(X,Y), (c(X),b(Y))) :- a(X,Y), b(Y), c(X). 
+    h(1, b(X,Z), (c(X), e(Z))) :- b(X,Z), e(Z), c(X). 
     """
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
 def test_multiple_aggregates_in_body():
     rule = "s(Y) :- r(Y), 2 #sum{X : p(X,Y), q(X) } 7."
-    expected = "#program base. h(1, s(Y), (q(X),p(X,Y),r(Y))) :- s(Y), r(Y),  p(X,Y), q(X), 2 #sum{_X : p(_X,_Y), q(_X) } 7."
+    expected = "#program base. h(1, s(Y), (r(Y),)) :- s(Y), r(Y), 2 #sum{X : p(X,Y), q(X) } 7."
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 def test_aggregates_in_body():
     rule = "reached(V) :- reached(U), hc(U,V),1{edge(U,V)}."
-    expected = "#program base. h(1,reached(V),(edge(U,V),hc(U,V),reached(U))) :- reached(V); reached(U); hc(U,V); edge(U,V); 1 <= { edge(_U,_V) }; 1 <= { edge(_U,_V) }."
+    expected = "#program base. h(1,reached(V),(hc(U,V),reached(U))) :- reached(V); reached(U); hc(U,V); 1 <= { edge(U,V) }."
+    assertProgramEqual(transform(rule), parse_program_to_ast(expected))
+
+def test_aggregate_in_body_2():
+    rule = "a(X) :- b(X), c(X),1 = {d(X) : e(X), X=1..3 }."
+    expected = """#program base.
+    h(1, a(X), (c(X),b(X))) :- a(X), b(X), c(X), 1 = {d(X) : e(X), X=1..3 }."""
+    assertProgramEqual(transform(rule), parse_program_to_ast(expected))
+
+def test_conditional_in_body():
+    rule = "a(X) :- b(X), c(X), d(X) : e(X), X=1..3."
+    expected = """#program base.
+    h(1, a(X), (c(X),b(X))) :- a(X), b(X), c(X), d(X) : e(X), X=1..3."""
+    assertProgramEqual(transform(rule), parse_program_to_ast(expected))
+
+def test_comparison_in_body():
+    rule = "a(X) :- b(X), X < 2."
+    expected = """#program base.
+    h(1, a(X), (b(X),)) :- a(X), b(X), X < 2."""
+    assertProgramEqual(transform(rule), parse_program_to_ast(expected))
+
+def test_boolean_constant_in_body():
+    rule = "a(X) :- b(X), c(X), #true."
+    expected = """#program base.
+    h(1, a(X), (c(X),b(X))) :- a(X), b(X), c(X), #true."""
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
 
@@ -236,14 +260,6 @@ def test_aggregate_in_body_of_constraint(get_sort_program):
     assert len(result) == 1
 
 
-def test_minimized_causes_a_warning():
-    program = "#minimize { 1,P,R : assignedB(P,R), paper(P), reviewer(R) }."
-
-    transformer = ProgramAnalyzer()
-    transformer.sort_program(program)
-    assert len(transformer.get_filtered())
-
-
 def test_disjunction_causes_error_and_doesnt_get_passed():
     program = "a; b."
 
@@ -253,13 +269,12 @@ def test_disjunction_causes_error_and_doesnt_get_passed():
     assert not len(program)
 
 
-def test_minimized_is_collected_as_pass_through():
+def test_minimized_is_collected_as_rule(app_context):
     program = "#minimize { 1,P,R : assignedB(P,R), paper(P), reviewer(R) }."
 
     transformer = ProgramAnalyzer()
     result = transformer.sort_program(program)
-    assert not len(result)
-    assert len(transformer.pass_through)
+    assert len(result) == 1
 
 
 def test_ast_types_do_not_intersect():

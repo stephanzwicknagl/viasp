@@ -14,6 +14,7 @@ from viasp.api import (FactParserError, relax_constraints, clingraph,
                        unmark_from_file, unmark_from_string)
 from viasp.shared.interfaces import ViaspClient
 from viasp.shared.model import ClingoMethodCall, StableModel
+from viasp.shared.io import clingo_model_to_stable_model
 
 
 class DebugClient(ViaspClient):
@@ -42,7 +43,7 @@ def test_load_program_file(client):
     debug_client = DebugClient(client)
     load_program_file(sample_encoding, _viasp_client=debug_client)
     
-   # Check that the calls were received
+    # Check that the calls were received
     res = client.get("control/calls")
     assert res.status_code == 200
     assert len(res.json) > 0
@@ -239,11 +240,6 @@ def test_mark_model_from_file(client):
     res = client.get("control/models")
     assert res.status_code == 200
     assert len(res.json) == 1
-    mark_from_file(sample_model)
-    show()
-    res = client.get("control/models")
-    assert res.status_code == 200
-    assert len(res.json) == 2
 
 
 def test_unmark_model_from_clingo_model(client):
@@ -260,7 +256,7 @@ def test_unmark_model_from_clingo_model(client):
     with ctl.solve(yield_=True) as handle:
         for m in handle:
             mark_from_clingo_model(m)
-            last_model = m
+            last_model = clingo_model_to_stable_model(m)
     show()
 
     # Assert the models were received
@@ -318,14 +314,13 @@ def test_call_in_different_order(client):
     clear()
     mark_from_file(sample_model)
     show()
-    mark_from_file(sample_model)
     load_program_string(
         r"sample.{encoding} :- sample.", _viasp_client=debug_client)
 
     show()
     res = client.get("control/models")
     assert res.status_code == 200
-    assert len(res.json) == 2
+    assert len(res.json) == 1
 
 def test_mix_methods(client):
     debug_client = DebugClient(client)

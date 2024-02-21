@@ -8,6 +8,7 @@ from clingo import Control, ModelType
 from viasp.shared.io import clingo_model_to_stable_model
 from viasp.shared.model import StableModel, ClingoMethodCall, Signature, Transformation, TransformationError, \
     FailedReason
+from viasp.server.database import get_database 
 
 
 def test_networkx_graph_with_dataclasses_is_isomorphic_after_dumping_and_loading_again(get_sort_program_and_get_graph):
@@ -79,3 +80,16 @@ def test_signature(app_context):
     object_to_serialize = Signature("a", 1)
     serialized = current_app.json.dumps(object_to_serialize)
     assert serialized
+
+def test_minimize_rule_representation(app_context):
+    sort = [Transformation(0, tuple([":~ last(N). [N@0,1]"]))]
+    db = get_database()
+    sort_hash = "0"
+    encoding_id = "1"
+    db.save_sort(sort_hash, sort, encoding_id)
+    db.set_current_graph(sort_hash, encoding_id)
+    serialized = db.get_current_sort(encoding_id)
+    assert serialized == sort
+
+
+

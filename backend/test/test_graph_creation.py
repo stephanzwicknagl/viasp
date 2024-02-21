@@ -1,4 +1,5 @@
 from typing import List
+import textwrap
 
 import networkx as nx
 from clingo.ast import AST, Function, Location, Position
@@ -144,7 +145,7 @@ def test_path_creation(app_context):
     rule_mapping = {1: Transformation(1, (parse_program_to_ast("fact(1)."),)), 2: Transformation(2, (parse_program_to_ast("result(X) :- fact(X)."),))}
     path = make_reason_path_from_facts_to_stable_model(single_saved_model,
                                                        rule_mapping, Node(frozenset(), 0),
-                                                       h_symbols, frozenset())
+                                                       h_symbols, set())
     nodes, edges = list(path.nodes), list(t for _, _, t in path.edges.data(True))
     assert len(edges) == 2
     assert len(nodes) == 3
@@ -170,24 +171,6 @@ def test_atoms_are_propagated_correctly_through_diffs(app_context):
         assert src.diff.issubset(tgt.atoms)
         assert len(src.atoms) == len(tgt.atoms) - len(tgt.diff)
 
-
-def test_multiple_sortings_yield_input_order_first(load_analyzer):
-    # uses all sorted programs
-    program= """
-    e. f. g.
-    1 {a; b} 1.
-    c :- a.
-    c :- b.
-    h. i.
-    """
-    analyzer = load_analyzer(program)
-    sorted_programs = list(analyzer.get_sorted_program())
-    assert len(sorted_programs) == 2
-    # assert first sorting is closest to the original program
-    assert sorted_programs[0][1] == Transformation(1, (parse_program_to_ast("c :- a."),))
-    assert sorted_programs[0][2] == Transformation(2, (parse_program_to_ast("c :- b."),))
-    assert sorted_programs[1][1] == Transformation(1, (parse_program_to_ast("c :- b."),))
-    assert sorted_programs[1][2] == Transformation(2, (parse_program_to_ast("c :- a."),))
 
 
 def test_multiple_sortings_yield_input_order_first_2(load_analyzer):

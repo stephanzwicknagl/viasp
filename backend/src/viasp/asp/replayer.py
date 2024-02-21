@@ -2,10 +2,11 @@ from typing import Sequence, Optional, Callable
 
 from clingo import Control
 
-from ..server.database import ProgramDatabase
+from ..server.database import get_database
 from ..shared.event import Event, publish
 from ..shared.model import ClingoMethodCall
 from ..shared.simple_logging import warn
+from ..shared.util import get_or_create_encoding_id
 
 
 def handler(cls):
@@ -53,16 +54,18 @@ class ClingoReconstructor:
 
     @handles("add")
     def add(self, ctl: Control, call: ClingoMethodCall) -> Control:
-        db = ProgramDatabase()
-        db.add_to_program(call.kwargs["program"])
+        db = get_database()
+        encoding_id = get_or_create_encoding_id()
+        db.add_to_program(call.kwargs["program"], encoding_id)
         func = getattr(ctl, call.name)
         func(**call.kwargs)
         return ctl
 
     @handles("__init__")
     def create_(self, _, call: ClingoMethodCall):
-        db = ProgramDatabase()
-        db.clear_program()
+        db = get_database()
+        encoding_id = get_or_create_encoding_id()
+        db.clear_program(encoding_id)
         return Control(**call.kwargs)
 
     @handles("load")
@@ -71,8 +74,9 @@ class ClingoReconstructor:
         prg = ""
         with open(path, encoding="utf-8") as f:
             prg = "".join(f.readlines())
-        db = ProgramDatabase()
-        db.add_to_program(prg)
+        db = get_database()
+        encoding_id = get_or_create_encoding_id()
+        db.add_to_program(prg, encoding_id)
         ctl.load(path)
         return ctl
 

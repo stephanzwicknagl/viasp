@@ -10,7 +10,7 @@ directly from strings or files containing the corresponding facts.
 """
 
 from inspect import signature
-from typing import List, cast, Union    
+from typing import List, cast, Union
 
 import clingo
 from clingo import Control as InnerControl
@@ -21,6 +21,7 @@ from clingo.symbol import Symbol
 
 from .shared.defaults import STDIN_TMP_STORAGE_PATH
 from .shared.io import clingo_symbols_to_stable_model
+from .shared.model import StableModel
 from .wrapper import ShowConnector, Control as viaspControl
 from .exceptions import InvalidSyntax
 
@@ -223,12 +224,12 @@ def show(**kwargs) -> None:
     connector.show()
 
 
-def mark_from_clingo_model(model: clingo_Model, **kwargs) -> None:
+def mark_from_clingo_model(model: Union[clingo_Model, StableModel], **kwargs) -> None:
     r"""
     Mark a model to be visualized. Models can be unmarked and cleared.
     The marked models are propagated to the backend when ``show`` is called.
 
-    :param model: ``clingo.solving.Model``
+    :param model: ``clingo.solving.Model`` or ``viasp.model.StableModel``
         The model to mark.
     :param \**kwargs:
         * *viasp_backend_url* (``str``) --
@@ -246,11 +247,12 @@ def mark_from_clingo_model(model: clingo_Model, **kwargs) -> None:
     connector.mark(model)
 
 
-def unmark_from_clingo_model(model: clingo_Model, **kwargs) -> None:
+def unmark_from_clingo_model(model: Union[clingo_Model, StableModel],
+                             **kwargs) -> None:
     r"""
     Unmark a model.
 
-    :param model: ``clingo.solving.Model``
+    :param model: ``clingo.solving.Model`` or ``viasp.model.StableModel``
         The model to unmark.
     :param \**kwargs:
         * *viasp_backend_url* (``str``) --

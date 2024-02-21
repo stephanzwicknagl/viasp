@@ -73,12 +73,15 @@ function GraphContainer(props) {
             setShownRecursion([]);
             setHighlightedSymbol([]);
             dispatchTransformation(reorderTransformation(oldIndex, newIndex));
-            postCurrentSort(backendUrlRef.current, newHash).catch((error) => {
+            postCurrentSort(backendUrlRef.current, newHash)
+            .catch((error) => {
                 messageDispatchRef.current(
                     showError(`Failed to set new current graph: ${error}`)
                     );
+                })
+            .then(r => {
+                dispatchTransformation(setCurrentSort(newHash));
                 });
-            dispatchTransformation(setCurrentSort(newHash));
             return;
         }
     }

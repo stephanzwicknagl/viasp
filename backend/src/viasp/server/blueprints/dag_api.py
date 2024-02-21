@@ -1,173 +1,39 @@
 import os
 from collections import defaultdict
-from typing import Union, Collection, Dict, List
+from typing import Union, Collection, Dict, List, Iterable
 
 import igraph
 import networkx as nx
-import sqlite3
 import numpy as np
-from flask import Blueprint, request, jsonify, abort, Response, send_file, current_app, g
-from networkx import DiGraph
+from flask import Blueprint, request, jsonify, abort, Response, send_file, session
+from clingo.ast import AST
 
-from ...shared.defaults import GRAPH_PATH, STATIC_PATH
+from ...asp.reify import ProgramAnalyzer, reify_list
+from ...asp.justify import build_graph
+from ...shared.defaults import STATIC_PATH
 from ...shared.model import Transformation, Node, Signature
-from ...shared.util import get_start_node_from_graph, is_recursive
+from ...shared.util import get_start_node_from_graph, is_recursive, hash_from_sorted_transformations
+from ...shared.io import StableModel
+from ..database import save_graph, get_graph, clear_graph, set_current_graph, get_all_sorts, get_current_sort, load_program, load_transformer, load_models, load_clingraph_names
 
-bp = Blueprint("dag_api", __name__, template_folder='../templates', static_folder='../static/',
+from uuid import uuid4
+
+bp = Blueprint("dag_api",
+               __name__,
+               template_folder='../templates',
+               static_folder='../static/',
                static_url_path='/static')
 
+def nx_to_igraph(nx_graph: nx.DiGraph):
+    return igraph.Graph.Adjacency((np.array(nx.to_numpy_array(nx_graph))
+                                   > 0).tolist())
 
-class GraphAccessor:
-
-    def __init__(self):
-        self.dbpath = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                   GRAPH_PATH)
-        self.conn = sqlite3.connect(self.dbpath)
-        self.cursor = self.conn.cursor()
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS graphs (
-                hash TEXT PRIMARY KEY,
-                data TEXT NOT NULL,
-                sort BLOB NOT NULL
-            )
-        """)
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS current_graph (
-                hash TEXT PRIMARY KEY,
-                FOREIGN KEY(hash) REFERENCES graphs(hash)
-            )
-        """)
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS clingraph (
-                filename TEXT PRIMARY KEY
-            )
-        """)
-        self.conn.commit()
-
-    def save(self, graph: Union[nx.Graph, dict], hash: str, sort: str = ""):
-        if isinstance(graph, nx.Graph):
-            serializable_graph = nx.node_link_data(graph)
-        else:
-            serializable_graph = graph
-
-        self.cursor.execute(
-            """
-            INSERT OR REPLACE INTO graphs (hash, data, sort) VALUES (?, ?, ?)
-        """, (hash, current_app.json.dumps(serializable_graph), sort))
-
-        if self.cursor.execute(
-                "SELECT COUNT(*) FROM current_graph").fetchone()[0] == 0:
-            self.set_current_graph(hash)
-        self.conn.commit()
-
-    def save_clingraph(self, filename: str):
-        self.cursor.execute(
-            """
-            INSERT OR REPLACE INTO clingraph (filename) VALUES (?)
-        """, (filename, ))
-        self.conn.commit()
-
-    def clear(self):
-        self.cursor.execute("""
-            DELETE FROM graphs
-        """)
-        self.cursor.execute("""
-            DELETE FROM current_graph
-        """)
-        self.conn.commit()
-
-    def clear_clingraph(self):
-        self.cursor.execute("""
-            DELETE FROM clingraph
-        """)
-        self.conn.commit()
-
-    def get_current_graph(self) -> str:
-        self.cursor.execute("""
-            SELECT hash FROM current_graph
-        """)
-        result = self.cursor.fetchone()
-        return result[0] if result is not None else ""
-
-    def set_current_graph(self, hash: str):
-        self.cursor.execute("DELETE FROM current_graph")
-        self.cursor.execute("INSERT INTO current_graph (hash) VALUES (?)",
-                            (hash, ))
-        self.conn.commit()
-
-    def load_json(self) -> dict:
-        hash = self.get_current_graph()
-
-        self.cursor.execute(
-            """
-            SELECT data FROM graphs WHERE hash = ?
-        """, (hash, ))
-        result = self.cursor.fetchone()
-
-        return current_app.json.loads(
-            result[0]) if result is not None else dict()
-
-    def load(self) -> nx.DiGraph:
-        graph_json = self.load_json()
-        loaded_graph = nx.node_link_graph(graph_json) if len(
-            graph_json) > 0 else nx.DiGraph()
-        return loaded_graph
-
-    def get_current_sort(self) -> str:
-        hash = self.get_current_graph()
-        self.cursor.execute(
-            """
-            SELECT sort FROM graphs WHERE hash = ?
-        """, (hash, ))
-        result = self.cursor.fetchone()
-        return current_app.json.loads(result[0]) if result is not None else ""
-
-    def load_all_sorts(self) -> List[str]:
-        self.cursor.execute("""
-            SELECT hash FROM graphs
-        """)
-        result: List[str] = self.cursor.fetchall()
-        loaded_sorts: List[str] = [r[0] for r in result]
-        index_of_current_sort: int = loaded_sorts.index(
-            self.get_current_graph())
-        loaded_sorts = loaded_sorts[
-            index_of_current_sort:] + loaded_sorts[:index_of_current_sort]
-        return loaded_sorts
-
-    def load_all_clingraphs(self) -> List[str]:
-        self.cursor.execute("""
-            SELECT filename FROM clingraph
-        """)
-        result = self.cursor.fetchall()
-        return [r[0] for r in result]
-
-
-def get_database():
-    if 'graph_accessor' not in g:
-        g.graph_accessor = GraphAccessor()
-    return g.graph_accessor
-
-
-def get_graph() -> DiGraph:
-    return get_database().load()
-
-def get_graph_json() -> dict:
-    return get_database().load_json()
-
-def get_all_sorts() -> List[str]:
-    return get_database().load_all_sorts()
-
-def set_current_graph(hash: str):
-    db = get_database()
-    if db.get_current_graph() == hash:
-        return
-    db.set_current_graph(hash)
-
-def clear_graph():
-    get_database().clear()
-
-def nx_to_igraph(nx_graph: DiGraph):
-    return igraph.Graph.Adjacency((np.array(nx.to_numpy_array(nx_graph)) > 0).tolist())
+def _get_graph():
+    try:
+        graph = get_graph()
+    except ValueError:
+        graph = generate_graph()
+    return graph
 
 
 def igraph_to_networkx_layout(i_layout, nx_map):
@@ -177,7 +43,7 @@ def igraph_to_networkx_layout(i_layout, nx_map):
     return nx_layout
 
 
-def make_node_positions(nx_graph: DiGraph, i_graph: igraph.Graph):
+def make_node_positions(nx_graph: nx.DiGraph, i_graph: igraph.Graph):
     layout = i_graph.layout_reingold_tilford(root=[0])
     layout.rotate(180)
     nx_map = {i: node for i, node in enumerate(nx_graph.nodes())}
@@ -185,14 +51,16 @@ def make_node_positions(nx_graph: DiGraph, i_graph: igraph.Graph):
     return pos
 
 
-def get_sort(nx_graph: DiGraph):
+def get_sort(nx_graph: nx.DiGraph):
     i_graph = nx_to_igraph(nx_graph)
     pos = make_node_positions(nx_graph, i_graph)
     return pos
 
 
-def handle_request_for_children(transformation_hash: str, ids_only: bool) -> Collection[Union[Node, int]]:
-    graph: nx.DiGraph = get_graph()
+def handle_request_for_children(
+        transformation_hash: str,
+        ids_only: bool) -> Collection[Union[Node, int]]:
+    graph: nx.DiGraph = _get_graph()
     children = list()
     for u, v, d in graph.edges(data=True):
         edge: Transformation = d['transformation']
@@ -215,39 +83,54 @@ def clear_all():
 def get_children(transformation_hash):
     if request.method == "GET":
         ids_only = request.args.get("ids_only", default=False, type=bool)
-        to_be_returned = handle_request_for_children(transformation_hash, ids_only)
+        to_be_returned = handle_request_for_children(transformation_hash,
+                                                     ids_only)
         return jsonify(to_be_returned)
     raise NotImplementedError
 
 
-def get_src_tgt_mapping_from_graph(shown_recursive_ids=[], shown_clingraph=False):
-    graph = get_graph()
+def get_src_tgt_mapping_from_graph(shown_recursive_ids=[],
+                                   shown_clingraph=False):
+    graph = _get_graph()
 
     to_be_added = []
 
     for source, target in graph.edges:
-        to_be_added.append({"src": source.uuid,
-                            "tgt": target.uuid,
-                            "style": "solid"})
+        to_be_added.append({
+            "src": source.uuid,
+            "tgt": target.uuid,
+            "style": "solid"
+        })
 
     for recursive_uuid in shown_recursive_ids:
         # get node from graph where node attribute uuid is uuid
         node = next(n for n in graph.nodes if n.uuid == recursive_uuid)
         for source, target in node.recursive.edges:
-            to_be_added.append({"src": source.uuid,
-                                "tgt": target.uuid,
-                                "style": "solid"})
+            to_be_added.append({
+                "src": source.uuid,
+                "tgt": target.uuid,
+                "style": "solid"
+            })
         # add connections to outer node
-        first_nodes = [n for n in node.recursive.nodes if node.recursive.in_degree(n) == 0]
-        last_nodes = [n for n in node.recursive.nodes if node.recursive.out_degree(n) == 0]
-        to_be_added.extend([{"src": node.uuid,
-                            "tgt": first_node.uuid,
-                            "recursion": "in",
-                            "style": "solid"} for first_node in first_nodes])
-        to_be_added.extend([{"src": last_node.uuid,
-                            "tgt": node.uuid,
-                            "recursion": "out",
-                            "style": "solid"} for last_node in last_nodes])
+        first_nodes = [
+            n for n in node.recursive.nodes if node.recursive.in_degree(n) == 0
+        ]
+        last_nodes = [
+            n for n in node.recursive.nodes
+            if node.recursive.out_degree(n) == 0
+        ]
+        to_be_added.extend([{
+            "src": node.uuid,
+            "tgt": first_node.uuid,
+            "recursion": "in",
+            "style": "solid"
+        } for first_node in first_nodes])
+        to_be_added.extend([{
+            "src": last_node.uuid,
+            "tgt": node.uuid,
+            "recursion": "out",
+            "style": "solid"
+        } for last_node in last_nodes])
 
     if shown_clingraph:
         clingraph = load_clingraph_names()
@@ -266,8 +149,7 @@ def find_reason_by_uuid(symbolid, nodeid):
         getattr(next(filter(lambda x: x.uuid == symbolid, node.diff)),
                 "symbol", ""))
     reasonids = [
-        getattr(r, "uuid", "")
-        for r in node.reason.get(symbolstr, [])
+        getattr(r, "uuid", "") for r in node.reason.get(symbolstr, [])
     ]
     return reasonids
 
@@ -278,7 +160,10 @@ def get_possible_transformation_orders():
         if request.json is None:
             return jsonify({'error': 'Missing JSON in request'}), 400
         hash = request.json["hash"]
-        set_current_graph(hash)
+        try:
+            set_current_graph(hash)
+        except ValueError:
+            generate_graph()
         return "ok", 200
     elif request.method == "GET":
         sorts = get_all_sorts()
@@ -288,8 +173,7 @@ def get_possible_transformation_orders():
 
 @bp.route("/graph/transformations", methods=["GET"])
 def get_all_transformations():
-    response = get_database().get_current_sort()
-    return jsonify(response)
+    return jsonify(get_current_sort())
 
 
 @bp.route("/graph/edges", methods=["GET", "POST"])
@@ -298,9 +182,12 @@ def get_edges():
     if request.method == "POST":
         if request.json is None:
             abort(Response("No json data provided.", 400))
-        shown_recursive_ids = request.json["shownRecursion"] if "shownRecursion" in request.json else []
-        shown_clingraph = request.json["usingClingraph"] if "usingClingraph" in request.json else False
-        to_be_returned = get_src_tgt_mapping_from_graph(shown_recursive_ids, shown_clingraph)
+        shown_recursive_ids = request.json[
+            "shownRecursion"] if "shownRecursion" in request.json else []
+        shown_clingraph = request.json[
+            "usingClingraph"] if "usingClingraph" in request.json else False
+        to_be_returned = get_src_tgt_mapping_from_graph(
+            shown_recursive_ids, shown_clingraph)
     elif request.method == "GET":
         to_be_returned = get_src_tgt_mapping_from_graph()
 
@@ -310,7 +197,7 @@ def get_edges():
 
 @bp.route("/graph/transformation/<uuid>", methods=["GET"])
 def get_rule(uuid):
-    graph = get_graph()
+    graph = _get_graph()
     for _, _, edge in graph.edges(data=True):
         transformation: Transformation = edge["transformation"]
         if str(transformation.id) == str(uuid):
@@ -320,7 +207,7 @@ def get_rule(uuid):
 
 @bp.route("/graph/model/<uuid>", methods=["GET"])
 def get_node(uuid):
-    graph = get_graph()
+    graph = _get_graph()
     for node in graph.nodes():
         if node.uuid == uuid:
             return jsonify(node)
@@ -329,7 +216,7 @@ def get_node(uuid):
 
 @bp.route("/graph/facts", methods=["GET"])
 def get_facts():
-    graph = get_graph()
+    graph = _get_graph()
     facts = get_start_node_from_graph(graph)
     r = jsonify(facts)
     return r
@@ -344,31 +231,15 @@ def entire_graph():
         hash = request.json['hash']
         sort = request.json['sort']
         save_graph(data, hash, sort)
+        _ = set_current_graph(hash)
         return jsonify({'message': 'ok'}), 200
     elif request.method == "GET":
-        result = get_graph()
+        result = _get_graph()
         return jsonify(result)
     elif request.method == "DELETE":
         clear_graph()
         return jsonify({'message': 'ok'}), 200
     raise NotImplementedError
-
-
-def save_graph(data: DiGraph, hash: str, sort: str):
-    database = get_database()
-    database.save(data, hash, sort)
-
-def save_clingraph(filename: str):
-    database = get_database()
-    database.save_clingraph(filename)
-
-def clear_clingraph():
-    database = get_database()
-    database.clear_clingraph()
-
-def load_clingraph_names():
-    database = get_database()
-    return database.load_all_clingraphs()
 
 
 def get_atoms_in_path_by_signature(uuid: str):
@@ -382,13 +253,16 @@ def get_atoms_in_path_by_signature(uuid: str):
 
 
 def find_node_by_uuid(uuid: str) -> Node:
-    graph = get_graph()
+    graph = _get_graph()
     matching_nodes = [x for x, _ in graph.nodes(data=True) if x.uuid == uuid]
 
     if len(matching_nodes) != 1:
         for node in graph.nodes():
             if node.recursive is not False:
-                matching_nodes = [x for x, _ in node.recursive.nodes(data=True) if x.uuid == uuid]
+                matching_nodes = [
+                    x for x, _ in node.recursive.nodes(data=True)
+                    if x.uuid == uuid
+                ]
                 if len(matching_nodes) == 1:
                     return matching_nodes[0]
         abort(Response(f"No node with uuid {uuid}.", 404))
@@ -396,7 +270,7 @@ def find_node_by_uuid(uuid: str) -> Node:
 
 
 def get_kind(uuid: str) -> str:
-    graph = get_graph()
+    graph = _get_graph()
     node = find_node_by_uuid(uuid)
     recursive = is_recursive(node, graph)
     if recursive:
@@ -439,16 +313,18 @@ def get_all_signatures(graph: nx.Graph):
 def search():
     if "q" in request.args.keys():
         query = request.args["q"]
-        graph = get_graph()
+        graph = _get_graph()
         result = []
         signatures = get_all_signatures(graph)
         result.extend(signatures)
         for node in graph.nodes():
-            if any(query in str(atm.symbol) for atm in node.atoms) and node not in result:
+            if any(query in str(atm.symbol)
+                   for atm in node.atoms) and node not in result:
                 result.append(node)
         for _, _, edge in graph.edges(data=True):
             transformation = edge["transformation"]
-            if any(query in str(r) for r in transformation.rules) and transformation not in result:
+            if any(query in str(r) for r in
+                   transformation.rules) and transformation not in result:
                 result.append(transformation)
         return jsonify(result[:10])
     return jsonify([])
@@ -460,7 +336,7 @@ def get_image(uuid):
     filename = os.path.join("clingraph", f"{uuid}.png")
     file_path = os.path.join(STATIC_PATH, filename)
     if not os.path.isfile(file_path):
-        return abort(Response(f"No clingraph with uuid {uuid}.",404))
+        return abort(Response(f"No clingraph with uuid {uuid}.", 404))
     return send_file(file_path, mimetype='image/png')
 
 
@@ -488,5 +364,50 @@ def get_reasons_of():
         source_uuid = request.json["sourceid"]
         node_uuid = request.json["nodeid"]
         reason_uuids = find_reason_by_uuid(source_uuid, node_uuid)
-        return jsonify([{"src": source_uuid, "tgt": reason_uuid} for reason_uuid in reason_uuids])
+        return jsonify([{
+            "src": source_uuid,
+            "tgt": reason_uuid
+        } for reason_uuid in reason_uuids])
     raise NotImplementedError
+
+
+def wrap_marked_models(
+        marked_models: Iterable[StableModel],
+        conflict_free_showTerm: str = "showTerm") -> List[List[str]]:
+    result = []
+    for model in marked_models:
+        wrapped = []
+        for part in model.atoms:
+            wrapped.append(f"{part}.")
+        for part in model.terms:
+            wrapped.append(f"{conflict_free_showTerm}({part}).")
+        result.append(wrapped)
+    return result
+
+
+def generate_graph() -> nx.DiGraph:
+    analyzer = ProgramAnalyzer()
+    analyzer.add_program(load_program(), load_transformer())
+
+    marked_models = load_models()
+    marked_models = wrap_marked_models(marked_models,
+                                       analyzer.get_conflict_free_showTerm())
+    if analyzer.will_work():
+        recursion_rules = analyzer.check_positive_recursion()
+        sorted_program = get_current_sort()
+        reified: Collection[AST] = reify_list(
+            sorted_program,
+            h=analyzer.get_conflict_free_h(),
+            h_showTerm=analyzer.get_conflict_free_h_showTerm(),
+            model=analyzer.get_conflict_free_model(),
+            conflict_free_showTerm=analyzer.get_conflict_free_showTerm(),
+            get_conflict_free_variable=analyzer.get_conflict_free_variable,
+            clear_temp_names=analyzer.clear_temp_names)
+        g = build_graph(marked_models, reified, sorted_program, analyzer,
+                        recursion_rules)
+        print(f"Got graph with {len(g.nodes)} nodes and {len(g.edges)} edges.",
+              flush=True)
+        save_graph(g, hash_from_sorted_transformations(sorted_program),
+                   sorted_program)
+
+    return g

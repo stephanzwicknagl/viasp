@@ -274,16 +274,22 @@ def test_minimized_causes_a_warning(app_context):
 
     transformer = ProgramAnalyzer()
     transformer.sort_program(program)
-    assert len(transformer.get_filtered())
+    assert len(transformer.get_filtered()) == 0
 
 
-def test_minimized_is_collected_as_pass_through(app_context):
+def test_minimized_is_collected_a_rule(app_context):
     program = "#minimize { 1,P,R : assignedB(P,R), paper(P), reviewer(R) }."
-
     transformer = ProgramAnalyzer()
     result = transformer.sort_program(program)
-    assert not len(result)
-    assert len(transformer.pass_through)
+    assert len(result)
+    assert len(transformer.rules) == 1
+
+def test_weak_minimized_is_collected_a_rule(app_context):
+    program = ":~ last(N). [N@0,1]"
+    transformer = ProgramAnalyzer()
+    result = transformer.sort_program(program)
+    assert len(result)
+    assert len(transformer.rules) == 1
 
 
 def test_ast_types_do_not_intersect(app_context):

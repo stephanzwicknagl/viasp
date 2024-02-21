@@ -11,7 +11,7 @@ from clingo.ast import (
     AST,
 )
 
-from .utils import is_constraint, merge_constraints, rank_topological_sorts
+from .utils import is_constraint, merge_constraints, rank_topological_sorts, topological_sort
 from ..asp.utils import merge_cycles, remove_loops
 from viasp.asp.ast_types import (
     SUPPORTED_TYPES,
@@ -101,34 +101,42 @@ class FilteredTransformer(Transformer):
 
 class DependencyCollector(Transformer):
 
-    def visit_Aggregate(self, aggregate: ast.Aggregate, **kwargs: Any) -> AST: # type: ignore
-        conditions = kwargs.get("conditions", [])
-        conditions.append(aggregate)
-        return aggregate.update(**self.visit_children(aggregate, **kwargs))
-
     def visit_ConditionalLiteral(self, conditional_literal: ast.ConditionalLiteral, # type: ignore
                                  **kwargs: Any) -> AST:
         deps = kwargs.get("deps", {})
         in_head = kwargs.get("in_head", False)
+        in_aggregate = kwargs.get("in_aggregate", False)
+        conditions: List[AST] = kwargs.get("conditions", [])
 
         if in_head:
             deps[conditional_literal.literal] = []
             for condition in conditional_literal.condition:
                 deps[conditional_literal.literal].append(condition)
+        elif not in_aggregate:
+            conditions.append(conditional_literal)
+        kwargs.update({"in_aggregate": True})
         return conditional_literal.update(
             **self.visit_children(conditional_literal, **kwargs))
 
     def visit_Literal(self, literal: ast.Literal, **kwargs: Any) -> AST: # type: ignore
         conditions: List[AST] = kwargs.get("conditions", [])
-        conditions.append(literal)
+        if not kwargs.get("in_aggregate", False):
+            conditions.append(literal)
         return literal.update(**self.visit_children(literal, **kwargs))
 
-    def visit_BooleanConstant(self, boolean_constant: ast.BooleanConstant, # type: ignore
-                              **kwargs: Any) -> AST:
-        conditions: List[AST] = kwargs.get("conditions", [])
-        conditions.append(boolean_constant)
-        return boolean_constant.update(
-            **self.visit_children(boolean_constant, **kwargs))
+    def visit_Comparison(self, comparison: ast.Comparison, **kwargs: Any) -> AST:  # type: ignore
+        kwargs.update({"in_aggregate": True})
+        return comparison.update(
+            **self.visit_children(comparison, **kwargs))
+
+    def visit_Aggregate(self, aggregate: ast.Aggregate, **kwargs: Any) -> AST: # type: ignore
+        kwargs.update({"in_aggregate": True})
+        return aggregate.update(**self.visit_children(aggregate, **kwargs))
+
+    def visit_BodyAggregate(self, body_aggregate: ast.BodyAggregate, **kwargs: Any) -> AST:  # type: ignore
+        kwargs.update({"in_aggregate": True})
+        return body_aggregate.update(
+            **self.visit_children(body_aggregate, **kwargs))
 
 
 class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
@@ -425,9 +433,17 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
     def visit_Minimize(self, minimize: ast.Minimize):  # type: ignore
         deps = defaultdict(list)
-        self.pass_through.add(minimize)
-
-        return minimize
+        true_head_literal = ast.Literal(minimize.location, ast.Sign.NoSign,ast.BooleanConstant(1))
+        # issue with minimize location:
+        # for #minimize{X: p(X)}. the location begins after the {
+        # reconstructing the statement from the location is not possible
+        deps[true_head_literal] = []
+        for _, cond in deps.items():
+            flattened_body = separate_body_conditionals(minimize.body)
+            cond.extend(filter(filter_body_arithmetic, flattened_body))
+        self.register_symbolic_dependencies(deps)
+        self.register_rule_dependencies(minimize, deps)
+        self.rules.append(minimize)
 
     def visit_Defined(self, defined: AST):
         self.pass_through.add(defined)
@@ -460,7 +476,8 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         parse_string(program, lambda rule: self.visit(rule) and None)
         sorted_programs = self.sort_program_by_dependencies()
         return [
-            Transformation(i, prg) for i, prg in enumerate(sorted_programs[0])
+            Transformation(i, prg)
+            for i, prg in enumerate(next(sorted_programs))
         ]
 
     def get_sorted_program(
@@ -468,6 +485,10 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         sorted_programs = self.sort_program_by_dependencies()
         for program in sorted_programs:
             yield [Transformation(i, (prg)) for i, prg in enumerate(program)]
+
+    def get_primary_sort(self) -> List[Transformation]:
+        sorted_program = self.primary_sort_program_by_dependencies()
+        return [Transformation(i, prg) for i, prg in enumerate(sorted_program)]
 
     def make_dependency_graph(
         self,
@@ -505,8 +526,16 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         deps = merge_constraints(deps)
         deps, _ = merge_cycles(deps)
         deps, _ = remove_loops(deps)
-        programs = rank_topological_sorts(nx.all_topological_sorts(deps),
-                                          self.rules)
+        programs = nx.all_topological_sorts(deps)
+        return programs
+
+    def primary_sort_program_by_dependencies(
+            self) -> List[ast.Rule]:  # type: ignore
+        deps = self.make_dependency_graph(self.dependants, self.conditions)
+        deps = merge_constraints(deps)
+        deps, _ = merge_cycles(deps)
+        deps, _ = remove_loops(deps)
+        programs = topological_sort(deps, self.rules)
         return programs
 
     def check_positive_recursion(self):
@@ -570,7 +599,10 @@ class ProgramReifier(DependencyCollector):
         loc_atm = ast.SymbolicAtom(loc_fun)
         loc_lit = ast.Literal(loc, ast.Sign.NoSign, loc_atm)
         for literal in conditions:
-            if literal.sign == ast.Sign.NoSign and \
+            if hasattr(literal, "sign") and \
+                literal.sign == ast.Sign.NoSign and \
+                hasattr(literal, "atom") and \
+                hasattr(literal.atom, "ast_type") and \
                literal.atom.ast_type == ASTType.SymbolicAtom:
                 reasons.append(literal.atom)
         reasons.reverse()
@@ -731,8 +763,15 @@ def transform(program: str, visitor=None, **kwargs):
 def reify(transformation: Transformation, **kwargs):
     visitor = ProgramReifier(transformation.id, **kwargs)
     result: List[AST] = []
-    for rule in transformation.rules:
-        result.extend(cast(Iterable[AST], visitor.visit(rule)))
+    rules = transformation.rules
+    if any(isinstance(r, str) for r in rules):
+        rules_str = rules
+        rules = []
+        for rule in rules_str:
+            parse_string(rule, lambda rule: rules.append(rule))
+    for rule in rules:
+        if rule.ast_type == ASTType.Rule:
+            result.extend(cast(Iterable[AST], visitor.visit(rule)))
     return result
 
 

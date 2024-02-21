@@ -1,21 +1,23 @@
-from typing import Tuple, Any, Dict, Iterable, Collection, Optional, List
+from multiprocessing import Value
+from typing import Tuple, Any, Dict, Iterable, Optional, List
 
-from flask import request, Blueprint, jsonify, abort, Response, current_app
+from flask import request, Blueprint, jsonify, abort, Response
 from uuid import uuid4
 
 from clingo import Control
 from clingraph.orm import Factbase
-from clingo.ast import AST
+from clingo.ast import Transformer
 from clingraph.graphviz import compute_graphs, render
-from ...shared.defaults import CLINGRAPH_PATH
 
-from .dag_api import save_graph, save_clingraph, clear_clingraph, load_clingraph_names
-from ..database import CallCenter, ProgramDatabase
-from ...asp.justify import build_graph
-from ...asp.reify import ProgramAnalyzer, reify_list
+from .dag_api import generate_graph, set_current_graph, wrap_marked_models, \
+        load_program, load_transformer, load_models, \
+        load_clingraph_names
+from ..database import CallCenter, get_database, set_models, clear_models, save_many_sorts, save_clingraph, clear_clingraph, save_transformer, save_warnings, clear_warnings, load_warnings
+from ...asp.reify import ProgramAnalyzer
 from ...asp.relax import ProgramRelaxer, relax_constraints
-from ...shared.model import ClingoMethodCall, StableModel
-from ...shared.util import hash_from_sorted_transformations
+from ...shared.model import ClingoMethodCall, StableModel, TransformerTransport
+from ...shared.util import hash_from_sorted_transformations, get_or_create_encoding_id
+from ...shared.defaults import CLINGRAPH_PATH
 from ...asp.replayer import apply_multiple
 
 bp = Blueprint("api", __name__, template_folder='../templates/')
@@ -44,8 +46,7 @@ def get_calls():
 
 @bp.route("/control/program", methods=["GET"])
 def get_program():
-    db = ProgramDatabase()
-    return db.get_program()
+    return load_program()
 
 
 @bp.route("/control/add_call", methods=["POST"])
@@ -61,13 +62,16 @@ def add_call():
     return "ok", 200
 
 
-def get_by_name_or_index_from_args_or_kwargs(name: str, index: int, *args: Tuple[Any], **kwargs: Dict[Any, Any]):
+def get_by_name_or_index_from_args_or_kwargs(name: str, index: int, *args:
+                                             Tuple[Any], **kwargs: Dict[Any,
+                                                                        Any]):
     if name in kwargs:
         return kwargs[name]
     elif index < len(args):
         return args[index]
     else:
-        raise TypeError(f"No argument {name} found in kwargs or at index {index}.")
+        raise TypeError(
+            f"No argument {name} found in kwargs or at index {index}.")
 
 
 @bp.route("/control/reconstruct", methods=["GET"])
@@ -78,19 +82,6 @@ def reconstruct():
     return "ok"
 
 
-class DataContainer:
-    def __init__(self):
-        self.models = []
-        self.warnings = []
-        self.transformer = None
-
-
-dc = DataContainer()
-
-
-def handle_models_received(parsed_models):
-    dc.models = parsed_models
-
 
 @bp.route("/control/models", methods=["GET", "POST"])
 def set_stable_models():
@@ -99,16 +90,21 @@ def set_stable_models():
             parsed_models = request.json
         except BaseException:
             return "Invalid model object", 400
-        handle_models_received(parsed_models)
+        if isinstance(parsed_models, str):
+            parsed_models = [parsed_models]
+        if not isinstance(parsed_models, list):
+            return "Expected a model or a list of models", 400
+        parsed_models = [m for i,m in enumerate(parsed_models) if m not in parsed_models[:i]]
+        set_models(parsed_models)
     elif request.method == "GET":
-        return jsonify(dc.models)
+        return jsonify(load_models())
     return "ok"
 
 
 @bp.route("/control/models/clear", methods=["POST"])
 def models_clear():
     if request.method == "POST":
-        dc.models.clear()
+        clear_models()
         global ctl
         ctl = None
     return "ok"
@@ -118,84 +114,88 @@ def models_clear():
 def set_transformer():
     if request.method == "POST":
         try:
-            dc.transformer = request.json
+            transformer = request.json
+            if not isinstance(transformer, TransformerTransport):
+                return "Expected a transformer object", 400
         except BaseException:
             return "Invalid transformer object", 400
+        save_transformer(transformer)
     return "ok", 200
 
 
-def wrap_marked_models(marked_models: Iterable[StableModel],
-                       conflict_free_showTerm: str = "showTerm")  -> List[List[str]]:
-    result = []
-    for model in marked_models:
-        wrapped = []
-        for part in model.atoms:
-            wrapped.append(f"{part}.")
-        for part in model.terms:
-            wrapped.append(f"{conflict_free_showTerm}({part}).")
-        result.append(wrapped)
-    return result
-
-
 def _set_warnings(warnings):
-    dc.warnings = warnings
+    encoding_id = get_or_create_encoding_id()
+    get_database().save_warnings(warnings, encoding_id)
+
 
 @bp.route("/control/warnings", methods=["POST", "DELETE", "GET"])
 def set_warnings():
     if request.method == "POST":
-        _set_warnings(request.json)
+        if not isinstance(request.json, list):
+            return "Expected a list of warnings", 400
+        save_warnings(request.json)
     elif request.method == "DELETE":
-        _set_warnings([])
+        clear_warnings()
     elif request.method == "GET":
-        return jsonify(dc.warnings)
+        return jsonify(load_warnings())
     return "ok"
 
+def save_all_sorts(analyzer: ProgramAnalyzer, batch_size: int = 1000):
+    sorts = []
+    for sorted_program in analyzer.get_sorted_program():
+        sorts.append((hash_from_sorted_transformations(sorted_program),
+                        sorted_program))
+        if len(sorts) >= batch_size:
+            save_many_sorts(sorts)
+            sorts = []
+    if sorts:
+        save_many_sorts(sorts)
+
+
+def set_primary_sort(analyzer: ProgramAnalyzer):
+    primary_sort = analyzer.get_primary_sort()
+    primary_hash = hash_from_sorted_transformations(primary_sort)
+    try:
+        _ = set_current_graph(primary_hash)
+    except ValueError:
+        generate_graph()
+
+
+def save_analyzer_values(analyzer: ProgramAnalyzer):
+    pass
 
 @bp.route("/control/show", methods=["POST"])
 def show_selected_models():
-    db = ProgramDatabase()
     analyzer = ProgramAnalyzer()
-    analyzer.add_program(db.get_program(), dc.transformer)
+    analyzer.add_program(load_program(), load_transformer())
     _set_warnings(analyzer.get_filtered())
 
-    marked_models = dc.models
+    marked_models = load_models()
     marked_models = wrap_marked_models(marked_models,
                                        analyzer.get_conflict_free_showTerm())
     if analyzer.will_work():
-        recursion_rules = analyzer.check_positive_recursion()
-        for sorted_program in analyzer.get_sorted_program():
-            reified: Collection[AST] = reify_list(
-                sorted_program,
-                h=analyzer.get_conflict_free_h(),
-                h_showTerm=analyzer.get_conflict_free_h_showTerm(),
-                model=analyzer.get_conflict_free_model(),
-                get_conflict_free_variable=analyzer.get_conflict_free_variable,
-                clear_temp_names=analyzer.clear_temp_names,
-                conflict_free_showTerm=analyzer.get_conflict_free_showTerm())
-            g = build_graph(marked_models, reified, sorted_program, analyzer,
-                            recursion_rules)
-            save_graph(g, hash_from_sorted_transformations(sorted_program),
-                       current_app.json.dumps(sorted_program))
+        save_all_sorts(analyzer, batch_size=1000)
+        set_primary_sort(analyzer)
+        save_analyzer_values(analyzer)
 
     return "ok", 200
 
 
 @bp.route("/control/relax", methods=["POST"])
 def transform_relax():
-    db = ProgramDatabase()
     if request.json is None:
         return "Invalid request", 400
     args = request.json["args"] if "args" in request.json else []
     kwargs = request.json["kwargs"] if "kwargs" in request.json else {}
     relaxer = ProgramRelaxer(*args, **kwargs)
-    relaxed = relax_constraints(relaxer, db.get_program())
+    relaxed = relax_constraints(relaxer, load_program())
     return jsonify(relaxed)
 
 
 @bp.route("/control/clingraph", methods=["POST", "GET", "DELETE"])
 def clingraph_generate():
     if request.method == "POST":
-        marked_models = dc.models
+        marked_models = load_models()
         marked_models = wrap_marked_models(marked_models)
         if request.json is None:
             return "Invalid request", 400
@@ -232,8 +232,3 @@ def clingraph_generate():
     if request.method == "DELETE":
         clear_clingraph()
     return "ok", 200
-
-def stringify_reified(reified: List[Collection[AST]]) -> str:
-    ab = [", ".join(list(map(str,r))) for r in reified]
-    st = '\n    '.join(ab)
-    return st

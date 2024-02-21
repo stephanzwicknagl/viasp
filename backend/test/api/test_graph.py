@@ -53,9 +53,13 @@ def test_graph_entries(client_with_a_graph):
 def test_get_node(client, single_node_graph):
     client.delete("graph/clear")
     uuid = list(single_node_graph.nodes)[0].uuid
-    serializable_graph = node_link_data(single_node_graph)
     hash = "0123"
-    res = client.post("graph", json={"data": serializable_graph, "hash": hash, "sort": ""})
+    res = client.post("graph",
+                      json={
+                          "data": single_node_graph,
+                          "hash": hash,
+                          "sort": ""
+                      })
     assert res.status_code == 200
     res = client.get(f"graph/model/{uuid.hex}")
     assert res.status_code == 200
@@ -70,7 +74,8 @@ def test_detail_endpoint_requires_key(client_with_a_graph):
 
 def test_detail_endpoint_returns_details_on_valid_uuid(client_with_a_single_node_graph):
     client, _, serializable_graphs, program = client_with_a_single_node_graph
-    uuid = serializable_graphs[0][0]["nodes"][0]["id"].uuid
+    graph = serializable_graphs[0][0]
+    uuid = list(graph.nodes)[0].uuid
     res = client.get(f"detail/{uuid.hex}")
     assert res.status_code == 200
     assert program[:-1] in str(res.json[1][0][1][0])

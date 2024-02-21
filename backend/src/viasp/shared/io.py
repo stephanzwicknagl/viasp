@@ -23,11 +23,12 @@ import networkx as nx
 # from _clingo.lib import clingo_model_type_brave_consequences, clingo_model_type_cautious_consequences, \
 #     clingo_model_type_stable_model
 from clingo import Model as clingo_Model, ModelType, Symbol, Application
-from clingo.ast import AST
+from clingo.ast import AST, ASTType
 
 from .interfaces import ViaspClient
 from .model import Node, ClingraphNode, Transformation, Signature, StableModel, ClingoMethodCall, TransformationError, FailedReason, SymbolIdentifier, TransformerTransport
-from ..server.database import ProgramDatabase
+from ..server.database import get_database
+from .util import get_or_create_encoding_id
 
 class DataclassJSONProvider(JSONProvider):
     def dumps(self, obj, **kwargs):
@@ -258,8 +259,9 @@ def symbol_to_dict(symbol: clingo.Symbol) -> dict:
 
 def get_rules_from_input_program(rules) -> Sequence[str]:
     rules_from_input_program: Sequence[str] = []
-    db = ProgramDatabase()
-    program = db.get_program().split("\n")
+    encoding_id = get_or_create_encoding_id()
+    db = get_database()
+    program = db.load_program(encoding_id).split("\n")
     for rule in rules:
         if isinstance(rule, str):
             rules_from_input_program.append(rule)
@@ -276,8 +278,25 @@ def get_rules_from_input_program(rules) -> Sequence[str]:
             r += program[end_line - 1][:end_colu]
         else:
             r += program[begin_line - 1][begin_colu - 1:end_colu]
+        r = append_hashtag_to_minimize(r, rule, program, begin_line, begin_colu)
         rules_from_input_program.append(r)
     return rules_from_input_program
+
+def append_hashtag_to_minimize(r: str, rule: AST, program: Sequence[str], begin_line: int, begin_colu: int) -> str:
+    if rule.ast_type == ASTType.Minimize and r[:2] != ":~":
+        for i in range(begin_line, 0, -1):
+            colu_of_hashtag = program[i - 1].rfind("#")
+            if colu_of_hashtag != -1:
+                if begin_line != i:
+                    pre = program[i - 1][colu_of_hashtag:] + "\n"
+                    for k in range(i, begin_line-1):
+                        pre += program[k] + "\n"
+                    pre += program[begin_line][:begin_colu-1]
+                    r = pre + r + "}."
+                else:
+                    r = program[i - 1][colu_of_hashtag:begin_colu-1] + r + "}."
+                break
+    return r
 
 def reconstruct_transformer(obj: dict) -> TransformerTransport:
     # Reconstruct the class definition

@@ -102,10 +102,6 @@ class ShowConnector:
 
 class Control:
     
-    
-    
-
-    
     def __init__(self, *args, **kwargs):
         if 'files' in kwargs:
             # files is only passed to call InnerControl with only the options
@@ -165,7 +161,7 @@ class Control:
             def wrapper_func(*args, **kwargs):
                 self.viasp.register_function_call(attr.__name__,
                                                   signature(attr), args,
-                                                  kwargs)
+                                                  kwargs.copy())
                 result = attr(*args, **kwargs)
                 return result
 

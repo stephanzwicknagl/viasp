@@ -5,7 +5,7 @@ from uuid import uuid4
 import networkx as nx
 import pytest
 from clingo import Control
-from flask import Flask, json
+from flask import Flask, current_app
 from flask.testing import FlaskClient
 from networkx import node_link_data
 
@@ -18,7 +18,7 @@ from viasp.server.blueprints.dag_api import bp as dag_bp
 from viasp.shared.io import DataclassJSONProvider, clingo_model_to_stable_model
 from viasp.shared.util import hash_from_sorted_transformations
 from viasp.shared.model import ClingoMethodCall, Node, StableModel, SymbolIdentifier, Transformation
-from viasp.server.database import ProgramDatabase
+from viasp.server.database import GraphAccessor
 from viasp.shared.defaults import CLINGRAPH_PATH, GRAPH_PATH, PROGRAM_STORAGE_PATH, STDIN_TMP_STORAGE_PATH
 
 def create_app_with_registered_blueprints(*bps) -> Flask:
@@ -53,11 +53,12 @@ def app_context():
 @pytest.fixture
 def load_analyzer(app_context) -> Callable[[str], ProgramAnalyzer]:
     def c(program: str) -> ProgramAnalyzer:
-        db = ProgramDatabase()
-        db.clear_program()
-        db.add_to_program(program)
+        encoding_id = "0"
+        db = GraphAccessor()
+        db.clear()
+        db.add_to_program(program, encoding_id)
         analyzer = ProgramAnalyzer()
-        analyzer.add_program(db.get_program())
+        analyzer.add_program(db.load_program(encoding_id))
         return analyzer
     return c
 
@@ -76,7 +77,7 @@ def get_sort_program_all_sorts(load_analyzer) -> Callable[[str], Tuple[List[List
     return c
 
 @pytest.fixture
-def get_sort_program_and_get_graph(get_sort_program_all_sorts) -> Callable[[str], Tuple[Tuple[Mapping, str, str, int], ProgramAnalyzer]]:
+def get_sort_program_and_get_graph(get_sort_program_all_sorts, app_context) -> Callable[[str], Tuple[Tuple[Mapping, str, str, int], ProgramAnalyzer]]:
     def c(program: str):
         """
         Returning a Tuple containing 
@@ -86,17 +87,18 @@ def get_sort_program_and_get_graph(get_sort_program_all_sorts) -> Callable[[str]
             * the number of possible sorts
         """
         sorted_programs, analyzer = get_sort_program_all_sorts(program)
-        sorted_program =sorted_programs[0]
+        sorted_program = sorted_programs[0]
+
 
         saved_models = get_stable_models_for_program(program)
         reified = reify_list(sorted_program)
         recursion_rules = analyzer.check_positive_recursion()
         g = build_graph(saved_models, reified, sorted_program, analyzer, recursion_rules)
-        return (node_link_data(g), hash_from_sorted_transformations(sorted_program), json.dumps(sorted_program), len(sorted_programs)), analyzer
+        return (node_link_data(g), hash_from_sorted_transformations(sorted_program), current_app.json.dumps(sorted_program), len(sorted_programs)), analyzer
     return c
 
 @pytest.fixture
-def get_sort_program_and_get_all_graphs(get_sort_program_all_sorts) -> Callable[[str], Tuple[List[Tuple[Mapping, str, str, int]], ProgramAnalyzer]]:
+def get_sort_program_and_get_all_graphs(get_sort_program_all_sorts, app_context) -> Callable[[str], Tuple[List[Tuple[nx.DiGraph, str, str, int]], ProgramAnalyzer]]:
     def c(program: str):
         """
         Returning List of Tuples containing 
@@ -114,7 +116,7 @@ def get_sort_program_and_get_all_graphs(get_sort_program_all_sorts) -> Callable[
         for sorted_program in sorted_programs:
             reified = reify_list(sorted_program)
             g = build_graph(saved_models, reified, sorted_program, analyzer, recursion_rules)
-            serializable_graphs.append((node_link_data(g), hash_from_sorted_transformations(sorted_program), json.dumps(sorted_program), len(sorted_programs)))
+            serializable_graphs.append((g, hash_from_sorted_transformations(sorted_program), sorted_program, len(sorted_programs)))
 
         return serializable_graphs, analyzer
     return c
@@ -134,7 +136,7 @@ def program_recursive() -> str:
 
 
 @pytest.fixture
-def client_with_a_single_node_graph(get_sort_program_and_get_all_graphs, a_1) -> Generator[Tuple[FlaskClient, ProgramAnalyzer, List[Tuple[Mapping, str, str, int]], str], Any, Any]:
+def client_with_a_single_node_graph(get_sort_program_and_get_all_graphs, a_1) -> Generator[Tuple[FlaskClient, ProgramAnalyzer, List[Tuple[nx.DiGraph, str, str, int]], str], Any, Any]:
     app = create_app_with_registered_blueprints(app_bp, api_bp, dag_bp)
 
     program = a_1
@@ -149,7 +151,7 @@ def client_with_a_single_node_graph(get_sort_program_and_get_all_graphs, a_1) ->
 def client_with_a_graph(
     request, get_sort_program_and_get_all_graphs
 ) -> Generator[Tuple[FlaskClient, ProgramAnalyzer, List[Tuple[
-        Mapping, str, str, int]], str], Any, Any]:
+        nx.DiGraph, str, str, int]], str], Any, Any]:
     app = create_app_with_registered_blueprints(app_bp, api_bp, dag_bp)
 
     program = request.getfixturevalue(request.param)
@@ -172,11 +174,10 @@ def client_with_a_graph(
 def client_with_a_clingraph(
     client_with_a_graph, get_clingo_stable_models
 ) -> Generator[Tuple[FlaskClient, ProgramAnalyzer, List[Tuple[
-        Mapping, str, str, int]], str], Any, Any]:
+        nx.DiGraph, str, str, int]], str], Any, Any]:
     client, analyzer, serializable_graphs, program = client_with_a_graph
 
     serialized = get_clingo_stable_models(program)
-    print(f"Marking models: {serialized}", flush=True)
     _ = client.post("/control/models",
                     json=serialized,
                     headers={'Content-Type': 'application/json'})

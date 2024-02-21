@@ -1,19 +1,18 @@
 """This module is concerned with finding reasons for why a stable model is found."""
 from collections import defaultdict
-from typing import List, Collection, Dict, Iterable, Union, Set, cast
+from typing import List, Collection, Dict, Iterable, Union, Set
 
 import networkx as nx
 
 from clingo import Control, Symbol, Model, ast
 
 from clingo.ast import AST
-from networkx import DiGraph
 
 from .reify import ProgramAnalyzer, has_an_interval
 from .recursion import RecursionReasoner
-from .utils import insert_atoms_into_nodes, identify_reasons, harmonize_uuids, calculate_spacing_factor
+from .utils import insert_atoms_into_nodes, identify_reasons, calculate_spacing_factor
 from ..shared.model import Node, Transformation, SymbolIdentifier
-from ..shared.simple_logging import info, warn
+from ..shared.simple_logging import info
 from ..shared.util import pairwise, get_leafs_from_graph
 
 
@@ -110,7 +109,6 @@ def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
     g = nx.DiGraph()
     if len(h_syms) == 1:
         # If there is a stable model that is exactly the same as the facts.
-        warn(f"Adding a model without reasons {wrapped_stable_model}")
         if rule_mapping[min(rule_mapping.keys())].rules in recursive_transformations:
             fact_node.recursive = True
         g.add_edge(fact_node, Node(frozenset(), min(rule_mapping.keys()), frozenset(fact_node.diff)),
@@ -141,7 +139,7 @@ def make_transformation_mapping(transformations: Iterable[Transformation]):
     return {t.id: t for t in transformations}
 
 
-def append_noops(result_graph: DiGraph,
+def append_noops(result_graph: nx.DiGraph,
                  sorted_program: Iterable[Transformation],
                  pass_through: Set[AST]):
     next_transformation_id = max(t.id for t in sorted_program) + 1
@@ -149,9 +147,10 @@ def append_noops(result_graph: DiGraph,
     leaf: Node
     for leaf in leaves:
         noop_node = Node(frozenset(), next_transformation_id, leaf.atoms)
-        result_graph.add_edge(leaf, noop_node,
-                              transformation=Transformation(next_transformation_id,
-                                                            tuple(pass_through)))
+        result_graph.add_edge(leaf,
+                              noop_node,
+                              transformation=Transformation(
+                                  next_transformation_id, tuple(pass_through)))
 
 
 def build_graph(wrapped_stable_models: List[List[str]],

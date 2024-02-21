@@ -1,19 +1,18 @@
 """Mostly graph utility functions."""
 import networkx as nx
-from clingo import Symbol
+from clingo import Symbol, ast
 from clingo.ast import ASTType, AST
-from typing import List, Sequence, Tuple, Dict, Set, FrozenSet, Optional
+from typing import Generator, List, Sequence, Tuple, Dict, Set, FrozenSet, Optional
 from ..shared.simple_logging import warn
 from ..shared.model import Node, SymbolIdentifier
 from ..shared.util import pairwise, get_root_node_from_graph
-from ..server.blueprints.dag_api import get_database
 
 
 def is_constraint(rule: AST) -> bool:
     return rule.ast_type == ASTType.Rule and "atom" in rule.head.child_keys and rule.head.atom.ast_type == ASTType.BooleanConstant  # type: ignore
 
 
-def merge_constraints(g: nx.Graph) -> nx.Graph:
+def merge_constraints(g: nx.DiGraph) -> nx.DiGraph:
     mapping = {}
     constraints = frozenset([
         ruleset for ruleset in g.nodes for rule in ruleset
@@ -25,7 +24,7 @@ def merge_constraints(g: nx.Graph) -> nx.Graph:
     return nx.relabel_nodes(g, mapping)
 
 
-def merge_cycles(g: nx.Graph) -> Tuple[nx.Graph, FrozenSet[AST]]:
+def merge_cycles(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[AST]]:
     mapping: Dict[AST, AST] = {}
     merge_node: FrozenSet[AST] = frozenset()
     where_recursion_happens = set()
@@ -46,7 +45,7 @@ def merge_nodes(nodes: frozenset) -> FrozenSet[AST]:
     return frozenset(old)
 
 
-def remove_loops(g: nx.Graph) -> Tuple[nx.Graph, FrozenSet[AST]]:
+def remove_loops(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[AST]]:
     remove_edges: List[Tuple[AST, AST]] = []
     where_recursion_happens: Set[AST] = set()
     for edge in g.edges:
@@ -61,7 +60,7 @@ def remove_loops(g: nx.Graph) -> Tuple[nx.Graph, FrozenSet[AST]]:
     return g, frozenset(where_recursion_happens)
 
 
-def rank_topological_sorts(all_sorts: List, rules: Sequence[AST]) -> List:
+def rank_topological_sorts(all_sorts: Generator, rules: Sequence[AST]) -> List:
     """ 
     Ranks all topological sorts by the number of rules that are in the same order as in the rules list.
     The highest rank is the first element in the list.
@@ -70,12 +69,16 @@ def rank_topological_sorts(all_sorts: List, rules: Sequence[AST]) -> List:
     :param rules: List of rules
     """
     ranked_sorts = []
-    for sort in all_sorts:
+    all_sortss = list(all_sorts)
+    print(f"There are {len(all_sortss)} topological sorts.")
+    for sort in all_sortss:
         rank = 0
         sort_rules = [rule for frznst in sort for rule in frznst]
         for i in range(len(sort_rules)):
             rank -= (rules.index(sort_rules[i]) + 1) * (i + 1)
         ranked_sorts.append((sort, rank))
+        # if len(ranked_sorts)>0:
+        #     break
     ranked_sorts.sort(key=lambda x: x[1])
     return [x[0] for x in ranked_sorts]
 
@@ -167,26 +170,6 @@ def get_identifiable_reason(g: nx.DiGraph,
     return None
 
 
-def harmonize_uuids(g: nx.DiGraph) -> None:
-    """
-    Harmonizes the uuids of the nodes in the graph with those of existing graphs of different sortings.
-    """
-    database = get_database()
-
-    if database.get_current_graph() != "":
-        pattern_g = database.load()
-
-        pattern_nodes = set(pattern_g.nodes())
-        incoming_nodes = set(g.nodes())
-
-        for incoming in incoming_nodes:
-            for pattern in pattern_nodes:
-                if incoming == pattern:
-                    incoming.uuid = pattern.uuid
-                    incoming.atoms = pattern.atoms
-                    incoming.diff = pattern.diff
-
-
 def calculate_spacing_factor(g: nx.DiGraph) -> None:
     """
     Calculate the spacing factor for each node the graph.
@@ -213,3 +196,42 @@ def calculate_spacing_factor(g: nx.DiGraph) -> None:
                 children_next.append(w)
         children_current = children_next
         children_next = []
+
+
+def topological_sort(g: nx.DiGraph, rules: Sequence[ast.Rule]) -> List:  # type: ignore
+    """ Topological sort of the graph.
+        If the order is ambiguous, prefer the order of the rules.
+        Note: Rule = Node
+
+        :param g: Graph
+        :param rules: List of Rules
+    """
+    sorted: List = []  # L list of the sorted elements
+    no_incoming_edge = set()  # set of all nodes with no incoming edges
+
+    no_incoming_edge.update(
+        [node for node in g.nodes if g.in_degree(node) == 0])
+    while len(no_incoming_edge):
+        earliest_node_index = len(rules)
+        earliest_node = None
+        for node in no_incoming_edge:
+            for rule in node:
+                node_index = rules.index(rule)
+                if node_index < earliest_node_index:
+                    earliest_node_index = node_index
+                    earliest_node = node
+
+        no_incoming_edge.remove(earliest_node)
+        sorted.append(earliest_node)
+
+        # update graph
+        for node in list(g.successors(earliest_node)):
+            g.remove_edge(earliest_node, node)
+            if g.in_degree(node) == 0:
+                no_incoming_edge.add(node)
+
+    if len(g.edges):
+        warn("Could not sort the graph.")
+        raise Exception("Could not sort the graph.")
+    return sorted
+

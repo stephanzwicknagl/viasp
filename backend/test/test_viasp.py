@@ -38,7 +38,7 @@ def test_load_from_file(client):
     debug_client = DebugClient(client)
     ctl = wrapper.Control(_viasp_client=debug_client)
     sample_encoding = pathlib.Path(__file__).parent.resolve() / "resources" / "sample_encoding.lp"
-    ctl.load(sample_encoding)
+    ctl.load(str(sample_encoding))
     # Check that the calls were received
     res = client.get("control/calls")
     assert res.status_code == 200

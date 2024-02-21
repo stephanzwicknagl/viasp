@@ -1,7 +1,7 @@
 from viasp.asp.replayer import apply_multiple
 
 
-def test_run(clingo_call_run_sample):
+def test_run(clingo_call_run_sample, app_context):
     replayed = apply_multiple(clingo_call_run_sample)
     num_models = 0
     with replayed.solve(yield_=True) as handle:

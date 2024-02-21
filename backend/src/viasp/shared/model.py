@@ -71,7 +71,7 @@ class ClingraphNode:
 
     def __eq__(self, o):
         return isinstance(o, type(self)) and self.uuid == o.uuid
-    
+
     def __repr__(self):
         return f"ClingraphNode(uuid={self.uuid})"
 
@@ -85,6 +85,8 @@ class Transformation:
     def __post_init__(self):
         if isinstance(self.rules, AST):
             self.rules = (self.rules,)
+        if isinstance(self.rules, List):
+            self.rules = tuple(self.rules)
         if self.hash == "":
             self.hash = hash_transformation_rules(self.rules)
 
@@ -141,7 +143,14 @@ class StableModel:
     def __eq__(self, o):
         return isinstance(o, type(self)) and set(self.atoms) == set(o.atoms)
 
-    def symbols(self, atoms: bool = False, terms: bool = False, shown: bool = False, theory: bool = False) -> Sequence[Symbol]:
+    def __hash__(self):
+        return hash(tuple(self.atoms))
+
+    def symbols(self,
+                atoms: bool = False,
+                terms: bool = False,
+                shown: bool = False,
+                theory: bool = False) -> Sequence[Symbol]:
         symbols = []
         if atoms:
             symbols.extend(self.atoms)
@@ -166,10 +175,10 @@ class TransformationError:
 
 @dataclass
 class TransformerTransport:
-    transformer: type[Transformer]
+    transformer: Transformer
     imports: str
     path: str
 
     @classmethod
-    def merge(cls, transformer: type[Transformer], imports: str, path: str):
+    def merge(cls, transformer: Transformer, imports: str, path: str):
         return cls(transformer, imports, path)

@@ -9,7 +9,7 @@ from viasp.shared.io import model_to_json, TransformerTransport
 
 from helper import Transformer
 
-def test_calls_are_filtered_after_application(clingo_call_run_sample):
+def test_calls_are_filtered_after_application(clingo_call_run_sample, app_context):
     db = CallCenter()
     db.extend(clingo_call_run_sample)
     assert len(db.get_all()) == 4, "There should be four unused calls before reconstruction."
@@ -41,7 +41,15 @@ def sample_models(sample_control):
     return models
 
 
+def test_client_clear_removes_all(client, sample_models):
+    client.post("control/models", json=sample_models)
+    client.post("control/models/clear")
+    r = client.get("control/models")
+    assert r.status_code == 200
+    assert len(r.json) == 0
+
 def test_client_mark_models(client, sample_models):
+    client.post("control/models/clear")
     r = client.post("control/models", json=sample_models)
     assert r.data == b'ok'
     r = client.get("control/models")
@@ -52,21 +60,28 @@ def test_client_mark_models(client, sample_models):
 
 
 def test_client_mark_single_model(client, sample_models):
+    client.post("control/models/clear")
     sample_model = sample_models[0]
     r = client.post("control/models", json=sample_model)
     assert r.data == b'ok'
     r = client.get("control/models")
     assert r.status_code == 200
     data = r.json
-    assert data == sample_model
+    assert data == [sample_model]
 
 
-def test_client_clear_removes_all(client, sample_models):
-    client.post("control/models", json=sample_models)
+def test_client_mark_models_duplicates_are_removed(client, sample_models):
     client.post("control/models/clear")
+    duplicate_models = sample_models + sample_models[:-1]
+    r = client.post("control/models", json=duplicate_models)
+    assert r.data == b'ok'
     r = client.get("control/models")
     assert r.status_code == 200
-    assert len(r.json) == 0
+    data = r.json
+    assert len(data) == len(sample_models)
+    assert data == sample_models
+
+
 
 @pytest.mark.skip(reason="Transformer not registered bc of base exception?")
 def test_client_add_transformer(client_with_a_graph):
@@ -77,4 +92,3 @@ def test_client_add_transformer(client_with_a_graph):
                         data=serialized,
                         headers={'Content-Type': 'application/json'})
     assert res.status_code == 200
-
