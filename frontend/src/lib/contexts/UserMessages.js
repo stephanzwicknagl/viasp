@@ -51,9 +51,10 @@ export const UserMessagesProvider = ({children}) => {
 
     const [state, dispatch] = React.useReducer(messageReducer, initialState);
     const {backendURL} = useSettings();
+    const backendUrlRef = React.useRef(backendURL);
     React.useEffect(() => {
         let mounted = true;
-        fetchWarnings(backendURL)
+        fetchWarnings(backendUrlRef.current)
             .catch((error) => {
                 showError(`Failed to get transformations: ${error}`);
             })
@@ -65,7 +66,7 @@ export const UserMessagesProvider = ({children}) => {
                 }
             });
         return () => (mounted = false);
-    }, [backendURL]);
+    }, []);
 
     return <UserMessagesContext.Provider value={[state, dispatch]}>{children}</UserMessagesContext.Provider>
 }
