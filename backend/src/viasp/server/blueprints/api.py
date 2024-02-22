@@ -12,7 +12,7 @@ from clingraph.graphviz import compute_graphs, render
 from .dag_api import generate_graph, set_current_graph, wrap_marked_models, \
         load_program, load_transformer, load_models, \
         load_clingraph_names
-from ..database import CallCenter, get_database, set_models, clear_models, save_many_sorts, save_clingraph, clear_clingraph, save_transformer, save_warnings, clear_warnings, load_warnings
+from ..database import CallCenter, get_database, set_models, clear_models, save_many_sorts, save_clingraph, clear_clingraph, save_transformer, save_warnings, clear_warnings, load_warnings, save_warnings
 from ...asp.reify import ProgramAnalyzer
 from ...asp.relax import ProgramRelaxer, relax_constraints
 from ...shared.model import ClingoMethodCall, StableModel, TransformerTransport
@@ -123,10 +123,6 @@ def set_transformer():
     return "ok", 200
 
 
-def _set_warnings(warnings):
-    encoding_id = get_or_create_encoding_id()
-    get_database().save_warnings(warnings, encoding_id)
-
 
 @bp.route("/control/warnings", methods=["POST", "DELETE", "GET"])
 def set_warnings():
@@ -168,7 +164,7 @@ def save_analyzer_values(analyzer: ProgramAnalyzer):
 def show_selected_models():
     analyzer = ProgramAnalyzer()
     analyzer.add_program(load_program(), load_transformer())
-    _set_warnings(analyzer.get_filtered())
+    save_warnings(analyzer.get_filtered())
 
     marked_models = load_models()
     marked_models = wrap_marked_models(marked_models,

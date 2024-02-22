@@ -8,7 +8,7 @@ from helper import get_stable_models_for_program
 from viasp.shared.util import hash_from_sorted_transformations
 from viasp.asp.reify import reify_list
 from viasp.asp.justify import build_graph
-from viasp.shared.model import TransformerTransport
+from viasp.shared.model import TransformerTransport, TransformationError, FailedReason
 from viasp.exampleTransformer import Transformer as ExampleTransfomer
 
 
@@ -171,6 +171,29 @@ def test_clingraph_database():
 
     db.clear_clingraph(encoding_id)
     r = db.load_all_clingraphs(encoding_id)
+    assert type(r) == list
+    assert len(r) == 0
+
+
+def test_warnings(app_context, load_analyzer, program_simple):
+    db = GraphAccessor()
+
+    encoding_id = "test"
+    analyzer = load_analyzer(program_simple)
+    some_ast = analyzer.rules[0]
+    warnings = [
+        TransformationError(ast=some_ast, reason=FailedReason.FAILURE),
+        TransformationError(ast=some_ast, reason=FailedReason.FAILURE)
+    ]
+    r = db.load_warnings(encoding_id)
+    assert type(r) == list
+    assert len(r) == 0
+    db.save_warnings(warnings, encoding_id)
+    r = db.load_warnings(encoding_id)
+    assert type(r) == list
+    assert len(r) == 2
+    db.clear_warnings(encoding_id)
+    r = db.load_warnings(encoding_id)
     assert type(r) == list
     assert len(r) == 0
 

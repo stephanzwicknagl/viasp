@@ -10,7 +10,7 @@ from clingo.ast import Transformer
 from ..shared.defaults import PROGRAM_STORAGE_PATH, GRAPH_PATH
 from ..shared.util import get_or_create_encoding_id
 from ..shared.event import Event, subscribe
-from ..shared.model import ClingoMethodCall, StableModel, Transformation, TransformerTransport
+from ..shared.model import ClingoMethodCall, StableModel, Transformation, TransformerTransport, TransformationError
 
 
 
@@ -163,7 +163,7 @@ def save_transformer(transformer: TransformerTransport):
     encoding_id = get_or_create_encoding_id()
     get_database().save_transformer(transformer, encoding_id)
 
-def save_warnings(warnings: List[str]):
+def save_warnings(warnings: List[TransformationError]):
     encoding_id = get_or_create_encoding_id()
     get_database().save_warnings(warnings, encoding_id)
 
@@ -245,14 +245,14 @@ class GraphAccessor:
     # ENCODING  #
     # # # # # # #
 
-    def save_program(self, program: str, encoding_id: str): #
+    def save_program(self, program: str, encoding_id: str):
         self.cursor.execute(
             """
             INSERT OR REPLACE INTO encodings (program, id) VALUES (?, ?)
         """, (program, encoding_id))
         self.conn.commit()
 
-    def add_to_program(self, program: str, encoding_id: str): #
+    def add_to_program(self, program: str, encoding_id: str):
         program = self.load_program(encoding_id) + program
         self.cursor.execute(
             """
@@ -260,7 +260,7 @@ class GraphAccessor:
         """, (encoding_id, program))
         self.conn.commit()
 
-    def load_program(self, encoding_id: str) -> str: #
+    def load_program(self, encoding_id: str) -> str:
         self.cursor.execute(
             """
             SELECT program FROM encodings WHERE id = (?)
@@ -268,7 +268,7 @@ class GraphAccessor:
         result = self.cursor.fetchone()
         return result[0] if result is not None else ""
 
-    def clear_program(self, encoding_id: str): #
+    def clear_program(self, encoding_id: str):
         self.cursor.execute(
             """
             DELETE FROM encodings WHERE id = (?)
@@ -279,12 +279,10 @@ class GraphAccessor:
     #  MODELS   #
     # # # # # # #
 
-    def set_models(self, parsed_models: Sequence[Union[StableModel, str]], encoding_id: str): #
+    def set_models(self, parsed_models: Sequence[Union[StableModel, str]],
+                   encoding_id: str):
         self.clear_models(encoding_id)
         for model in parsed_models:
-            # if isinstance(model, str):
-            #     json_model = model
-            # else:
             json_model = current_app.json.dumps(model)
             self.cursor.execute(
                 """
@@ -292,7 +290,7 @@ class GraphAccessor:
             """, (encoding_id, json_model))
         self.conn.commit()
 
-    def load_models(self, encoding_id: str) -> List[StableModel]: #
+    def load_models(self, encoding_id: str) -> List[StableModel]:
         self.cursor.execute(
             """
             SELECT model FROM models WHERE encoding_id = (?)
@@ -301,7 +299,7 @@ class GraphAccessor:
 
         return [current_app.json.loads(r[0]) for r in result]
 
-    def clear_models(self, encoding_id: str): #
+    def clear_models(self, encoding_id: str):
         self.cursor.execute(
             """
             DELETE FROM models WHERE encoding_id = (?)
@@ -313,15 +311,15 @@ class GraphAccessor:
     # # # # # # # #
 
     def save_graph(self, graph: nx.Graph, hash: str,
-                   sort: List[Transformation], encoding_id: str): #
+                   sort: List[Transformation], encoding_id: str):
         self.cursor.execute(
             """
             INSERT OR REPLACE INTO graphs (data, hash, sort, encoding_id) VALUES (?, ?, ?, ?)
-        """, (current_app.json.dumps(nx.node_link_data(graph)), hash, current_app.json.dumps(sort),
-              encoding_id))
+        """, (current_app.json.dumps(nx.node_link_data(graph)), hash,
+              current_app.json.dumps(sort), encoding_id))
         self.conn.commit()
 
-    def set_current_graph(self, hash: str, encoding_id: str): #
+    def set_current_graph(self, hash: str, encoding_id: str):
         self.cursor.execute(
             """
             DELETE FROM current_graph WHERE encoding_id = (?)
@@ -331,7 +329,7 @@ class GraphAccessor:
             (hash, encoding_id))
         self.conn.commit()
 
-    def get_current_graph(self, encoding_id: str) -> str:  #
+    def get_current_graph(self, encoding_id: str) -> str:
         self.cursor.execute(
             """
             SELECT hash FROM current_graph WHERE encoding_id = (?)
@@ -355,20 +353,20 @@ class GraphAccessor:
         graph_json_str = self.load_graph_json(hash, encoding_id)
         return nx.node_link_graph(current_app.json.loads(graph_json_str))
 
-    def load_current_graph_json(self, encoding_id: str) -> str: #
+    def load_current_graph_json(self, encoding_id: str) -> str:
         hash = self.get_current_graph(encoding_id)
         return self.load_graph_json(hash, encoding_id)
 
-    def load_current_graph(self, encoding_id: str) -> nx.DiGraph: #
+    def load_current_graph(self, encoding_id: str) -> nx.DiGraph:
         graph_json_str = self.load_current_graph_json(encoding_id)
-        # return current_app.json.loads(graph_json_str)
         return nx.node_link_graph(current_app.json.loads(graph_json_str))
 
     # # # # # # # #
     #   SORTS     #
     # # # # # # # #
 
-    def save_many_sorts(self, sorts: List[Tuple[str, List[Transformation], str]]):
+    def save_many_sorts(self, sorts: List[Tuple[str, List[Transformation],
+                                                str]]):
         self.cursor.executemany(
             """
             INSERT OR REPLACE INTO graphs (hash, data, sort, encoding_id) VALUES (?, ?, ?, ?)
@@ -376,7 +374,8 @@ class GraphAccessor:
               for hash, sort, encoding_id in sorts])
         self.conn.commit()
 
-    def save_sort(self, hash: str, sort: List[Transformation], encoding_id: str):
+    def save_sort(self, hash: str, sort: List[Transformation],
+                  encoding_id: str):
         self.cursor.execute(
             """
             INSERT OR REPLACE INTO graphs (hash, data, sort, encoding_id) VALUES (?, ?, ?, ?)
@@ -436,20 +435,39 @@ class GraphAccessor:
         return [r[0] for r in result]
 
     # # # # # # # #
-    #   GENERAL   #
+    #   WARNINGS  #
     # # # # # # # #
 
-    def clear(self):
-        self.cursor.execute("DELETE FROM encodings")
-        self.cursor.execute("DELETE FROM models")
-        self.cursor.execute("DELETE FROM graphs")
-        self.cursor.execute("DELETE FROM current_graph")
-        self.cursor.execute("DELETE FROM clingraph")
-        self.cursor.execute("DELETE FROM transformer")
-        self.cursor.execute("DELETE FROM warnings")
+    def clear_warnings(self, encoding_id: str):
+        self.cursor.execute(
+            """
+            DELETE FROM warnings WHERE encoding_id = (?)
+        """, (encoding_id, ))
         self.conn.commit()
 
-    def save_transformer(self, transformer: TransformerTransport, encoding_id: str):
+    def save_warnings(self, warnings: List[TransformationError],
+                      encoding_id: str):
+        for warning in warnings:
+            self.cursor.execute(
+                """
+                INSERT INTO warnings (encoding_id, warning) VALUES (?, ?)
+            """, (encoding_id, current_app.json.dumps(warning)))
+        self.conn.commit()
+
+    def load_warnings(self, encoding_id: str) -> List[str]:
+        self.cursor.execute(
+            """
+            SELECT warning FROM warnings WHERE encoding_id = (?)
+        """, (encoding_id, ))
+        result = self.cursor.fetchall()
+        return [current_app.json.loads(r[0]) for r in result]
+
+    # # # # # # # # # # # # # # #
+    #   REGISTERED TRANFORMER   #
+    # # # # # # # # # # # # # # #
+
+    def save_transformer(self, transformer: TransformerTransport,
+                         encoding_id: str):
         self.cursor.execute(
             """
             INSERT OR REPLACE INTO transformer (transformer, encoding_id) VALUES (?, ?)
@@ -462,27 +480,18 @@ class GraphAccessor:
             SELECT transformer FROM transformer WHERE encoding_id = (?)
         """, (encoding_id, ))
         result = self.cursor.fetchone()
-        return result[0] if result is not None else None
+        return current_app.json.loads(result[0]) if result is not None else None
 
-    def clear_warnings(self, encoding_id: str):
-        self.cursor.execute(
-            """
-            DELETE FROM warnings WHERE encoding_id = (?)
-        """, (encoding_id, ))
+    # # # # # # # #
+    #   GENERAL   #
+    # # # # # # # #
+
+    def clear(self):
+        self.cursor.execute("DELETE FROM encodings")
+        self.cursor.execute("DELETE FROM models")
+        self.cursor.execute("DELETE FROM graphs")
+        self.cursor.execute("DELETE FROM current_graph")
+        self.cursor.execute("DELETE FROM clingraph")
+        self.cursor.execute("DELETE FROM transformer")
+        self.cursor.execute("DELETE FROM warnings")
         self.conn.commit()
-
-    def save_warnings(self, warnings: List[str], encoding_id: str):
-        for warning in warnings:
-            self.cursor.execute(
-                """
-                INSERT INTO warnings (encoding_id, warning) VALUES (?, ?)
-            """, (encoding_id, warning))
-        self.conn.commit()
-
-    def load_warnings(self, encoding_id: str) -> List[str]:
-        self.cursor.execute(
-            """
-            SELECT warning FROM warnings WHERE encoding_id = (?)
-        """, (encoding_id, ))
-        result = self.cursor.fetchall()
-        return [r[0] for r in result]
