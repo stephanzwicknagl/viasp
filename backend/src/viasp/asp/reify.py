@@ -11,7 +11,7 @@ from clingo.ast import (
     AST,
 )
 
-from .utils import is_constraint, merge_constraints, rank_topological_sorts, topological_sort
+from .utils import is_constraint, merge_constraints, topological_sort
 from ..asp.utils import merge_cycles, remove_loops
 from viasp.asp.ast_types import (
     SUPPORTED_TYPES,
@@ -27,7 +27,7 @@ def is_fact(rule, dependencies):
     return len(rule.body) == 0 and not len(dependencies)
 
 
-def make_signature(literal: ast.Literal) -> Tuple[str, int]: # type: ignore
+def make_signature(literal: ast.Literal) -> Tuple[str, int]:  # type: ignore
     if literal.atom.ast_type in [ASTType.BodyAggregate]:
         return literal, 0
     unpacked = literal.atom.symbol
@@ -39,20 +39,9 @@ def make_signature(literal: ast.Literal) -> Tuple[str, int]: # type: ignore
     )
 
 
-def filter_body_arithmetic(elem: ast.Literal): # type: ignore
+def filter_body_arithmetic(elem: ast.Literal):  # type: ignore
     elem_ast_type = getattr(getattr(elem, "atom", ""), "ast_type", None)
     return elem_ast_type not in ARITH_TYPES
-
-
-def separate_body_conditionals(body: Sequence[AST]) -> List[AST]:
-    separated: List[AST] = []
-    for body_elem in body:
-        if body_elem.ast_type == ASTType.ConditionalLiteral:
-            separated.append(cast(AST, body_elem.literal))
-            separated.extend(cast(Iterable[AST], body_elem.condition))
-        else:
-            separated.append(body_elem)
-    return separated
 
 
 class FilteredTransformer(Transformer):
@@ -101,39 +90,56 @@ class FilteredTransformer(Transformer):
 
 class DependencyCollector(Transformer):
 
-    def visit_ConditionalLiteral(self, conditional_literal: ast.ConditionalLiteral, # type: ignore
-                                 **kwargs: Any) -> AST:
+    def visit_ConditionalLiteral(
+            self,
+            conditional_literal: ast.ConditionalLiteral,  # type: ignore
+            **kwargs: Any) -> AST:
         deps = kwargs.get("deps", {})
         in_head = kwargs.get("in_head", False)
         in_aggregate = kwargs.get("in_aggregate", False)
+        in_analyzer = kwargs.get("in_analyzer", False)
         conditions: List[AST] = kwargs.get("conditions", [])
 
         if in_head:
+            # collect deps for choice rules
             deps[conditional_literal.literal] = []
             for condition in conditional_literal.condition:
                 deps[conditional_literal.literal].append(condition)
-        elif not in_aggregate:
+        if (not in_aggregate and not in_analyzer):
+            # add simple Cond.Literals from rule body to justifier rule body
             conditions.append(conditional_literal)
         kwargs.update({"in_aggregate": True})
         return conditional_literal.update(
             **self.visit_children(conditional_literal, **kwargs))
 
-    def visit_Literal(self, literal: ast.Literal, **kwargs: Any) -> AST: # type: ignore
+    def visit_Literal(
+            self,
+            literal: ast.Literal,  # type: ignore
+            **kwargs: Any) -> AST:
         conditions: List[AST] = kwargs.get("conditions", [])
-        if not kwargs.get("in_aggregate", False):
+        in_analyzer = kwargs.get("in_analyzer", False)
+        in_aggregate = kwargs.get("in_aggregate", False)
+
+        if (in_analyzer and literal.atom.ast_type
+                not in [ASTType.Aggregate, ASTType.BodyAggregate]):
+            # all non-aggregate Literals in the rule body are conditions of the rule
+            conditions.append(literal)
+        if (not in_analyzer and not in_aggregate):
+            # add all Literals outside of aggregates from rule body to justifier rule body
             conditions.append(literal)
         return literal.update(**self.visit_children(literal, **kwargs))
 
-    def visit_Comparison(self, comparison: ast.Comparison, **kwargs: Any) -> AST:  # type: ignore
-        kwargs.update({"in_aggregate": True})
-        return comparison.update(
-            **self.visit_children(comparison, **kwargs))
-
-    def visit_Aggregate(self, aggregate: ast.Aggregate, **kwargs: Any) -> AST: # type: ignore
+    def visit_Aggregate(
+            self,
+            aggregate: ast.Aggregate,  # type: ignore
+            **kwargs: Any) -> AST:
         kwargs.update({"in_aggregate": True})
         return aggregate.update(**self.visit_children(aggregate, **kwargs))
 
-    def visit_BodyAggregate(self, body_aggregate: ast.BodyAggregate, **kwargs: Any) -> AST:  # type: ignore
+    def visit_BodyAggregate(
+            self,
+            body_aggregate: ast.BodyAggregate,  # type: ignore
+            **kwargs: Any) -> AST:
         kwargs.update({"in_aggregate": True})
         return body_aggregate.update(
             **self.visit_children(body_aggregate, **kwargs))
@@ -146,8 +152,6 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
     def __init__(self):
         super().__init__()
-        # TODO: self.dependencies can go?
-        self.dependencies = nx.DiGraph()
         self.dependants: Dict[Tuple[str, int], Set[AST]] = defaultdict(set)
         self.conditions: Dict[Tuple[str, int], Set[AST]] = defaultdict(set)
         self.positive_conditions: Dict[Tuple[
@@ -337,12 +341,6 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     def get_constants(self):
         return list(self.constants)
 
-    def register_symbolic_dependencies(
-            self, deps: Dict[ast.Literal, List[ast.Literal]]):  # type: ignore
-        for u, conditions in deps.items():
-            for v in conditions:
-                self.dependencies.add_edge(u, v)
-
     def register_rule_conditions(
             self,
             rule: ast.Rule,  # type: ignore
@@ -357,7 +355,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         deps: Dict[
             ast.Literal,  # type: ignore
             List[ast.Literal]]  # type: ignore
-    ) -> None:  # type: ignore
+    ) -> None:
         for uu in deps.values():
             for u in filter(filter_body_arithmetic, uu):
                 u_sig = make_signature(u)
@@ -375,31 +373,10 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
                                 and body_item.sign == ast.Sign.NoSign):
                             self.positive_conditions[u_sig].add(rule)
 
-        for v in filter(
-                lambda symbol: symbol.atom.ast_type != ASTType.BooleanConstant
-                if (hasattr(symbol, "atom") and hasattr(
-                    symbol.atom, "ast_type")) else False,
-                deps.keys(),
-        ):
-            v_sig = make_signature(v)
-            self.dependants[v_sig].add(rule)
-
-    def visit_Rule(self, rule: ast.Rule):  # type: ignore
-        deps = defaultdict(list)
-        _ = self.visit(rule.head, deps=deps, in_head=True)
-        for b in rule.body:
-            self.visit(b, deps=deps)
-
-        if is_fact(rule, deps):
-            self.facts.add(rule.head)
-        if not len(deps) and len(rule.body):
-            deps[rule.head] = []
-        for _, cond in deps.items():
-            flattened_body = separate_body_conditionals(rule.body)
-            cond.extend(filter(filter_body_arithmetic, flattened_body))
-        self.register_symbolic_dependencies(deps)
-        self.register_rule_dependencies(rule, deps)
-        self.rules.append(rule)
+        for v in deps.keys():
+            if v.ast_type == ASTType.Literal and v.atom.ast_type != ASTType.BooleanConstant:
+                v_sig = make_signature(v)
+                self.dependants[v_sig].add(rule)
 
     def get_body_aggregate_elements(self, body: Sequence[AST]) -> List[AST]:
         body_aggregate_elements: List[AST] = []
@@ -407,43 +384,41 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             self.visit(elem, body_aggregate_elements=body_aggregate_elements)
         return body_aggregate_elements
 
-    def get_first_attribute_with_name_from_tree(self, ast: AST,
-                                                attribute: str) -> Any:
-        while not hasattr(ast, attribute):
-            if hasattr(ast, "symbol"):
-                ast = cast(AST, ast.symbol)
-            else:
-                break
-        return getattr(ast, attribute, None)
+    def process_body(self, head, body, deps, in_analyzer=True):
+        for b in body:
+            self.visit(b, deps=deps)
+        if not len(deps) and len(body):
+            deps[head] = []
+        for _, cond in deps.items():
+            self.visit_sequence(body, conditions=cond, in_analyzer=in_analyzer)
+
+    def register_dependencies_and_append_rule(self, rule, deps):
+        self.register_rule_dependencies(rule, deps)
+        self.rules.append(rule)
+
+    def visit_Rule(self, rule: ast.Rule):  # type: ignore
+        deps = defaultdict(list)
+        _ = self.visit(rule.head, deps=deps, in_head=True)
+        self.process_body(rule.head, rule.body, deps)
+        if is_fact(rule, deps):
+            self.facts.add(rule.head)
+        self.register_dependencies_and_append_rule(rule, deps)
 
     def visit_ShowTerm(self, showTerm: ast.ShowTerm):  # type: ignore
         deps = defaultdict(list)
         _ = self.visit(showTerm.term, deps=deps, in_head=True)
-        for b in showTerm.body:
-            self.visit(b, deps=deps)
-
-        if not len(deps) and len(showTerm.body):
-            deps[showTerm.term] = []
-        for _, cond in deps.items():
-            flattened_body = separate_body_conditionals(showTerm.body)
-            cond.extend(filter(filter_body_arithmetic, flattened_body))
-        self.register_symbolic_dependencies(deps)
-        self.register_rule_dependencies(showTerm, deps)
-        self.rules.append(showTerm)
+        head_literal = ast.Literal(showTerm.location, ast.Sign.NoSign,
+                                   showTerm.term)
+        self.process_body(head_literal, showTerm.body, deps)
+        self.register_dependencies_and_append_rule(showTerm, deps)
 
     def visit_Minimize(self, minimize: ast.Minimize):  # type: ignore
         deps = defaultdict(list)
-        true_head_literal = ast.Literal(minimize.location, ast.Sign.NoSign,ast.BooleanConstant(1))
-        # issue with minimize location:
-        # for #minimize{X: p(X)}. the location begins after the {
-        # reconstructing the statement from the location is not possible
+        true_head_literal = ast.Literal(minimize.location, ast.Sign.NoSign,
+                                        ast.BooleanConstant(1))
         deps[true_head_literal] = []
-        for _, cond in deps.items():
-            flattened_body = separate_body_conditionals(minimize.body)
-            cond.extend(filter(filter_body_arithmetic, flattened_body))
-        self.register_symbolic_dependencies(deps)
-        self.register_rule_dependencies(minimize, deps)
-        self.rules.append(minimize)
+        self.process_body(true_head_literal, minimize.body, deps)
+        self.register_dependencies_and_append_rule(minimize, deps)
 
     def visit_Defined(self, defined: AST):
         self.pass_through.add(defined)
