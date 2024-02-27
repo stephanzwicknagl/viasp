@@ -408,7 +408,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         deps = defaultdict(list)
         _ = self.visit(showTerm.term, deps=deps, in_head=True)
         head_literal = ast.Literal(showTerm.location, ast.Sign.NoSign,
-                                   showTerm.term)
+                                   ast.SymbolicAtom(showTerm.term))
         self.process_body(head_literal, showTerm.body, deps)
         self.register_dependencies_and_append_rule(showTerm, deps)
 
@@ -547,7 +547,7 @@ class ProgramReifier(DependencyCollector):
                  model="model",
                  get_conflict_free_variable=lambda s: s,
                  clear_temp_names=lambda: None,
-                 conflict_free_showTerm: str = "ShowTerm"):
+                 conflict_free_showTerm: str = "showTerm"):
         self.rule_nr = rule_nr
         self.h = h
         self.h_showTerm = h_showTerm
@@ -676,7 +676,7 @@ class ProgramReifier(DependencyCollector):
         )
         self.replace_anon_variables(conditions)
         new_head_s = self._nest_rule_head_in_h_with_explanation_tuple(
-            showTerm.location, showTerm.term, [], True)
+            showTerm.location, showTerm.term, conditions, True)
 
         conditions.insert(
             0,
@@ -743,10 +743,9 @@ def reify(transformation: Transformation, **kwargs):
         rules_str = rules
         rules = []
         for rule in rules_str:
-            parse_string(rule, lambda rule: rules.append(rule))
+            parse_string(rule, lambda rule: rules.append(rule) if rule.ast_type != ASTType.Program else None)
     for rule in rules:
-        if rule.ast_type == ASTType.Rule:
-            result.extend(cast(Iterable[AST], visitor.visit(rule)))
+        result.extend(cast(Iterable[AST], visitor.visit(rule)))
     return result
 
 

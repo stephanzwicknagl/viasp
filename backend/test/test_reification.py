@@ -194,3 +194,7 @@ def test_disjunctions_in_head():
     h(1, q(X), (r(X),)) :- q(X), r(X). """
     assertProgramEqual(transform(rule), parse_program_to_ast(expected))
 
+def test_showTerm_transformed_correctly():
+    rule = "#show a(X) : b(X)."
+    expected = "h_showTerm(1, a(X), (b(X),)) :- showTerm(a(X)), b(X)."
+    assertProgramEqual(transform(rule), parse_program_to_ast(expected))
