@@ -31,13 +31,23 @@ def make_signature(literal: ast.Literal) -> Tuple[str, int]:  # type: ignore
     if literal.atom.ast_type in [ASTType.BodyAggregate]:
         return literal, 0
     unpacked = literal.atom.symbol
-    if hasattr(unpacked, "ast_type") and unpacked.ast_type == ASTType.Pool:
+    if unpacked.ast_type in [ASTType.Variable, ASTType.Function]:
+        return (
+            unpacked.name,
+            len(unpacked.arguments) if hasattr(unpacked, "arguments") else 0,
+        )
+    if unpacked.ast_type == ASTType.SymbolicTerm:
+        return (
+            unpacked.symbol.name,
+            len(unpacked.arguments) if hasattr(unpacked, "arguments") else 0,
+        )
+    if unpacked.ast_type == ASTType.Pool:
         unpacked = unpacked.arguments[0]
-    return (
-        unpacked.name,
-        len(unpacked.arguments) if hasattr(unpacked, "arguments") else 0,
-    )
-
+        return (
+            unpacked.name,
+            len(unpacked.arguments)
+        )
+    raise ValueError(f"Could not make signature of {literal}")
 
 def filter_body_arithmetic(elem: ast.Literal):  # type: ignore
     elem_ast_type = getattr(getattr(elem, "atom", ""), "ast_type", None)

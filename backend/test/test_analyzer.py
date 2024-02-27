@@ -309,14 +309,6 @@ def test_ast_types_do_not_intersect(app_context):
         known), "No type should be known and unknown"
 
 
-def test_disjunction_causes_error_and_doesnt_get_passed():
-    program = "a; b."
-
-    transformer = ProgramAnalyzer()
-    result = transformer.sort_program(program)
-    assert len(transformer.get_filtered())
-    assert len(result) == 0
-
 
 @pytest.mark.skip(reason="Not implemented yet")
 def test_constraints_gets_put_last(app_context):

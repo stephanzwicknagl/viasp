@@ -393,11 +393,9 @@ def generate_graph() -> nx.DiGraph:
     marked_models = load_models()
     marked_models = wrap_marked_models(marked_models,
                                        analyzer.get_conflict_free_showTerm())
-    print(f"Using marked model: {marked_models}", flush=True)
     if analyzer.will_work():
         recursion_rules = analyzer.check_positive_recursion()
         sorted_program = get_current_sort()
-        print(F"Sorted program: {sorted_program}", flush=True)
         reified: Collection[AST] = reify_list(
             sorted_program,
             h=analyzer.get_conflict_free_h(),
@@ -406,11 +404,8 @@ def generate_graph() -> nx.DiGraph:
             conflict_free_showTerm=analyzer.get_conflict_free_showTerm(),
             get_conflict_free_variable=analyzer.get_conflict_free_variable,
             clear_temp_names=analyzer.clear_temp_names)
-        print(f"Reified program: {list(map(str,reified))}", flush=True)
         g = build_graph(marked_models, reified, sorted_program, analyzer,
                         recursion_rules)
-        print(f"Got graph with {len(g.nodes)} nodes and {len(g.edges)} edges.",
-              flush=True)
         save_graph(g, hash_from_sorted_transformations(sorted_program),
                    sorted_program)
 
