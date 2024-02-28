@@ -171,7 +171,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
       
       - name: Setup Graphviz
-        uses: ts-graphviz/setup-graphviz@v1
+        uses: ts-graphviz/setup-graphviz@v2
 
       - name: Run Tests
         working-directory: backend
