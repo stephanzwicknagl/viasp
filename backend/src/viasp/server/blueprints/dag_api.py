@@ -17,7 +17,6 @@ from ...shared.util import get_start_node_from_graph, is_recursive, hash_from_so
 from ...shared.io import StableModel
 from ..database import load_recursive_transformations_hashes, save_graph, get_graph, clear_graph, set_current_graph, get_all_sorts, get_current_sort, load_program, load_transformer, load_models, load_clingraph_names
 
-from uuid import uuid4
 
 bp = Blueprint("dag_api",
                __name__,
@@ -126,12 +125,14 @@ def get_src_tgt_mapping_from_graph(shown_recursive_ids=[],
             "recursion": "in",
             "style": "solid"
         } for first_node in first_nodes])
-        to_be_added.extend([{
-            "src": last_node.uuid,
-            "tgt": node.uuid,
-            "recursion": "out",
-            "style": "solid"
-        } for last_node in last_nodes])
+        if graph.out_degree(node) > 0:
+            # only add connection out if there are more nodes / clingraph
+            to_be_added.extend([{
+                "src": last_node.uuid,
+                "tgt": node.uuid,
+                "recursion": "out",
+                "style": "solid"
+            } for last_node in last_nodes])
 
     if shown_clingraph:
         clingraph = load_clingraph_names()
