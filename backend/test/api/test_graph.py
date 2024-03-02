@@ -114,7 +114,7 @@ def test_get_edges(client_with_a_graph):
         res = client.post(f"/graph/edges", json={"shownNodes": uuids, "shownRecursion": [uuids[-1]]})
         assert res.status_code == 200
         assert type(res.json) == list
-        assert len(res.json) == 6
+        assert len(res.json) == 5
 
 def test_get_transformations(client_with_a_graph):
     client, _, _, _ = client_with_a_graph

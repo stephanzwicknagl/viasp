@@ -143,8 +143,7 @@ def test_path_creation(app_context):
     facts, constants = [], []
     h_symbols = get_h_symbols_from_model(single_saved_model, transformed, facts, constants)
     rule_mapping = {1: Transformation(1, (parse_program_to_ast("fact(1)."),)), 2: Transformation(2, (parse_program_to_ast("result(X) :- fact(X)."),))}
-    path = make_reason_path_from_facts_to_stable_model(single_saved_model,
-                                                       rule_mapping, Node(frozenset(), 0),
+    path = make_reason_path_from_facts_to_stable_model(rule_mapping, Node(frozenset(), 0),
                                                        h_symbols, set())
     nodes, edges = list(path.nodes), list(t for _, _, t in path.edges.data(True))
     assert len(edges) == 2
@@ -160,8 +159,7 @@ def test_atoms_are_propagated_correctly_through_diffs(app_context):
     facts, constants = [], []
     h_symbols = get_h_symbols_from_model(single_saved_model, transformed, facts, constants)
     rule_mapping = {1: Transformation(1, (parse_program_to_ast("b :- a."),)), 2: Transformation(2, (parse_program_to_ast("c :- b."),)), 3: Transformation(3, (parse_program_to_ast("d :- c."),))}
-    path = make_reason_path_from_facts_to_stable_model(single_saved_model,
-                                                        rule_mapping,
+    path = make_reason_path_from_facts_to_stable_model(rule_mapping,
                                                        Node(frozenset([SymbolIdentifier(Function(loc,"a",[], False))]), 0, frozenset([Function(loc,"a", [], False)])), # type: ignore
                                                        h_symbols, set())
     beginning: Node = get_start_node_from_graph(path)
