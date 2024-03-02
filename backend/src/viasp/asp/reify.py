@@ -417,10 +417,10 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         self.register_dependencies_and_append_rule(showTerm, deps)
 
     def visit_Minimize(self, minimize: ast.Minimize):  # type: ignore
-        deps = defaultdict(list)
+        deps = defaultdict(tuple)
         true_head_literal = ast.Literal(minimize.location, ast.Sign.NoSign,
                                         ast.BooleanConstant(1))
-        deps[true_head_literal] = []
+        deps[true_head_literal] = ([], [])
         self.process_body(true_head_literal, minimize.body, deps)
         self.register_dependencies_and_append_rule(minimize, deps)
 
