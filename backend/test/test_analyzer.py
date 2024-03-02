@@ -1,9 +1,12 @@
+from flask import current_app
 import pytest
 from clingo.ast import AST
 
 from viasp.asp.ast_types import (SUPPORTED_TYPES, UNSUPPORTED_TYPES,
                                  make_unknown_AST_enum_types)
 from viasp.asp.reify import ProgramAnalyzer
+from viasp.shared.model import Transformation
+from viasp.shared.util import hash_transformation_rules
 
 
 def test_simple_fact_analyzed_correctly(app_context):
@@ -424,3 +427,27 @@ def test_body_aggregate_sorted_in_show_term(app_context):
         'pathExists', 0)]) == 1, "pathExists/0 should depend on one rule."
     assert len(transformer.conditions[(
         'hc', 2)]) == 1, "hc/2 should be a condition of the rule"
+
+
+def test_positive_recursion_gets_recognized(app_context):
+    program = "a :- b. b :- a.d :- c. c :- d."
+    transformer = ProgramAnalyzer()
+    _ = transformer.sort_program(program)
+    recursive_rules = transformer.check_positive_recursion()
+
+    assert isinstance(recursive_rules, set), "The result should be a set."
+    assert isinstance(next(iter(recursive_rules)),
+                      str), "The result should be a set of hashes."
+    assert len(recursive_rules) == 2, "Two transformations are recursive."
+
+
+def test_loop_recursion_gets_recognized(app_context):
+    program = "a :- a."
+    transformer = ProgramAnalyzer()
+    _ = transformer.add_program(program)
+    recursive_rules = transformer.check_positive_recursion()
+
+    assert isinstance(recursive_rules, set), "The result should be a set."
+    assert isinstance(next(iter(recursive_rules)), str), "The result should be a set of tuples."
+    assert len(recursive_rules) == 1, "The rule should be recursive."
+    assert hash_transformation_rules(("a :- a.",)) in recursive_rules, "Hash is determined by transformatinos."

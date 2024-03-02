@@ -1,14 +1,13 @@
 from viasp.server.database import CallCenter, GraphAccessor
 import pytest
-import pathlib
 from typing import Tuple
 import networkx as nx
 
 from helper import get_stable_models_for_program
-from viasp.shared.util import hash_from_sorted_transformations
+from viasp.shared.util import hash_from_sorted_transformations, hash_transformation_rules
 from viasp.asp.reify import reify_list
 from viasp.asp.justify import build_graph
-from viasp.shared.model import TransformerTransport, TransformationError, FailedReason
+from viasp.shared.model import Transformation, TransformerTransport, TransformationError, FailedReason
 from viasp.exampleTransformer import Transformer as ExampleTransfomer
 
 
@@ -154,6 +153,30 @@ def test_current_sort_database(graph_info):
     r = db.get_current_sort(encoding_id)
     assert len(r) == 2
     assert type(r) == list
+
+def test_recursion_database(app_context):
+    db = GraphAccessor()
+    encoding_id = "test"
+    recursion = {hash_transformation_rules(("a :- b.",)), hash_transformation_rules(("b :- c.",))}
+
+    r = db.load_recursive_transformations_hashes(encoding_id)
+    assert type(r) == set
+    assert len(r) == 0
+    
+    db.save_recursive_transformations_hashes(recursion, encoding_id)
+    r = db.load_recursive_transformations_hashes(encoding_id)
+    assert type(r) == set
+    assert len(r) == 2
+
+    db.save_recursive_transformations_hashes({recursion.pop()}, encoding_id)
+    r = db.load_recursive_transformations_hashes(encoding_id)
+    assert type(r) == set
+    assert len(r) == 2
+
+    db.clear_recursive_transformations_hashes(encoding_id)
+    r = db.load_recursive_transformations_hashes(encoding_id)
+    assert type(r) == set
+    assert len(r) == 0
 
 def test_clingraph_database():
     db = GraphAccessor()

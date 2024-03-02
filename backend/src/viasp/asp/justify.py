@@ -4,11 +4,11 @@ from typing import List, Collection, Dict, Iterable, Union, Set
 
 import networkx as nx
 
-from clingo import Control, Symbol, Model, ast
+from clingo import Control, Symbol, Model
 
-from clingo.ast import AST
+from clingo.ast import AST, ASTType
 
-from .reify import ProgramAnalyzer, has_an_interval
+from .reify import ProgramAnalyzer, reify_recursion_transformation
 from .recursion import RecursionReasoner
 from .utils import insert_atoms_into_nodes, identify_reasons, calculate_spacing_factor
 from ..shared.model import Node, Transformation, SymbolIdentifier
@@ -28,7 +28,7 @@ def get_h_symbols_from_model(wrapped_stable_model: Iterable[str],
                              h_showTerm="h_showTerm") -> List[Symbol]:
     rules_that_are_reasons_why = []
     ctl = Control()
-    stringified = "".join(map(str, transformed_prg))
+    stringified = "\n".join(map(str, transformed_prg))
     new_head = f"_{h}"
     get_new_atoms_rule = f"{new_head}(I, H, G) :- {h}(I, H, G), not {h}(II,H,_) : II<I, {h}(II,_,_)."
     ctl.add("base", [], "".join(map(str, constants)))
@@ -92,16 +92,16 @@ def collect_h_symbols_and_create_nodes(h_symbols: Collection[Symbol], relevant_i
     return h_nodes
 
 
-def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
-                                            rule_mapping: Dict[int, Transformation],
+def make_reason_path_from_facts_to_stable_model(rule_mapping: Dict[int, Transformation],
                                             fact_node: Node,
                                             h_symbols: List[Symbol],
-                                            recursive_transformations:set,
+                                            recursive_transformations_hashes: Set[str],
                                             h="h",
                                             analyzer: ProgramAnalyzer = ProgramAnalyzer(),
                                             pad=True) \
                                             -> nx.DiGraph:
-    h_syms: List[Node] = collect_h_symbols_and_create_nodes(h_symbols, rule_mapping.keys(), pad)
+    h_syms: List[Node] = collect_h_symbols_and_create_nodes(
+        h_symbols, rule_mapping.keys(), pad)
     h_syms.sort(key=lambda node: node.rule_nr)
     h_syms.insert(0, fact_node)
 
@@ -109,18 +109,16 @@ def make_reason_path_from_facts_to_stable_model(wrapped_stable_model,
     g = nx.DiGraph()
     if len(h_syms) == 1:
         # If there is a stable model that is exactly the same as the facts.
-        if rule_mapping[min(rule_mapping.keys())].rules in recursive_transformations:
-            fact_node.recursive = True
-        g.add_edge(fact_node, Node(frozenset(), min(rule_mapping.keys()), frozenset(fact_node.diff)),
+        g.add_edge(fact_node,
+                   Node(frozenset(), min(rule_mapping.keys()),
+                        frozenset(fact_node.diff)),
                    transformation=rule_mapping[min(rule_mapping.keys())])
         return g
 
     for a, b in pairwise(h_syms):
-        if rule_mapping[b.rule_nr].rules in recursive_transformations:
-            b.recursive = get_recursion_subgraph(a.atoms,
-                                                 b.diff,
-                                                 rule_mapping[b.rule_nr],
-                                                 h,
+        if rule_mapping[b.rule_nr].hash in recursive_transformations_hashes:
+            b.recursive = get_recursion_subgraph(a.atoms, b.diff,
+                                                 rule_mapping[b.rule_nr], h,
                                                  analyzer)
         g.add_edge(a, b, transformation=rule_mapping[b.rule_nr])
 
@@ -157,7 +155,7 @@ def build_graph(wrapped_stable_models: List[List[str]],
                 transformed_prg: Collection[AST],
                 sorted_program: List[Transformation],
                 analyzer: ProgramAnalyzer,
-                recursion_transformations: set) -> nx.DiGraph:
+                recursion_transformations_hashes: Set[str]) -> nx.DiGraph:
     paths: List[nx.DiGraph] = []
     facts = analyzer.get_facts()
     conflict_free_h = analyzer.get_conflict_free_h()
@@ -177,7 +175,7 @@ def build_graph(wrapped_stable_models: List[List[str]],
                                              conflict_free_h,
                                              conflict_free_h_showTerm)
         new_path = make_reason_path_from_facts_to_stable_model(
-            model, mapping, fact_node, h_symbols, recursion_transformations,
+            mapping, fact_node, h_symbols, recursion_transformations_hashes,
             conflict_free_h, analyzer)
         paths.append(new_path)
 
@@ -198,16 +196,18 @@ def save_model(model: Model) -> Collection[str]:
 
 
 def filter_body_aggregates(element: AST):
-    if (element.ast_type == ast.ASTType.Aggregate):
+    aggregate_types = [ASTType.Aggregate, ASTType.BodyAggregate, ASTType.ConditionalLiteral]
+    if (element.ast_type in aggregate_types):
         return False
-    if (getattr(getattr(element, "atom", None), "ast_type",None) == ast.ASTType.Aggregate):
+    if (getattr(getattr(element, "atom", None), "ast_type",None) in aggregate_types):
         return False
     return True
 
 
-def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
-                           transformation: Transformation, conflict_free_h: str,
-                           analyzer: ProgramAnalyzer) -> Union[bool, nx.DiGraph]:
+def get_recursion_subgraph(
+        facts: frozenset, supernode_symbols: frozenset,
+        transformation: Transformation, conflict_free_h: str,
+        analyzer: ProgramAnalyzer) -> Union[bool, nx.DiGraph]:
     """
     Get a recursion explanation for the given facts and the recursive transformation.
     Generate graph from explanation, sorted by the iteration step number.
@@ -217,71 +217,26 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
     :param transformation: The recursive transformation. An ast object.
     :param conflict_free_h: The name of the h predicate.
     """
-    # get_conflict_free_model = analyzer.get_conflict_free_model()
-    # get_conflict_free_iterindex = analyzer.get_conflict_free_iterindex()
-
     init = [fact.symbol for fact in facts]
     justification_program = ""
-    model_str: str = analyzer.get_conflict_free_model() if analyzer else "model"
+    model_str: str = analyzer.get_conflict_free_model(
+    ) if analyzer else "model"
     n_str: str = analyzer.get_conflict_free_iterindex() if analyzer else "n"
 
-    for rule in transformation.rules:
-        deps = defaultdict(list)
-        loc = rule.location
+    justifier_rules = reify_recursion_transformation(
+        transformation,
+        h=analyzer.get_conflict_free_h(),
+        h_showTerm=analyzer.get_conflict_free_h_showTerm(),
+        model=analyzer.get_conflict_free_model(),
+        conflict_free_showTerm=analyzer.get_conflict_free_showTerm(),
+        get_conflict_free_variable=analyzer.get_conflict_free_variable,
+        clear_temp_names=analyzer.clear_temp_names,
+        conflict_free_model=analyzer.get_conflict_free_model(),
+        conflict_free_iterindex=analyzer.get_conflict_free_iterindex(),
+    )
+    justification_program += "\n".join(map(str, justifier_rules))
+    justification_program += f"\n{model_str}(@new())."
 
-        _ = analyzer.visit(rule.head, deps=deps) # type: ignore
-        if not deps:
-            deps[rule.head] = []
-        for dependant, conditions in deps.items():
-            if has_an_interval(dependant):
-                # replace dependant with variable: e.g. (1..3) -> X
-                variables = [
-                    ast.Variable(loc, analyzer.get_conflict_free_variable())
-                    if arg.ast_type == ast.ASTType.Interval else arg
-                    for arg in dependant.atom.symbol.arguments
-                ]
-                symbol = ast.SymbolicAtom(ast.Function(loc,
-                                                        dependant.atom.symbol.name,
-                                                        variables,
-                                                        False))
-                dependant = ast.Literal(loc, ast.Sign.NoSign, symbol)
-
-            reason_literals: List[ast.Literal] = [] # type: ignore
-            _ = analyzer.visit_sequence(
-                rule.body, reasons=reason_literals, conditions=conditions, rename_variables=False)
-            loc_fun = ast.Function(loc, n_str, [], False)
-            loc_atm = ast.SymbolicAtom(loc_fun)
-            loc_lit = ast.Literal(loc, ast.Sign.NoSign, loc_atm)
-            for literal in conditions:
-                if literal.atom.ast_type == ast.ASTType.SymbolicAtom:
-                    reason_literals.append(literal.atom)
-            reason_literals.reverse()
-            reason_literals = [r for i,r in enumerate(reason_literals) if r not in reason_literals[:i]]
-            reason_fun = ast.Function(loc, '', reason_literals, 0)
-            reason_lit = ast.Literal(loc, ast.Sign.NoSign, reason_fun)
-
-            new_head_s = [
-                ast.Function(loc, analyzer.get_conflict_free_h(),
-                             [loc_lit, dependant, reason_lit], 0)
-            ]
-
-            conditions.extend(conditions)
-            # Remove duplicates but preserve order
-            conditions = [
-                x for i, x in enumerate(conditions) if x not in conditions[:i]
-            ]
-            conditions = [
-                ast.Function(loc, model_str, [bb], 0)
-                for bb in filter(filter_body_aggregates, conditions)
-            ]
-            conditions.append(
-                ast.Function(loc, f"not {model_str}", [dependant], 0))
-            justification_program += "\n".join(
-                map(str, (ast.Rule(rule.location, new_head, conditions)
-                          for new_head in new_head_s)))
-    # TODO: add proper edge generation
-
-    justification_program += f"{model_str}(@new())."
     h_syms = set()
 
     try:
@@ -293,8 +248,11 @@ def get_recursion_subgraph(facts: frozenset, supernode_symbols: frozenset,
     except RuntimeError:
         return False
 
-    h_syms = collect_h_symbols_and_create_nodes(h_syms, relevant_indices = [], pad = False, supernode_symbols = supernode_symbols)
-    # here: rule_nr is iteration number
+    h_syms = collect_h_symbols_and_create_nodes(
+        h_syms,
+        relevant_indices=[],
+        pad=False,
+        supernode_symbols=supernode_symbols)
     h_syms.sort(key=lambda node: node.rule_nr)
     h_syms.insert(0, Node(frozenset(facts), -1))
     insert_atoms_into_nodes(h_syms)

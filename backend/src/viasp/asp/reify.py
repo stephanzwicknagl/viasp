@@ -10,8 +10,9 @@ from clingo.ast import (
     ASTType,
     AST,
 )
+from viasp.shared.util import hash_transformation_rules
 
-from .utils import is_constraint, merge_constraints, topological_sort
+from .utils import is_constraint, merge_constraints, topological_sort, filter_body_aggregates
 from ..asp.utils import merge_cycles, remove_loops
 from viasp.asp.ast_types import (
     SUPPORTED_TYPES,
@@ -112,9 +113,9 @@ class DependencyCollector(Transformer):
 
         if in_head:
             # collect deps for choice rules
-            deps[conditional_literal.literal] = []
+            deps[conditional_literal.literal] = ([], [])
             for condition in conditional_literal.condition:
-                deps[conditional_literal.literal].append(condition)
+                deps[conditional_literal.literal][0].append(condition)
         if (not in_aggregate and not in_analyzer):
             # add simple Cond.Literals from rule body to justifier rule body
             conditions.append(conditional_literal)
@@ -127,6 +128,7 @@ class DependencyCollector(Transformer):
             literal: ast.Literal,  # type: ignore
             **kwargs: Any) -> AST:
         conditions: List[AST] = kwargs.get("conditions", [])
+        positive_conditions: List[AST] = kwargs.get("positive_conditions", [])
         in_analyzer = kwargs.get("in_analyzer", False)
         in_aggregate = kwargs.get("in_aggregate", False)
 
@@ -134,6 +136,8 @@ class DependencyCollector(Transformer):
                 not in [ASTType.Aggregate, ASTType.BodyAggregate]):
             # all non-aggregate Literals in the rule body are conditions of the rule
             conditions.append(literal)
+            if literal.sign == ast.Sign.NoSign and not in_aggregate:
+                positive_conditions.append(literal)
         if (not in_analyzer and not in_aggregate):
             # add all Literals outside of aggregates from rule body to justifier rule body
             conditions.append(literal)
@@ -162,11 +166,12 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
     def __init__(self):
         super().__init__()
-        self.dependants: Dict[Tuple[str, int], Set[AST]] = defaultdict(set)
-        self.conditions: Dict[Tuple[str, int], Set[AST]] = defaultdict(set)
-        self.positive_conditions: Dict[Tuple[
-            str, int], Set[ast.Rule]] = defaultdict(  # type: ignore
-                set)
+        self.dependants: Dict[Tuple[str, int],
+                              Set[ast.Rule]] = defaultdict(set)  # type: ignore
+        self.conditions: Dict[Tuple[str, int],
+                              Set[ast.Rule]] = defaultdict(set)  # type: ignore
+        self.positive_conditions: Dict[Tuple[str, int],
+                                       Set[ast.Rule]] = defaultdict(set)  # type: ignore
         self.rule2signatures = defaultdict(set)
         self.facts: Set[Symbol] = set()
         self.constants: Set[Symbol] = set()
@@ -366,22 +371,13 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             ast.Literal,  # type: ignore
             List[ast.Literal]]  # type: ignore
     ) -> None:
-        for uu in deps.values():
-            for u in filter(filter_body_arithmetic, uu):
-                u_sig = make_signature(u)
-                self.conditions[u_sig].add(rule)
-                for body_item in rule.body:
-                    if (hasattr(body_item, "atom")
-                            and hasattr(body_item.atom, "ast_type") and
-                            body_item.atom.ast_type == ASTType.SymbolicAtom):
-                        if (hasattr(body_item.atom.symbol, "name")
-                                and hasattr(u, "atom")
-                                and hasattr(u.atom, "symbol")
-                                and hasattr(u.atom.symbol, "name")
-                                and body_item.atom.symbol.name
-                                == u.atom.symbol.name
-                                and body_item.sign == ast.Sign.NoSign):
-                            self.positive_conditions[u_sig].add(rule)
+        for (cond, pos_cond) in deps.values():
+            for c in filter(filter_body_arithmetic, cond):
+                c_sig = make_signature(c)
+                self.conditions[c_sig].add(rule)
+            for c in filter(filter_body_arithmetic, pos_cond):
+                c_sig = make_signature(c)
+                self.positive_conditions[c_sig].add(rule)
 
         for v in deps.keys():
             if v.ast_type == ASTType.Literal and v.atom.ast_type != ASTType.BooleanConstant:
@@ -395,27 +391,25 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         return body_aggregate_elements
 
     def process_body(self, head, body, deps, in_analyzer=True):
-        for b in body:
-            self.visit(b, deps=deps)
         if not len(deps) and len(body):
-            deps[head] = []
-        for _, cond in deps.items():
-            self.visit_sequence(body, conditions=cond, in_analyzer=in_analyzer)
+            deps[head] = ([], [])
+        for _, (cond, pos_cond) in deps.items():
+            self.visit_sequence(body, conditions=cond, positive_conditions=pos_cond, in_analyzer=in_analyzer)
 
     def register_dependencies_and_append_rule(self, rule, deps):
         self.register_rule_dependencies(rule, deps)
         self.rules.append(rule)
 
     def visit_Rule(self, rule: ast.Rule):  # type: ignore
-        deps = defaultdict(list)
+        deps = defaultdict(tuple)
         _ = self.visit(rule.head, deps=deps, in_head=True)
         self.process_body(rule.head, rule.body, deps)
+        self.register_dependencies_and_append_rule(rule, deps)
         if is_fact(rule, deps):
             self.facts.add(rule.head)
-        self.register_dependencies_and_append_rule(rule, deps)
 
     def visit_ShowTerm(self, showTerm: ast.ShowTerm):  # type: ignore
-        deps = defaultdict(list)
+        deps = defaultdict(tuple)
         _ = self.visit(showTerm.term, deps=deps, in_head=True)
         head_literal = ast.Literal(showTerm.location, ast.Sign.NoSign,
                                    ast.SymbolicAtom(showTerm.term))
@@ -492,17 +486,17 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
         for deps in head_dependencies.values():
             for dep in deps:
-                g.add_node(frozenset([dep]))
+                g.add_node(tuple([dep]))
         for deps in body_dependencies.values():
             for dep in deps:
-                g.add_node(frozenset([dep]))
+                g.add_node(tuple([dep]))
 
         for head_signature, rules_with_head in head_dependencies.items():
             dependent_rules = body_dependencies.get(head_signature, [])
             for parent_rule in rules_with_head:
                 for dependent_rule in dependent_rules:
-                    g.add_edge(frozenset([parent_rule]),
-                               frozenset([dependent_rule]))
+                    g.add_edge(tuple([parent_rule]),
+                               tuple([dependent_rule]))
 
         return g
 
@@ -523,29 +517,30 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         programs = topological_sort(deps, self.rules)
         return programs
 
-    def check_positive_recursion(self):
+    def check_positive_recursion(self) -> Set[str]:
         deps1 = self.make_dependency_graph(self.dependants,
                                            self.positive_conditions)
         deps1 = merge_constraints(deps1)
         deps2, where1 = merge_cycles(deps1)
         _, where2 = remove_loops(deps2)
-        return {
-            recursive_set
-            for recursive_set in where1.union(where2)
-            if self.should_include_recursive_set(recursive_set)
-        }
 
-    def should_include_recursive_set(self, recursive_set):
+        recursion_rules = set()
+        for t in where1.union(where2):
+            if self.should_include_recursive_set(t):
+                recursion_rules.add(hash_transformation_rules(t))
+        return recursion_rules
+
+    def should_include_recursive_set(self, recursive_tuple: Tuple[AST, ...]):
         """
         Drop the set of integrity constraints from the recursive set.
         """
-        for rule in recursive_set:
+        for rule in recursive_tuple:
             head = getattr(rule, "head", None)
             atom = getattr(head, "atom", None)
             ast_type = getattr(atom, "ast_type", None)
-            if ast_type != ASTType.BooleanConstant:
-                return True
-        return False
+            if ast_type == ASTType.BooleanConstant:
+                return False
+        return True
 
 
 class ProgramReifier(DependencyCollector):
@@ -566,6 +561,11 @@ class ProgramReifier(DependencyCollector):
         self.clear_temp_names = clear_temp_names
         self.conflict_free_showTerm = conflict_free_showTerm
 
+    def make_loc_lit(self, loc: ast.Location) -> ast.Literal:  # type: ignore
+        loc_fun = ast.Function(loc, str(self.rule_nr), [], False)
+        loc_atm = ast.SymbolicAtom(loc_fun)
+        return ast.Literal(loc, ast.Sign.NoSign, loc_atm)
+
     def _nest_rule_head_in_h_with_explanation_tuple(
         self,
         loc: ast.Location,
@@ -580,9 +580,7 @@ class ProgramReifier(DependencyCollector):
         """
         reasons: List[ast.Literal] = []  # type: ignore
 
-        loc_fun = ast.Function(loc, str(self.rule_nr), [], False)
-        loc_atm = ast.SymbolicAtom(loc_fun)
-        loc_lit = ast.Literal(loc, ast.Sign.NoSign, loc_atm)
+        loc_lit = self.make_loc_lit(loc)
         for literal in conditions:
             if hasattr(literal, "sign") and \
                 literal.sign == ast.Sign.NoSign and \
@@ -592,7 +590,8 @@ class ProgramReifier(DependencyCollector):
                 reasons.append(literal.atom)
         reasons.reverse()
         reasons = [r for i, r in enumerate(reasons) if r not in reasons[:i]]
-        reason_fun = ast.Function(loc, "", reasons, 0)
+        reason_fun = ast.Function(loc, "",
+                                  [r for r in reasons if r is not None], 0)
         reason_lit = ast.Literal(loc, ast.Sign.NoSign, reason_fun)
 
         h_attribute = self.h_showTerm if use_h_showTerm else self.h
@@ -603,6 +602,26 @@ class ProgramReifier(DependencyCollector):
 
     def post_rule_creation(self):
         self.clear_temp_names()
+
+    def process_dependant_intervals(
+            self, loc: ast.Location,
+            dependant: Union[ast.Literal, ast.Function]):  # type: ignore
+        if dependant.ast_type == ASTType.Function:
+            print(f"Type of dependant {dependant.ast_type}, going to make lit",
+                  flush=True)
+            dependant = ast.Literal(loc, ast.Sign.NoSign, ast.SymbolicAtom(dependant))
+        if has_an_interval(dependant):
+            # replace dependant with variable: e.g. (1..3) -> X
+            variables = [
+                ast.Variable(loc, self.get_conflict_free_variable())
+                if arg.ast_type == ASTType.Interval else arg
+                for arg in dependant.atom.symbol.arguments
+            ]
+            symbol = ast.SymbolicAtom(
+                ast.Function(loc, dependant.atom.symbol.name, variables,
+                             False))
+            dependant = ast.Literal(loc, ast.Sign.NoSign, symbol)
+        return dependant
 
     def visit_Rule(self, rule: ast.Rule) -> List[AST]:  # type: ignore
         """
@@ -616,7 +635,7 @@ class ProgramReifier(DependencyCollector):
         :param rule: The rule to reify
         :return: A list of new rules"""
         # Embed the head
-        deps = defaultdict(list)
+        deps = defaultdict(tuple)
         loc = rule.location
         _ = self.visit(rule.head, deps=deps, in_head=True)
 
@@ -624,20 +643,10 @@ class ProgramReifier(DependencyCollector):
             return [rule]
         if not deps:
             # if it's a "simple head"
-            deps[rule.head] = []
+            deps[rule.head] = ([], [])
         new_rules: List[ast.Rule] = []  # type: ignore
-        for dependant, conditions in deps.items():
-            if has_an_interval(dependant):
-                # replace dependant with variable: e.g. (1..3) -> X
-                variables = [
-                    ast.Variable(loc, self.get_conflict_free_variable())
-                    if arg.ast_type == ASTType.Interval else arg
-                    for arg in dependant.atom.symbol.arguments
-                ]
-                symbol = ast.SymbolicAtom(
-                    ast.Function(loc, dependant.atom.symbol.name, variables,
-                                 False))
-                dependant = ast.Literal(loc, ast.Sign.NoSign, symbol)
+        for dependant, (conditions, _) in deps.items():
+            dependant = self.process_dependant_intervals(loc, dependant)
 
             _ = self.visit_sequence(
                 rule.body,
@@ -667,17 +676,7 @@ class ProgramReifier(DependencyCollector):
         _ = self.visit(showTerm.term, deps=deps, in_head=True)
 
         new_rules = []
-        if has_an_interval(showTerm.term):
-            # replace dependant with variable: e.g. (1..3) -> X
-            variables = [
-                ast.Variable(loc, self.get_conflict_free_variable())
-                if arg.ast_type == ASTType.Interval else arg
-                for arg in showTerm.term.atom.symbol.arguments
-            ]
-            symbol = ast.SymbolicAtom(
-                ast.Function(loc, showTerm.term.atom.symbol.name, variables,
-                             False))
-            showTerm.term = ast.Literal(loc, ast.Sign.NoSign, symbol)
+        showTerm.term = self.process_dependant_intervals(loc, showTerm.term)
 
         conditions: List[AST] = []
         _ = self.visit_sequence(
@@ -722,6 +721,84 @@ class ProgramReifier(DependencyCollector):
                             )
             except AttributeError:
                 continue
+
+
+class LiteralWrapper(Transformer):
+
+    def __init__(self, *args, **kwargs):
+        self.wrap_str: str = kwargs.pop("wrap_str", "model")
+        self.no_wrap_types: List[ASTType] = [
+            ASTType.Aggregate, ASTType.BodyAggregate, ASTType.Comparison,
+            ASTType.BooleanConstant
+        ]
+        super().__init__(*args, **kwargs)
+
+    def visit_Literal(self,
+                      literal: ast.Literal) -> ast.Literal:  # type: ignore
+        if literal.atom.ast_type in self.no_wrap_types:
+            return literal.update(**self.visit_children(literal))
+        wrap_fun = ast.Function(literal.location, self.wrap_str, [literal], 0)
+        wrap_atm = ast.SymbolicAtom(wrap_fun)
+        return ast.Literal(literal.location, ast.Sign.NoSign, wrap_atm)
+
+
+class ProgramReifierForRecursions(ProgramReifier):
+
+    def __init__(self, *args, **kwargs):
+        self.model_str: str = kwargs.pop("conflict_free_model", "model")
+        self.n_str: str = kwargs.pop("conflict_free_iterindex", "n")
+        super().__init__(*args, **kwargs)
+
+    def visit_Rule(self, rule: ast.Rule) -> List[AST]:  # type: ignore
+        deps = defaultdict(list)
+        loc = cast(ast.Location, rule.location)
+        _ = self.visit(rule.head, deps=deps, in_head=True)
+
+        if is_fact(rule, deps) or is_constraint(rule):
+            return [rule]
+        if not deps:
+            # if it's a "simple head"
+            deps[rule.head] = []
+        new_rules: List[ast.Rule] = []  # type: ignore
+        for dependant, conditions in deps.items():
+            dependant = self.process_dependant_intervals(loc, dependant)
+
+            _ = self.visit_sequence(
+                rule.body,
+                conditions=conditions,
+            )
+
+
+            self.replace_anon_variables(conditions)
+            new_head_s = self._nest_rule_head_in_h_with_explanation_tuple(
+                rule.location, dependant, conditions)
+
+            # Remove duplicates but preserve order
+            conditions = [
+                x for i, x in enumerate(conditions) if x not in conditions[:i]
+            ]
+
+            # Wrap in model function
+            wrapper = LiteralWrapper(wrap_str=self.model_str)
+            conditions = [wrapper.visit(c) for c in conditions]
+
+            # Append dependant (wrapped, negated)
+            dep_fun = ast.Function(loc, f"{self.model_str}", [dependant], 0)
+            dep_atm = ast.SymbolicAtom(dep_fun)
+            conditions.append(ast.Literal(loc, ast.Sign.Negation, dep_atm))
+
+            new_rules.extend([
+                ast.Rule(rule.location, new_head, conditions)
+                for new_head in new_head_s
+            ])
+            self.post_rule_creation()
+
+        return new_rules
+
+    def make_loc_lit(self, loc: ast.Location) -> ast.Literal:  # type: ignore
+        loc_fun = ast.Function(loc, self.n_str, [], False)
+        loc_atm = ast.SymbolicAtom(loc_fun)
+        return ast.Literal(loc, ast.Sign.NoSign, loc_atm)
 
 
 
@@ -792,3 +869,18 @@ def has_an_interval(literal: ast.Literal) -> bool:  # type: ignore
     except AttributeError:
         return False
     return False
+
+
+def reify_recursion_transformation(transformation: Transformation, **kwargs) -> List[AST]:
+    visitor = ProgramReifierForRecursions(**kwargs)
+    result: List[AST] = []
+    rules = transformation.rules
+    if any(isinstance(r, str) for r in rules):
+        rules_str = rules
+        rules = []
+        for rule in rules_str:
+            parse_string(rule, lambda rule: rules.append(rule) if rule.ast_type != ASTType.Program else None)
+
+    for r in rules:
+        result.extend(cast(Iterable[AST], visitor.visit(r)))
+    return result

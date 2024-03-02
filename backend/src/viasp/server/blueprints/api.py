@@ -12,7 +12,7 @@ from clingraph.graphviz import compute_graphs, render
 from .dag_api import generate_graph, set_current_graph, wrap_marked_models, \
         load_program, load_transformer, load_models, \
         load_clingraph_names
-from ..database import CallCenter, get_database, set_models, clear_models, save_many_sorts, save_clingraph, clear_clingraph, save_transformer, save_warnings, clear_warnings, load_warnings, save_warnings
+from ..database import CallCenter, get_database, save_recursive_transformations_hashes, set_models, clear_models, save_many_sorts, save_clingraph, clear_clingraph, save_transformer, save_warnings, clear_warnings, load_warnings, save_warnings
 from ...asp.reify import ProgramAnalyzer
 from ...asp.relax import ProgramRelaxer, relax_constraints
 from ...shared.model import ClingoMethodCall, StableModel, TransformerTransport
@@ -158,7 +158,9 @@ def set_primary_sort(analyzer: ProgramAnalyzer):
 
 
 def save_analyzer_values(analyzer: ProgramAnalyzer):
-    pass
+    save_recursive_transformations_hashes(analyzer.check_positive_recursion())
+
+
 
 @bp.route("/control/show", methods=["POST"])
 def show_selected_models():
@@ -171,8 +173,8 @@ def show_selected_models():
                                        analyzer.get_conflict_free_showTerm())
     if analyzer.will_work():
         save_all_sorts(analyzer, batch_size=1000)
-        set_primary_sort(analyzer)
         save_analyzer_values(analyzer)
+        set_primary_sort(analyzer)
 
     return "ok", 200
 

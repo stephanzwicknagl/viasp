@@ -4,6 +4,7 @@ from typing import Set, List, Union, Tuple, Optional, Sequence
 from uuid import UUID
 from flask import current_app, g
 import networkx as nx
+import pickle
 
 from clingo.ast import Transformer
 
@@ -132,6 +133,17 @@ def get_graph_json() -> str:
     return get_database().load_current_graph_json(encoding_id)
 
 
+def save_recursive_transformations_hashes(transformation_hashes: Set[str]):
+    encoding_id = get_or_create_encoding_id()
+    get_database().save_recursive_transformations_hashes(
+        transformation_hashes, encoding_id)
+
+
+def load_recursive_transformations_hashes() -> Set[str]:
+    encoding_id = get_or_create_encoding_id()
+    return get_database().load_recursive_transformations_hashes(encoding_id)
+
+
 def save_clingraph(filename: str):
     database = get_database()
     encoding_id = get_or_create_encoding_id()
@@ -213,6 +225,14 @@ class GraphAccessor:
                 hash TEXT PRIMARY KEY,
                 encoding_id TEXT,
                 FOREIGN KEY(hash) REFERENCES graphs(hash)
+                FOREIGN KEY(encoding_id) REFERENCES encodings(id)
+            )
+        """)
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS recursion (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                encoding_id TEXT,
+                recursive_hash TEXT,
                 FOREIGN KEY(encoding_id) REFERENCES encodings(id)
             )
         """)
@@ -406,6 +426,34 @@ class GraphAccessor:
             loaded_sorts = loaded_sorts[
                 index_of_current_sort:] + loaded_sorts[:index_of_current_sort]
         return loaded_sorts
+
+    # # # # # # # #
+    #  RECURSION  #
+    # # # # # # # #
+
+    def save_recursive_transformations_hashes(self, transformations: Set[str],
+                                      encoding_id: str):
+        for t in transformations:
+            self.cursor.execute(
+                """
+                INSERT INTO recursion (encoding_id, recursive_hash) VALUES (?, ?)
+            """, (encoding_id, t))
+        self.conn.commit()
+
+    def load_recursive_transformations_hashes(self, encoding_id: str) -> Set[str]:
+        self.cursor.execute(
+            """
+            SELECT recursive_hash FROM recursion WHERE encoding_id = (?)
+        """, (encoding_id, ))
+        result = self.cursor.fetchall()
+        return {r[0] for r in result}
+    
+    def clear_recursive_transformations_hashes(self, encoding_id: str):
+        self.cursor.execute(
+            """
+            DELETE FROM recursion WHERE encoding_id = (?)
+        """, (encoding_id, ))
+        self.conn.commit()
 
     # # # # # # # #
     #  CLINGRAPH  #

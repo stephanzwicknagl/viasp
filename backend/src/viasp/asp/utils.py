@@ -24,9 +24,9 @@ def merge_constraints(g: nx.DiGraph) -> nx.DiGraph:
     return nx.relabel_nodes(g, mapping)
 
 
-def merge_cycles(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[AST]]:
+def merge_cycles(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[Tuple[AST,...]]]:
     mapping: Dict[AST, AST] = {}
-    merge_node: FrozenSet[AST] = frozenset()
+    merge_node: Tuple[AST, ...] = ()
     where_recursion_happens = set()
     for cycle in nx.algorithms.components.strongly_connected_components(g):
         merge_node = merge_nodes(cycle)
@@ -38,14 +38,14 @@ def merge_cycles(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[AST]]:
     return nx.relabel_nodes(g, mapping), frozenset(where_recursion_happens)
 
 
-def merge_nodes(nodes: frozenset) -> FrozenSet[AST]:
+def merge_nodes(nodes: frozenset) -> Tuple[AST, ...]:
     old = set()
     for x in nodes:
         old.update(x)
-    return frozenset(old)
+    return tuple(old)
 
 
-def remove_loops(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[AST]]:
+def remove_loops(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[Tuple[AST, ...]]]:
     remove_edges: List[Tuple[AST, AST]] = []
     where_recursion_happens: Set[AST] = set()
     for edge in g.edges:
@@ -235,3 +235,14 @@ def topological_sort(g: nx.DiGraph, rules: Sequence[ast.Rule]) -> List:  # type:
         raise Exception("Could not sort the graph.")
     return sorted
 
+
+def filter_body_aggregates(element: AST):
+    aggregate_types = [
+        ASTType.Aggregate, ASTType.BodyAggregate, ASTType.ConditionalLiteral
+    ]
+    if (element.ast_type in aggregate_types):
+        return False
+    if (getattr(getattr(element, "atom", None), "ast_type", None)
+            in aggregate_types):
+        return False
+    return True

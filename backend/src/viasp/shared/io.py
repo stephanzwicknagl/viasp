@@ -277,7 +277,7 @@ def get_rules_from_input_program(rules) -> Sequence[str]:
                 r += program[i] + "\n"
             r += program[end_line - 1][:end_colu]
         else:
-            r += program[begin_line - 1][begin_colu - 1:end_colu]
+            r += program[begin_line - 1][begin_colu - 1:end_colu-1]
         r = append_hashtag_to_minimize(r, rule, program, begin_line, begin_colu)
         rules_from_input_program.append(r)
     return rules_from_input_program

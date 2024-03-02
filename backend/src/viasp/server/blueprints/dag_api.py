@@ -6,7 +6,7 @@ from flask.cli import F
 import igraph
 import networkx as nx
 import numpy as np
-from flask import Blueprint, request, jsonify, abort, Response, send_file, session
+from flask import Blueprint, current_app, request, jsonify, abort, Response, send_file, session
 from clingo.ast import AST
 
 from ...asp.reify import ProgramAnalyzer, reify_list
@@ -15,7 +15,7 @@ from ...shared.defaults import STATIC_PATH
 from ...shared.model import Transformation, Node, Signature
 from ...shared.util import get_start_node_from_graph, is_recursive, hash_from_sorted_transformations
 from ...shared.io import StableModel
-from ..database import save_graph, get_graph, clear_graph, set_current_graph, get_all_sorts, get_current_sort, load_program, load_transformer, load_models, load_clingraph_names
+from ..database import load_recursive_transformations_hashes, save_graph, get_graph, clear_graph, set_current_graph, get_all_sorts, get_current_sort, load_program, load_transformer, load_models, load_clingraph_names
 
 from uuid import uuid4
 
@@ -394,7 +394,7 @@ def generate_graph() -> nx.DiGraph:
     marked_models = wrap_marked_models(marked_models,
                                        analyzer.get_conflict_free_showTerm())
     if analyzer.will_work():
-        recursion_rules = analyzer.check_positive_recursion()
+        recursion_rules = load_recursive_transformations_hashes()
         sorted_program = get_current_sort()
         reified: Collection[AST] = reify_list(
             sorted_program,
