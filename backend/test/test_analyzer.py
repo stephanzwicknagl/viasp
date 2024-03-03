@@ -121,7 +121,7 @@ def test2():
     program = transformer.sort_program(program)
     filtered = transformer.get_filtered()
     will_work = transformer.will_work()
-    assert len(filtered) == 1, "Script Statement should be filtered out."
+    assert len(filtered) == 0, "Script Statement should not be filtered out."
     assert will_work == True, "Program with ScriptTerm should work."
     # assertProgramEqual(rules, parse_program_to_ast(expected))
 

@@ -1,11 +1,7 @@
 from typing import List
 
-from clingo import Control
 from clingo.ast import AST, ASTType, parse_string
-import pytest
 
-from viasp.asp.ast_types import (SUPPORTED_TYPES, UNSUPPORTED_TYPES,
-                                 make_unknown_AST_enum_types)
 from viasp.asp.reify import ProgramAnalyzer, transform
 
 

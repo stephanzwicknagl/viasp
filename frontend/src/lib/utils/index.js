@@ -13,6 +13,8 @@ export function make_atoms_string(atoms) {
         }
         case "SymbolIdentifier":
             return make_atoms_string(atoms.symbol)
+        case "String":
+            return `"${atoms.string}"`;
         default:
             throw new TypeError(`Unimplemented type ${atoms._type}`)
 

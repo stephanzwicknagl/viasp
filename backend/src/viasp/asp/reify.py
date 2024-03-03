@@ -101,6 +101,10 @@ class FilteredTransformer(Transformer):
 
 class DependencyCollector(Transformer):
 
+    def __init__(self, **kwargs):
+        self.compound_atoms_types: List = [ASTType.Aggregate, ASTType.BodyAggregate, ASTType.Comparison]
+        self.in_analyzer = kwargs.get("in_analyzer", False)
+
     def visit_ConditionalLiteral(
             self,
             conditional_literal: ast.ConditionalLiteral,  # type: ignore
@@ -129,16 +133,15 @@ class DependencyCollector(Transformer):
             **kwargs: Any) -> AST:
         conditions: List[AST] = kwargs.get("conditions", [])
         positive_conditions: List[AST] = kwargs.get("positive_conditions", [])
-        in_analyzer = kwargs.get("in_analyzer", False)
         in_aggregate = kwargs.get("in_aggregate", False)
 
-        if (in_analyzer and literal.atom.ast_type
-                not in [ASTType.Aggregate, ASTType.BodyAggregate]):
-            # all non-aggregate Literals in the rule body are conditions of the rule
+        if (self.in_analyzer
+                and literal.atom.ast_type not in self.compound_atoms_types):
+            # all non-compound Literals in the rule body are conditions of the rule
             conditions.append(literal)
             if literal.sign == ast.Sign.NoSign and not in_aggregate:
                 positive_conditions.append(literal)
-        if (not in_analyzer and not in_aggregate):
+        if (not self.in_analyzer and not in_aggregate):
             # add all Literals outside of aggregates from rule body to justifier rule body
             conditions.append(literal)
         return literal.update(**self.visit_children(literal, **kwargs))
@@ -165,7 +168,8 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     """
 
     def __init__(self):
-        super().__init__()
+        DependencyCollector.__init__(self, in_analyzer=True)
+        FilteredTransformer.__init__(self)
         self.dependants: Dict[Tuple[str, int],
                               Set[ast.Rule]] = defaultdict(set)  # type: ignore
         self.conditions: Dict[Tuple[str, int],
@@ -560,6 +564,7 @@ class ProgramReifier(DependencyCollector):
         self.get_conflict_free_variable = get_conflict_free_variable
         self.clear_temp_names = clear_temp_names
         self.conflict_free_showTerm = conflict_free_showTerm
+        super().__init__(in_analyzer=False)
 
     def make_loc_lit(self, loc: ast.Location) -> ast.Literal:  # type: ignore
         loc_fun = ast.Function(loc, str(self.rule_nr), [], False)
@@ -607,8 +612,6 @@ class ProgramReifier(DependencyCollector):
             self, loc: ast.Location,
             dependant: Union[ast.Literal, ast.Function]):  # type: ignore
         if dependant.ast_type == ASTType.Function:
-            print(f"Type of dependant {dependant.ast_type}, going to make lit",
-                  flush=True)
             dependant = ast.Literal(loc, ast.Sign.NoSign, ast.SymbolicAtom(dependant))
         if has_an_interval(dependant):
             # replace dependant with variable: e.g. (1..3) -> X
@@ -750,7 +753,7 @@ class ProgramReifierForRecursions(ProgramReifier):
         super().__init__(*args, **kwargs)
 
     def visit_Rule(self, rule: ast.Rule) -> List[AST]:  # type: ignore
-        deps = defaultdict(list)
+        deps = defaultdict(tuple)
         loc = cast(ast.Location, rule.location)
         _ = self.visit(rule.head, deps=deps, in_head=True)
 
@@ -758,9 +761,9 @@ class ProgramReifierForRecursions(ProgramReifier):
             return [rule]
         if not deps:
             # if it's a "simple head"
-            deps[rule.head] = []
+            deps[rule.head] = ([],[])
         new_rules: List[ast.Rule] = []  # type: ignore
-        for dependant, conditions in deps.items():
+        for dependant, (conditions, _) in deps.items():
             dependant = self.process_dependant_intervals(loc, dependant)
 
             _ = self.visit_sequence(
