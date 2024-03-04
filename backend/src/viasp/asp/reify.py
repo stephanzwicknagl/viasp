@@ -708,6 +708,9 @@ class ProgramReifier(DependencyCollector):
 
         return new_rules
 
+    def visit_Minimize(self, minimize: ast.Minimize):  # type: ignore
+        return [minimize]
+
     def replace_anon_variables(
             self, literals: List[ast.Literal]) -> None:  # type: ignore
         """

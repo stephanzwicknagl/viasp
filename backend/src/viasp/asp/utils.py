@@ -47,7 +47,7 @@ def merge_nodes(nodes: frozenset) -> Tuple[AST, ...]:
 
 def remove_loops(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[Tuple[AST, ...]]]:
     remove_edges: List[Tuple[AST, AST]] = []
-    where_recursion_happens: Set[AST] = set()
+    where_recursion_happens: Set[Tuple[AST]] = set()
     for edge in g.edges:
         u, v = edge
         if u == v:
