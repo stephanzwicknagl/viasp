@@ -68,6 +68,10 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
                                       colorPalette=color_palette)
     app.title = "viASP"
 
+    # suppress dash's flask server banner
+    cli = sys.modules['flask.cli']
+    cli.show_server_banner = lambda *x: None  # type: ignore
+    
     # make sure the backend is up, before continuing with other modules
     t_start = time()
     while True:

@@ -195,4 +195,8 @@ def start():
                             graphviz_type=graphviz_type)
 
     webbrowser.open(f"http://{host}:{frontend_port}")
-    app.run(host=host, port=frontend_port, use_reloader=False, debug=False)
+    app.run(host=host,
+            port=frontend_port,
+            use_reloader=False,
+            debug=False,
+            dev_tools_silence_routes_logging=True)
