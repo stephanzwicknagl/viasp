@@ -12,4 +12,4 @@ dash-html-components
 igraph>=0.8
 numpy
 clingraph
-
+retrying

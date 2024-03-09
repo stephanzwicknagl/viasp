@@ -11,6 +11,7 @@ directly from strings or files containing the corresponding facts.
 
 from inspect import signature
 from typing import List, cast, Union
+import webbrowser
 
 import clingo
 from clingo import Control as InnerControl
@@ -18,14 +19,17 @@ from clingo import Model as clingo_Model
 from clingo import ast
 from clingo.ast import AST, ASTSequence, ASTType, Transformer
 from clingo.symbol import Symbol
+from clingo.script import enable_python
 
-from .shared.defaults import STDIN_TMP_STORAGE_PATH
-from .shared.io import clingo_symbols_to_stable_model
+from .shared.defaults import DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT, DEFAULT_FRONTEND_PORT, STDIN_TMP_STORAGE_PATH, DEFAULT_BACKEND_PROTOCOL
+from .shared.io import clingo_symbols_to_stable_model, clingo_model_to_stable_model
 from .shared.model import StableModel
 from .wrapper import ShowConnector, Control as viaspControl
 from .exceptions import InvalidSyntax
+from .server import startup
 
 __all__ = [
+    "viasp",
     "load_program_file",
     "load_program_string",
     "add_program_file",
@@ -63,6 +67,112 @@ def _get_program_string(path: Union[str, List[str]]) -> str:
         with open(p, encoding="utf-8") as f:
             prg += "".join(f.readlines())
     return prg
+
+
+def _is_running_in_notebook():
+    try:
+        shell = get_ipython().__class__.__name__  # type: ignore
+        if shell == 'ZMQInteractiveShell':
+            return True  # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False  # Probably standard Python interpreter
+
+
+def viasp(**kwargs) -> None:
+    r"""
+    Single endpoint to start a viasp visualization. 
+    This function loads the input program, solves it, and visualizes the models.
+    Optional settings for the visualization can be provided.
+
+    :param \**kwargs: 
+        * *models* (``int``) --
+            number of models to compute, defaults to `0` (compute all)
+        * *paths* (``list``) --
+            list of paths to program files
+        * *opt_mode* (``tuple``) --
+            optimization mode and bounds, defaults to `('opt', [])`
+        * *viz_encoding* (``str``) --
+            path to the clingraph visualization encoding
+        * *engine* (``str``) --
+            clingraph visualization engine, defaults to "dot"
+        * *graphviz_type* (``str``) --
+            clingraph graph type, default "graph"
+        * *no_relaxer* (``bool``) --
+            do not relax constraints of unsatisfiable programs, defaults to `False`
+        * *head_name* (``str``) --
+            name of head literal in relaxed program, defaults to "unsat"
+        * *no_collect_variables* (``bool``) --
+            do not collect variables from body in relaxed program, defaults to `False`
+        * *host* (``str``) --
+            host of the backend, defaults to `localhost`
+        * *port* (``int``) --
+            port of the backend, defaults to `5050`
+        * *frontend_port* (``int``) --
+            port of the frontend, defaults to `8050`
+    """
+    models = kwargs.get("models", 0)
+    no_relaxer = kwargs.get("no_relaxer", False)
+    paths = kwargs.get("paths", [])
+    host = kwargs.get("host", DEFAULT_BACKEND_HOST)
+    port = kwargs.get("port", DEFAULT_BACKEND_PORT)
+    frontend_port = kwargs.get("frontend_port", DEFAULT_FRONTEND_PORT)
+    viz_encoding = kwargs.get("viz_encoding", None)
+    engine = kwargs.get("engine", "dot")
+    graphviz_type = kwargs.get("graphviz_type", "graph")
+    head_name = kwargs.get("head_name", "unsat")
+    no_collect_variables = kwargs.get("no_collect_variables", False)
+    opt_mode, bounds = kwargs.get("opt_mode", ('opt', []))
+    opt_mode_str = f"--opt-mode={opt_mode}" + (f",{','.join(bounds)}" if len(
+        bounds) > 0 else "")
+
+
+    app = startup.run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT)
+
+    options = [str(models), opt_mode_str]
+
+    backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
+    enable_python()
+    ctl = viaspControl(options, viasp_backend_url=backend_url)
+    for path in paths:
+        ctl.load(path)
+    if len(paths) == 0:
+        ctl.load("-")
+    ctl.ground([("base", [])])
+
+    with ctl.solve(yield_=True) as handle:
+        models = {}
+        for m in handle:
+            print(f"Answer: {m.number}\n{m}")
+            if len(m.cost) > 0:
+                print(f"Optimization: {m.cost}")
+            c = m.cost[0] if len(m.cost) > 0 else 0
+            models[clingo_model_to_stable_model(m)] = c
+        for m in list(
+                filter(lambda i: models.get(i) == min(models.values()),
+                       models.keys())):
+            ctl.viasp.mark(m)
+        print(handle.get())
+        if handle.get().unsatisfiable and not no_relaxer:
+            ctl = ctl.viasp.relax_constraints(
+                head_name=head_name,
+                collect_variables=not no_collect_variables)
+    ctl.viasp.show()
+    if viz_encoding:
+        ctl.viasp.clingraph(viz_encoding=viz_encoding,
+                            engine=engine,
+                            graphviz_type=graphviz_type)
+
+    if not _is_running_in_notebook():
+        webbrowser.open(f"http://{host}:{frontend_port}")
+    app.run(host=host,
+            port=frontend_port,
+            use_reloader=False,
+            debug=False,
+            dev_tools_silence_routes_logging=True)
 
 
 def load_program_file(path: Union[str, List[str]], **kwargs) -> None:

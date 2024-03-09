@@ -21,7 +21,11 @@ import sys
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
 # sys.path.append(os.path.join(os.path.abspath(os.pardir)))
-autodoc_mock_imports = ["clingo", "_clingo", "graphviz", "networkx", "viasp.shared", "viasp.wrapper"]
+autodoc_mock_imports = [
+    "clingo", "_clingo", "graphviz", "networkx", "viasp.shared",
+    "viasp.wrapper", "viasp.clingoApiClient",
+    "viasp_dash", "dash"
+]
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

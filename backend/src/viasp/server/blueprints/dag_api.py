@@ -1,7 +1,6 @@
 import os
 from collections import defaultdict
 from typing import Union, Collection, Dict, List, Iterable
-from flask.cli import F
 
 import igraph
 import networkx as nx

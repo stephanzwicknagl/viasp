@@ -70,7 +70,6 @@ def rank_topological_sorts(all_sorts: Generator, rules: Sequence[AST]) -> List:
     """
     ranked_sorts = []
     all_sortss = list(all_sorts)
-    print(f"There are {len(all_sortss)} topological sorts.")
     for sort in all_sortss:
         rank = 0
         sort_rules = [rule for frznst in sort for rule in frznst]

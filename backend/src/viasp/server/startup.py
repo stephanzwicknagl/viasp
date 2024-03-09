@@ -14,8 +14,8 @@ import os
 import atexit
 import shutil
 from subprocess import Popen
-from time import time
 import json
+from retrying import retry
 
 import viasp_dash
 from dash import Dash, jupyter_dash
@@ -71,14 +71,26 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     # suppress dash's flask server banner
     cli = sys.modules['flask.cli']
     cli.show_server_banner = lambda *x: None  # type: ignore
-    
+
     # make sure the backend is up, before continuing with other modules
-    t_start = time()
-    while True:
-        if clingoApiClient.backend_is_running(backend_url):
-            break
-        if time() - t_start > 30:
-            raise Exception("Backend did not start in time.")
+    @retry(
+        stop_max_attempt_number=30,
+        wait_exponential_multiplier=10,
+        wait_exponential_max=10000,
+    )
+    def wait_for_backend():
+        try: 
+            assert clingoApiClient.backend_is_running(backend_url)
+        except Exception as e:
+            raise Exception("Backend did not start in time.") from e
+        
+    try:
+        wait_for_backend()
+    except Exception as final_error:
+        print(f"Error: {final_error}")
+        viasp_backend.terminate()
+        raise final_error
+
 
     def terminate_process(process):
         """ kill the backend on keyboard interruptions"""

@@ -4,7 +4,7 @@ import webbrowser
 import importlib.metadata
 from clingo.script import enable_python
 
-from viasp import Control
+from viasp import Control, viasp
 from viasp.server import startup
 from viasp.shared.defaults import DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT, DEFAULT_FRONTEND_PORT, DEFAULT_BACKEND_PROTOCOL
 from viasp.shared.io import clingo_model_to_stable_model
@@ -141,62 +141,5 @@ def backend():
 
 def start():
     parser = _get_parser()
-
     args = parser.parse_args()
-    models = args.models
-    no_relaxer = args.no_relaxer
-    paths = args.paths
-    host = args.host
-    port = args.port
-    frontend_port = args.frontend_port
-    viz_encoding = args.viz_encoding
-    engine = args.engine
-    graphviz_type = args.graphviz_type
-    head_name = args.head_name
-    no_collect_variables = args.no_collect_variables
-    opt_mode, bounds = args.opt_mode or ('opt', [])
-    opt_mode_str = f"--opt-mode={opt_mode}" + (f",{','.join(bounds)}" if len(
-        bounds) > 0 else "")
-
-    app = startup.run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT)
-
-    options = [str(models), opt_mode_str]
-
-    backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
-    enable_python()
-    ctl = Control(options, viasp_backend_url=backend_url)
-    for path in paths:
-        ctl.load(path)
-    if len(paths) == 0:
-        ctl.load("-")
-    ctl.ground([("base", [])])
-
-    with ctl.solve(yield_=True) as handle:
-        models = {}
-        for m in handle:
-            print(f"Answer: {m.number}\n{m}")
-            if len(m.cost) > 0:
-                print(f"Optimization: {m.cost}")
-            c = m.cost[0] if len(m.cost) > 0 else 0
-            models[clingo_model_to_stable_model(m)] = c
-        for m in list(
-                filter(lambda i: models.get(i) == min(models.values()),
-                       models.keys())):
-            ctl.viasp.mark(m)
-        print(handle.get())
-        if handle.get().unsatisfiable and not no_relaxer:
-            ctl = ctl.viasp.relax_constraints(
-                head_name=head_name,
-                collect_variables=not no_collect_variables)
-    ctl.viasp.show()
-    if viz_encoding:
-        ctl.viasp.clingraph(viz_encoding=viz_encoding,
-                            engine=engine,
-                            graphviz_type=graphviz_type)
-
-    webbrowser.open(f"http://{host}:{frontend_port}")
-    app.run(host=host,
-            port=frontend_port,
-            use_reloader=False,
-            debug=False,
-            dev_tools_silence_routes_logging=True)
+    viasp(**vars(args))
