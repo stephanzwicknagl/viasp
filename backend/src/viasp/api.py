@@ -94,7 +94,7 @@ def viasp(**kwargs) -> None:
         * *paths* (``list``) --
             list of paths to program files
         * *opt_mode* (``tuple``) --
-            optimization mode and bounds, defaults to `('opt', [])`
+            optimization mode and bounds for clingo optimization. Tuple must contain one of {opt|enum|optN|ignore} in the first element and a list of strings in the second element. Defaults to `('opt', [])`
         * *viz_encoding* (``str``) --
             path to the clingraph visualization encoding
         * *engine* (``str``) --
@@ -125,10 +125,10 @@ def viasp(**kwargs) -> None:
     graphviz_type = kwargs.get("graphviz_type", "graph")
     head_name = kwargs.get("head_name", "unsat")
     no_collect_variables = kwargs.get("no_collect_variables", False)
-    opt_mode, bounds = kwargs.get("opt_mode", ('opt', []))
-    opt_mode_str = f"--opt-mode={opt_mode}" + (f",{','.join(bounds)}" if len(
-        bounds) > 0 else "")
-
+    opt_mode, bounds = kwargs.get("opt_mode") or ('opt', [])
+    print(f"opt_mode_str: {opt_mode}, {bounds}")
+    opt_mode_str = f"--opt-mode={opt_mode}" + (f",{','.join(bounds)}"
+                                               if len(bounds) > 0 else "")
 
     app = startup.run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT)
 
