@@ -11,14 +11,15 @@ Try it out in Binder!
 
 viASP allows you to explore the visualization in a variety of ways:
 
-* Inspect iterations of recursive rules individually
-* Explain the derivation of symbols with arrows
-* Relax the constraints of unsatisfiable programs
-* Toggle parts of the program
-* Show the added symbols or all of them
-* Inspect a single model
-* Add `#show` statements on the fly
-* Search models, signatures and rules.
+* Follow the derivation of stable models step-by-step
+* Inspect single models and their atoms
+* Explain the derivation of individual symbols with arrows
+* Inspect iterations of recursive rules
+* Visualize unsatisfiable programs
+* Add #show statements on the fly
+* Search models and signatures
+* Move rules to follow a preferred order
+* Zoom in and out of parts of the graph
 
 ## Installation
 
