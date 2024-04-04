@@ -1,5 +1,6 @@
 import React from 'react';
 import "./search.css";
+import * as Constants from "../constants";
 import {Suggestion} from "./SearchResult.react";
 import PropTypes from "prop-types";
 import {useHighlightedNode} from "../contexts/HighlightedNode";
@@ -9,11 +10,6 @@ import {NODE, SIGNATURE, TRANSFORMATION} from "../types/propTypes";
 import {showOnlyTransformation, useTransformations} from "../contexts/transformations";
 import {useColorPalette} from "../contexts/ColorPalette";
 import { useShownDetail } from "../contexts/ShownDetail";
-
-
-const KEY_DOWN = 40;
-const KEY_UP = 38;
-const KEY_ENTER = 13;
 
 function ActiveFilters() {
     const [{activeFilters},] = useFilters();
@@ -126,16 +122,16 @@ export function Search() {
     }
 
     function onKeyDown(e) {
-        if (e.keyCode === KEY_ENTER) {
+        if (e.keyCode === Constants.KEY_ENTER) {
             select(filteredSuggestions[activeSuggestion])
             setHighlightedNode(null);
-        } else if (e.keyCode === KEY_UP) {
+        } else if (e.keyCode === Constants.KEY_UP) {
 
             if (activeSuggestion === 0) {
                 return;
             }
             setActiveSuggestion(activeSuggestion - 1);
-        } else if (e.keyCode === KEY_DOWN) {
+        } else if (e.keyCode === Constants.KEY_DOWN) {
             if (activeSuggestion - 1 === filteredSuggestions.length) {
                 return;
             }

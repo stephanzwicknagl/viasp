@@ -1,7 +1,10 @@
 import React, { useCallback } from "react";
+import * as Constants from "../constants";
 import { Box } from "./Box.react";
 import './boxrow.css';
 import { useTransformations } from "../contexts/transformations";
+import debounce from 'lodash/debounce';
+import useResizeObserver from "@react-hook/resize-observer";
 
 export function Boxrow() {
     const [isOverflowH, setIsOverflowH] = React.useState(false);
@@ -10,20 +13,18 @@ export function Boxrow() {
     const {
         state: {currentDragged, clingraphGraphics},
     } = useTransformations();
-    const [clingraphNodes, setClingraphNodes] = React.useState([]);
     const [style, setStyle] = React.useState({opacity: 1.0});
-    const opacityMultiplier = 0.8;
 
     React.useEffect(() => {
         if (currentDragged.length > 0) {
             setStyle((prevStyle) => ({
                 ...prevStyle,
-                opacity: 1 - opacityMultiplier,
+                opacity: 1 - Constants.opacityMultiplier,
             }));
         } else {
             setStyle((prevStyle) => ({...prevStyle, opacity: 1.0}));
         }
-    }, [currentDragged, opacityMultiplier]);
+    }, [currentDragged]);
 
 
     const checkForOverflow = useCallback(() => {
@@ -47,20 +48,18 @@ export function Boxrow() {
         }
     }, [boxrowRef, isOverflowH, overflowBreakingPoint]);
 
+    const debouncedCheckForOverflow = React.useMemo(() => {
+        return debounce(checkForOverflow, Constants.DEBOUNCETIMEOUT);
+    }, [checkForOverflow]);
+
     React.useEffect(() => {
         checkForOverflow();
     }, [checkForOverflow, clingraphGraphics]);
 
-    React.useEffect(() => {
-        if (clingraphGraphics.length > 0) {
-            setClingraphNodes(clingraphGraphics);
-        }
-    }, [clingraphGraphics]);
-
-    React.useEffect(() => {
-        window.addEventListener('resize', checkForOverflow)
-        return _ => window.removeEventListener('resize', checkForOverflow)
-    })
+    useResizeObserver(
+        document.getElementById('content'),
+        debouncedCheckForOverflow
+    );
 
     return (
         <div className="boxrow_container" style={style}>

@@ -1,5 +1,6 @@
 import React from 'react';
 import {Node, RecursiveSuperNode} from './Node.react';
+import * as Constants from '../constants';
 import './row.css';
 import PropTypes from 'prop-types';
 import {RowHeader} from './RowHeader.react';
@@ -18,9 +19,8 @@ import {
     useAnimationUpdater,
 } from '../contexts/AnimationUpdater';
 import {DragHandle} from './DragHandle.react';
+import debounce from 'lodash/debounce';
 
-const animationIntervalInMs = 30;
-const animationPickupThreshold = 0.01;
 
 export class RowTemplate extends React.Component {
     static contextType = TransformationContext;
@@ -63,7 +63,7 @@ export class RowTemplate extends React.Component {
         ) {
             this.context.dispatch(setCurrentDragged(''));
         }
-        if (this.props.itemSelected > animationPickupThreshold && this.intervalId === null) {
+        if (this.props.itemSelected > Constants.rowAnimationPickupThreshold && this.intervalId === null) {
             this.intervalId = setInterval(() => {
                 const element = this.rowRef.current;
                 if (element === null) {
@@ -79,9 +79,9 @@ export class RowTemplate extends React.Component {
                         left: element.offsetLeft,
                     },
                 }));
-            }, animationIntervalInMs);
+            }, Constants.rowAnimationIntervalInMs);
         }
-        if (this.props.itemSelected < animationPickupThreshold && this.intervalId !== null) {
+        if (this.props.itemSelected < Constants.rowAnimationPickupThreshold && this.intervalId !== null) {
             clearInterval(this.intervalId);
             this.intervalId = null;
         }
@@ -103,7 +103,6 @@ export class RowTemplate extends React.Component {
                                         {({rowShading}) => {
                                             const scaleConstant = 0.005;
                                             const shadowConstant = 15;
-                                            const opacityMultiplier = 0.8;
                                             const scale =
                                                 itemSelected * scaleConstant +
                                                 1;
@@ -137,7 +136,7 @@ export class RowTemplate extends React.Component {
                                                     itemSelected
                                                         ? 1
                                                         : 1 -
-                                                          opacityMultiplier *
+                                                          Constants.opacityMultiplier *
                                                               this.props
                                                                   .anySelected,
                                             };
@@ -262,7 +261,11 @@ export function Row(props) {
             },
             }));
     }, []);
-    useResizeObserver(rowbodyRef, animateResize);
+
+    const debouncedAnimateResize = React.useMemo(() => {
+        return debounce(animateResize, Constants.DEBOUNCETIMEOUT);
+    }, [animateResize]);
+    useResizeObserver(rowbodyRef, debouncedAnimateResize);
 
     const showNodes =
         transformations.find(

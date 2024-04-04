@@ -17,11 +17,9 @@ import clockwiseVerticalArrows from '@iconify/icons-emojione-monotone/clockwise-
 import arrowDownDoubleFill from '@iconify/icons-ri/arrow-down-double-fill';
 import {IconWrapper} from '../LazyLoader';
 import useResizeObserver from '@react-hook/resize-observer';
-import {findChildByClass, emToPixel} from '../utils';
-
-const minimumNodeHeight = 2.5;
-const standardNodeHeight = 5.7;
-const overflowThreshold = 0.1;
+import {findChildByClass} from '../utils';
+import debounce from 'lodash.debounce';
+import * as Constants from '../constants';
 
 function any(iterable) {
     for (let index = 0; index < iterable.length; index++) {
@@ -39,7 +37,6 @@ function NodeContent(props) {
     const colorPalette = useColorPalette();
     const [{activeFilters}] = useFilters();
     const {highlightedSymbol, toggleReasonOf} = useHighlightedSymbol();
-    const belowLineMargin = 5;
 
     let contentToShow;
     if (state.show_all) {
@@ -102,6 +99,7 @@ function NodeContent(props) {
         }
         const childRect = childElement.getBoundingClientRect();
         const parentRect = parentElement.getBoundingClientRect();
+        const belowLineMargin = 5;
         return {
             fittingHeight:
                 childRect.bottom - parentRect.top + belowLineMargin,
@@ -122,12 +120,12 @@ function NodeContent(props) {
             );
         var markedItems = allHeights.filter((item) => item.isMarked);
         var maxSymbolHeight = Math.max(
-            emToPixel(minimumNodeHeight),
+            Constants.minimumNodeHeight,
             ...allHeights.map((item) => item.fittingHeight)
         );
 
         if (node.loading === true) {
-            setHeight(Math.min(emToPixel(standardNodeHeight), maxSymbolHeight));
+            setHeight(Math.min(Constants.standardNodeHeight, maxSymbolHeight));
             setIsExpandableV(false);
             return;
         }
@@ -140,7 +138,7 @@ function NodeContent(props) {
                 markedItems.length &&
                 any(
                     markedItems.map(
-                        (item) => item.fittingHeight > emToPixel(standardNodeHeight)
+                        (item) => item.fittingHeight > Constants.standardNodeHeight
                     )
                 )
             ) {
@@ -153,8 +151,8 @@ function NodeContent(props) {
                 });
             } else {
                 // marked node is not under the standard height fold
-                setHeight(Math.min(emToPixel(standardNodeHeight), maxSymbolHeight));
-                setIsExpandableV(maxSymbolHeight > emToPixel(standardNodeHeight));
+                setHeight(Math.min(Constants.standardNodeHeight, maxSymbolHeight));
+                setIsExpandableV(maxSymbolHeight > Constants.standardNodeHeight);
             }
         }
     }, [
@@ -371,12 +369,12 @@ function checkForOverflowE(
         const wouldOverflowNow = setContainer
             ? setContainer.scrollWidth >
               nodeBorder.offsetWidth
-               - emToPixel(overflowThreshold)
+               - Constants.overflowThreshold
             : false;
         // We overflowed previously but not anymore
         if (
             overflowBreakingPoint <=
-            e.offsetWidth - emToPixel(overflowThreshold)
+            e.offsetWidth - Constants.overflowThreshold
         ) {
             setShowMini(false);
         }
@@ -404,7 +402,7 @@ export function Node(props) {
     const colorPalette = useColorPalette();
     const {dispatch: dispatchShownNodes} = useShownNodes();
     const classNames = useHighlightedNodeToCreateClassName(node);
-    const [height, setHeight] = React.useState(emToPixel(minimumNodeHeight));
+    const [height, setHeight] = React.useState(Constants.minimumNodeHeight);
     const {animationState, setAnimationState} = useAnimationUpdater();
     const setAnimationStateRef = React.useRef(setAnimationState);
     const {setShownDetail} = useShownDetail();
@@ -437,7 +435,7 @@ export function Node(props) {
     }, []);
 
     React.useEffect(() => {
-        setIsCollapsibleV(height > emToPixel(standardNodeHeight));
+        setIsCollapsibleV(height > Constants.standardNodeHeight);
     }, [height])
 
     const checkForOverflow = React.useCallback(() => {
@@ -450,15 +448,19 @@ export function Node(props) {
         );
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [branchSpace, showMini, overflowBreakingPoint, animationState.graph_zoom]);
+    
+    const debouncedCheckForOverflow = React.useMemo(() => {
+        return debounce(checkForOverflow, Constants.DEBOUNCETIMEOUT);
+    }, [checkForOverflow]);
 
     React.useEffect(() => {
         checkForOverflow();
     }, [checkForOverflow, node]);
 
-    React.useEffect(() => {
-        window.addEventListener('resize', checkForOverflow);
-        return (_) => window.removeEventListener('resize', checkForOverflow);
-    });
+    useResizeObserver(
+        document.getElementById('content'),
+        debouncedCheckForOverflow
+    );
 
     const divID = `${node.uuid}_animate_height`;
 
@@ -564,14 +566,19 @@ export function RecursiveSuperNode(props) {
         );
     }, [branchSpace, showMini, overflowBreakingPoint]);
 
+    const debouncedCheckForOverflow = React.useMemo(() => {
+        return debounce(checkForOverflow, Constants.DEBOUNCETIMEOUT);
+    }, [checkForOverflow]);
+
     React.useEffect(() => {
         checkForOverflow();
     }, [checkForOverflow, node]);
 
-    React.useEffect(() => {
-        window.addEventListener('resize', checkForOverflow);
-        return () => window.removeEventListener('resize', checkForOverflow);
-    });
+    useResizeObserver(
+        document.getElementById('content'),
+        debouncedCheckForOverflow
+    );
+    
     return (
         <div
             className={classNames}

@@ -49,6 +49,7 @@ import {
 import DraggableList from 'react-draggable-list';
 import {MapInteraction} from 'react-map-interaction';
 import useResizeObserver from '@react-hook/resize-observer';
+import * as Constants from '../constants';
 import debounce from 'lodash.debounce';
 
 function postCurrentSort(backendURL, hash) {
@@ -218,15 +219,6 @@ function MainWindow(props) {
     // Manage Graph Zoom
     const {shownDetail} = useShownDetail();
     const prevShownDetail = React.useRef(null);
-    const detailOpenWidthRatio =
-        parseFloat(
-            getComputedStyle(document.documentElement).getPropertyValue(
-                '--detail-open-width'
-            )
-        ) / 100;
-    const detailClosedShiftThreshold = 0.2;
-    const detailOpenShiftThreshold = 0.05;
-    
 
     const handleMapChange = ({translation, scale}) => {
         if (ctrlPressed) {
@@ -238,11 +230,11 @@ function MainWindow(props) {
             const detailOpenWidth =
                 shownDetail === null 
                 ? 0
-                : detailOpenWidthRatio * contentWidth;
+                : Constants.detailOpenWidthRatio * contentWidth;
             setTranslationBounds({
                 scale: shownDetail === null 
                         ? 1
-                        : 1 - detailOpenWidthRatio,
+                        : 1 - Constants.detailOpenWidthRatio,
                 translation: {
                     xMax: 0,
                     xMin: 
@@ -320,7 +312,7 @@ function MainWindow(props) {
                 if (
                     oldShiftValue.scale === 1 ||
                     distanceOfRightSideOfGraphFromRightBorder >=
-                        detailOpenShiftThreshold *
+                        Constants.detailOpenShiftThreshold *
                             contentDivRef.current.clientWidth
                 ) {
                     return {...oldShiftValue};
@@ -331,7 +323,7 @@ function MainWindow(props) {
                         ...oldShiftValue.translation,
                         x:
                             oldShiftValue.translation.x -
-                            detailOpenWidthRatio *
+                            Constants.detailOpenWidthRatio *
                                 contentDivRef.current.clientWidth -
                             distanceOfRightSideOfGraphFromRightBorder,
                     },
@@ -339,23 +331,22 @@ function MainWindow(props) {
             });
         }
         prevShownDetail.current = shownDetail;
-    }, [setMapShiftValue, shownDetail, detailOpenWidthRatio]);
+    }, [setMapShiftValue, shownDetail]);
 
     React.useEffect(() => {
         handleMapChangeOnDetailChange();
     }, [shownDetail, handleMapChangeOnDetailChange]);
 
     const animateResize = React.useCallback(() => {
-        const minBound = translationBounds.translation.xMin;
         setMapShiftValue((oldShiftValue) => {
             const contentWidth = contentDivRef.current.clientWidth;
             const detailWidth = shownDetail === null
                 ? 0
-                : detailOpenWidthRatio * contentWidth;
+                : Constants.detailOpenWidthRatio * contentWidth;
             const rowWidth = contentWidth * oldShiftValue.scale;
             if (
-                minBound + oldShiftValue.translation.x >=
-                detailOpenShiftThreshold * contentWidth
+                translationBounds.translation.xMin + oldShiftValue.translation.x >=
+                Constants.detailOpenShiftThreshold * contentWidth
             ) {
                 return {...oldShiftValue};
             }
@@ -370,25 +361,13 @@ function MainWindow(props) {
                 },
             };
         });
-    }, [shownDetail, detailOpenWidthRatio, translationBounds]);
+    }, [shownDetail, translationBounds]);
 
     const debouncedAnimateResize = React.useMemo(
-        () => debounce(animateResize, 100)
-        , [animateResize]);
+        () => debounce(animateResize, Constants.DEBOUNCETIMEOUT),
+        [animateResize]
+    );
     useResizeObserver(contentDivRef, debouncedAnimateResize);
-
-    React.useEffect(() => {
-        setAnimationState((oldValue) => ({
-            ...oldValue,
-            graph_zoom: {
-                ...oldValue.graph_zoom,
-                translation: {
-                    ...oldValue.translation,
-                    x: mapShiftValue.translation.x,
-                },
-            },
-        }));
-    }, [mapShiftValue, setAnimationState]);
 
     // observe scroll position
     // Add a state for the scroll position
@@ -397,9 +376,10 @@ function MainWindow(props) {
     // Add an effect to update the scroll position state when the contentDiv scrolls
     React.useEffect(() => {
         const contentDiv = contentDivRef.current;
-        const handleScroll = () => {
-            setScrollPosition(contentDiv.scrollTop);
+        const handleScroll = (event) => {
+            setScrollPosition(event.target.scrollTop)
         };
+
 
         if (contentDiv) {
             contentDiv.addEventListener('scroll', handleScroll);
@@ -412,24 +392,23 @@ function MainWindow(props) {
         };
     }, [contentDivRef]);
 
-    // Add an effect to update the animation state when the scroll position changes
     React.useEffect(() => {
         setAnimationState((oldValue) => ({
             ...oldValue,
             graph_zoom: {
                 ...oldValue.graph_zoom,
                 translation: {
-                    ...oldValue.translation,
-                    x: scrollPosition,
+                    x: mapShiftValue.translation.x,
+                    y: scrollPosition,
                 },
             },
         }));
-    }, [scrollPosition, setAnimationState]);
+    }, [mapShiftValue, scrollPosition, setAnimationState]);
 
     return (
         <>
             <Detail />
-            <div className="content" ref={contentDivRef}>
+            <div className="content" id="content" ref={contentDivRef}>
                 <Search />
                 <div
                     style={{
