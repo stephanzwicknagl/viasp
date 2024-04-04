@@ -126,7 +126,6 @@ def viasp(**kwargs) -> None:
     head_name = kwargs.get("head_name", "unsat")
     no_collect_variables = kwargs.get("no_collect_variables", False)
     opt_mode, bounds = kwargs.get("opt_mode") or ('opt', [])
-    print(f"opt_mode_str: {opt_mode}, {bounds}")
     opt_mode_str = f"--opt-mode={opt_mode}" + (f",{','.join(bounds)}"
                                                if len(bounds) > 0 else "")
 

@@ -94,20 +94,23 @@ def get_src_tgt_mapping_from_graph(shown_recursive_ids=[],
 
     to_be_added = []
 
-    for source, target in graph.edges:
+    for source, target, edge in graph.edges(data=True):
         to_be_added.append({
             "src": source.uuid,
             "tgt": target.uuid,
+            "transformation": edge["transformation"].hash,
             "style": "solid"
         })
 
     for recursive_uuid in shown_recursive_ids:
         # get node from graph where node attribute uuid is uuid
         node = next(n for n in graph.nodes if n.uuid == recursive_uuid)
+        _, _, edge = next(e for e in graph.in_edges(node, data=True))
         for source, target in node.recursive.edges:
             to_be_added.append({
                 "src": source.uuid,
                 "tgt": target.uuid,
+                "transformation": edge["transformation"].hash,
                 "style": "solid"
             })
         # add connections to outer node
@@ -121,6 +124,7 @@ def get_src_tgt_mapping_from_graph(shown_recursive_ids=[],
         to_be_added.extend([{
             "src": node.uuid,
             "tgt": first_node.uuid,
+            "transformation": edge["transformation"].hash,
             "recursion": "in",
             "style": "solid"
         } for first_node in first_nodes])
@@ -129,17 +133,20 @@ def get_src_tgt_mapping_from_graph(shown_recursive_ids=[],
             to_be_added.extend([{
                 "src": last_node.uuid,
                 "tgt": node.uuid,
+                "transformation": edge["transformation"].hash,
                 "recursion": "out",
                 "style": "solid"
             } for last_node in last_nodes])
 
     if shown_clingraph:
         clingraph = load_clingraph_names()
-        to_be_added += [{
-            "src": src,
-            "tgt": tgt,
-            "style": "dashed"
-        } for src, tgt in list(zip(last_nodes_in_graph(graph), clingraph))]
+        for src, tgt in list(zip(last_nodes_in_graph(graph), clingraph)):
+            to_be_added.append({
+                "src": src,
+                "tgt": tgt,
+                "transformation": "boxrow_container",
+                "style": "dashed"
+            })
     return to_be_added
 
 
@@ -218,7 +225,7 @@ def get_node(uuid):
 @bp.route("/graph/facts", methods=["GET"])
 def get_facts():
     graph = _get_graph()
-    facts = get_start_node_from_graph(graph)
+    facts = [get_start_node_from_graph(graph)]
     r = jsonify(facts)
     return r
 

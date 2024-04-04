@@ -1,7 +1,7 @@
 
 .row_header {
     font-family: "Monaco", monospace;
-    font-size: 12pt;
+    /* font-size: 12pt; */
     border-radius: 0 8px 8px 0;
     width: fit-content;
     max-width: 95%;
@@ -37,12 +37,14 @@
     justify-content: space-around;
     align-content: center;
     background: transparent;
+    overflow: hidden;
 }
 
 .branch_space {
     display: flex;
     justify-content: center;
     align-items: center;
+    overflow: hidden;
 }
 
 .row_container {
@@ -56,14 +58,4 @@
     opacity: 0.6;
     filter: grayscale(100%);
 
-}
-.dragHandle {
-    visibility: hidden;
-    cursor: move;
-    padding-left: 10px;
-    width: 20px;
-    height: 16px;
-}
-.row_container:hover .dragHandle{
-    visibility: visible;
 }

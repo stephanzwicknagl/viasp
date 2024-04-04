@@ -4,18 +4,17 @@
     height: 100vh;
     box-shadow: -1px -1px 2px 1px rgba(0, 0, 0, .2);
     font-family: monospace;
-    overflow-x: scroll;
     transition: width 0.2s;
     width: 0;
     position: fixed;
     z-index: 20;
-    /*position: fixed; !* Sit on top of the page content *!*/
     top: 0;
     right: 0;
+    overflow-y: auto;
 }
 
 .detail-open {
-    width: 20%;
+    width: var(--detail-open-width);
 }
 
 @media screen and (max-height: 450px) {

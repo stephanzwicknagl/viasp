@@ -6,8 +6,8 @@
     "error": "#F44336",
     "infoBackground": "#B3BAC5",
     "rowShading": [
-        "#a9a9a92f",
-        "#ffffff"
+        "#c9c9c99f",
+        "#ffffff9f"
     ],
     "explanationSuccess": "#e2b38a", 
     "explanationHighlights": [

@@ -82,7 +82,7 @@ const initialState = {
     currentDragged: '',
     canDrop: null,
     transformationNodesMap: null,
-    clingraphGraphics: null,
+    clingraphGraphics: [],
 };
 
 const HIDE_TRANSFORMATION = 'APP/TRANSFORMATIONS/HIDE';
@@ -245,12 +245,6 @@ const transformationReducer = (state = initialState, action) => {
                 state.transformationNodesMap
             )
             .reduce((obj, key) => {
-                if (key === "-1") {
-                    obj[key] = make_default_nodes(
-                        state.transformationNodesMap[key]
-                    )[0];
-                    return obj;
-                }
                 obj[key] = make_default_nodes(
                     state.transformationNodesMap[key]
                 );
@@ -324,7 +318,12 @@ const TransformationProvider = ({children}) => {
 
                 const transformationNodesMap = nodesRes.reduce(
                     (map, items, i) => {
-                        map[transformations[i].id] = items;
+                        map[transformations[i].id] = items.map((node) => {
+                            return {
+                                ...node,
+                                loading: false,
+                            };
+                        });
                         return map;
                     },
                     {}

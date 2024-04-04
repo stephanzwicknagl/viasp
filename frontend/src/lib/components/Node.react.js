@@ -1,24 +1,27 @@
-import React, {Suspense} from "react";
+import React, {Suspense} from 'react';
 import './node.css';
-import PropTypes from "prop-types";
-import { Symbol } from "./Symbol.react";
-import { hideNode, showNode, useShownNodes } from "../contexts/ShownNodes";
-import { useColorPalette } from "../contexts/ColorPalette";
-import { useHighlightedNode } from "../contexts/HighlightedNode";
-import { useHighlightedSymbol } from "../contexts/HighlightedSymbol";
-import { useShownRecursion } from "../contexts/ShownRecursion";
-import { useSettings } from "../contexts/Settings";
-import { useShownDetail } from "../contexts/ShownDetail";
-import { NODE } from "../types/propTypes";
-import { useFilters } from "../contexts/Filters";
+import PropTypes from 'prop-types';
+import {Symbol} from './Symbol.react';
+import {hideNode, showNode, useShownNodes} from '../contexts/ShownNodes';
+import {useColorPalette} from '../contexts/ColorPalette';
+import {useHighlightedNode} from '../contexts/HighlightedNode';
+import {useHighlightedSymbol} from '../contexts/HighlightedSymbol';
+import {useShownRecursion} from '../contexts/ShownRecursion';
+import {useSettings} from '../contexts/Settings';
+import {useShownDetail} from '../contexts/ShownDetail';
+import {NODE} from '../types/propTypes';
+import {useFilters} from '../contexts/Filters';
 import AnimateHeight from 'react-animate-height';
-import { useAnimationUpdater } from "../contexts/AnimationUpdater";
+import {useAnimationUpdater} from '../contexts/AnimationUpdater';
 import clockwiseVerticalArrows from '@iconify/icons-emojione-monotone/clockwise-vertical-arrows';
 import arrowDownDoubleFill from '@iconify/icons-ri/arrow-down-double-fill';
-import { IconWrapper } from '../LazyLoader';
+import {IconWrapper} from '../LazyLoader';
+import useResizeObserver from '@react-hook/resize-observer';
+import {findChildByClass, emToPixel} from '../utils';
 
-const minimumNodeHeight = 34;
-const standardNodeHeight = 80;
+const minimumNodeHeight = 2.5;
+const standardNodeHeight = 5.7;
+const overflowThreshold = 0.1;
 
 function any(iterable) {
     for (let index = 0; index < iterable.length; index++) {
@@ -30,12 +33,12 @@ function any(iterable) {
 }
 
 function NodeContent(props) {
-
-    const { state } = useSettings();
-    const { node, setHeight, parentID, setIsOverflowV, expandNode, isSubnode } = props;
+    const {state} = useSettings();
+    const {node, setHeight, parentID, setIsExpandableV, expandVAllTheWay, isSubnode} =
+        props;
     const colorPalette = useColorPalette();
-    const [{ activeFilters },] = useFilters();
-    const { highlightedSymbol, toggleReasonOf } = useHighlightedSymbol();
+    const [{activeFilters}] = useFilters();
+    const {highlightedSymbol, toggleReasonOf} = useHighlightedSymbol();
     const belowLineMargin = 5;
 
     let contentToShow;
@@ -46,6 +49,7 @@ function NodeContent(props) {
     }
 
     const isMounted = React.useRef(true);
+    const setContainerRef = React.useRef(null);
 
     React.useEffect(() => {
         return () => {
@@ -53,36 +57,60 @@ function NodeContent(props) {
         };
     }, []);
 
-    const symbolShouldBeShown = React.useCallback((symbolId) => {
-        return activeFilters.length === 0 || any(activeFilters.filter(filter => filter._type === "Signature")
-            .map(filter => filter.name === symbolId.symbol.name && filter.args === symbolId.symbol.arguments.length));
-    }, [activeFilters])
+    const symbolShouldBeShown = React.useCallback(
+        (symbolId) => {
+            return (
+                activeFilters.length === 0 ||
+                any(
+                    activeFilters
+                        .filter((filter) => filter._type === 'Signature')
+                        .map(
+                            (filter) =>
+                                filter.name === symbolId.symbol.name &&
+                                filter.args === symbolId.symbol.arguments.length
+                        )
+                )
+            );
+        },
+        [activeFilters]
+    );
 
     function handleClick(e, src) {
         e.stopPropagation();
         if (src.has_reason) {
-            toggleReasonOf(src.uuid, node.uuid, highlightedSymbol)
+            toggleReasonOf(src.uuid, node.uuid, highlightedSymbol);
         }
     }
 
+    const symbolVisibilityManager = React.useCallback((
+        compareHighlightedSymbol,
+        symbol,
+    ) => {
+        const i = compareHighlightedSymbol
+            .map((item) => item.tgt)
+            .indexOf(symbol.uuid);
+        const j = compareHighlightedSymbol
+            .map((item) => item.src)
+            .indexOf(symbol.uuid);
+        const childElement = document.getElementById(
+            symbol.uuid + `_${isSubnode ? 'sub' : 'main'}`
+        );
+        const parentElement = document.getElementById(parentID);
 
-
-    const visibilityManager = React.useCallback(() => {
-        function symbolVisibilityManager(compareHighlightedSymbol, symbol, print) {
-            const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbol.uuid);
-            const j = compareHighlightedSymbol.map(item => item.src).indexOf(symbol.uuid);
-            const childElement = document.getElementById(symbol.uuid + `_${isSubnode ? "sub" : "main"}`);
-            const parentElement = document.getElementById(parentID);
-            
-            if (!childElement || !parentElement) {
-                return { "fittingHeight": 0, "isMarked": i !== -1 || j !== -1 };
-            }
-            const childRect = childElement.getBoundingClientRect();
-            const parentRect = parentElement.getBoundingClientRect();
-            return { "fittingHeight": childRect.bottom - parentRect.top + belowLineMargin, "isMarked": i !== -1 || j !== -1 };
+        if (!childElement || !parentElement) {
+            return {fittingHeight: 0, isMarked: i !== -1 || j !== -1};
         }
+        const childRect = childElement.getBoundingClientRect();
+        const parentRect = parentElement.getBoundingClientRect();
+        return {
+            fittingHeight:
+                childRect.bottom - parentRect.top + belowLineMargin,
+            isMarked: i !== -1 || j !== -1,
+        };
+    }, [isSubnode, parentID]);
+    
+    const visibilityManager = React.useCallback(() => {
 
-        
         var allHeights = contentToShow
             .filter((symbol) => symbolShouldBeShown(symbol))
             .map((s) =>
@@ -92,70 +120,97 @@ function NodeContent(props) {
                     contentToShow.length === 1
                 )
             );
-        var markedItems = allHeights.filter(item => item.isMarked);
-        var maxSymbolHeight = Math.max(minimumNodeHeight, ...allHeights.map(item => item.fittingHeight))
-        
-        if (node.uuid.includes('loading')) {
-            setHeight(Math.min(standardNodeHeight, maxSymbolHeight));
-            setIsOverflowV(false)
+        var markedItems = allHeights.filter((item) => item.isMarked);
+        var maxSymbolHeight = Math.max(
+            emToPixel(minimumNodeHeight),
+            ...allHeights.map((item) => item.fittingHeight)
+        );
+
+        if (node.loading === true) {
+            setHeight(Math.min(emToPixel(standardNodeHeight), maxSymbolHeight));
+            setIsExpandableV(false);
             return;
         }
-        if (expandNode) {
+        if (expandVAllTheWay) {
             setHeight(maxSymbolHeight);
-            setIsOverflowV(false)
-        }
-        else { 
-            // marked node is under the fold
-            if (markedItems.length && any(markedItems.map(item => item.fittingHeight > standardNodeHeight))) {
-                setHeight(height => {
-                    Math.max(height, Math.max(...markedItems.map(item => item.fittingHeight)));
-                    setIsOverflowV(maxSymbolHeight > height)
+            setIsExpandableV(false);
+        } else {
+            // marked node is under the standard height fold
+            if (
+                markedItems.length &&
+                any(
+                    markedItems.map(
+                        (item) => item.fittingHeight > emToPixel(standardNodeHeight)
+                    )
+                )
+            ) {
+                setHeight((oldHeight) => {
+                    const newHeight = Math.max(
+                        ...markedItems.map((item) => item.fittingHeight)
+                    );
+                    setIsExpandableV(maxSymbolHeight > oldHeight);
+                    return newHeight;
                 });
+            } else {
+                // marked node is not under the standard height fold
+                setHeight(Math.min(emToPixel(standardNodeHeight), maxSymbolHeight));
+                setIsExpandableV(maxSymbolHeight > emToPixel(standardNodeHeight));
             }
-            else { 
-                // marked node is not under the fold
-                setHeight(Math.min(standardNodeHeight, maxSymbolHeight));
-                setIsOverflowV(maxSymbolHeight > standardNodeHeight)
-            }
-        };
-    }, [contentToShow, highlightedSymbol, setHeight, setIsOverflowV, expandNode, symbolShouldBeShown, isSubnode, parentID, node.uuid])
-
+        }
+    }, [
+        contentToShow,
+        highlightedSymbol,
+        setHeight,
+        setIsExpandableV,
+        expandVAllTheWay,
+        symbolShouldBeShown,
+        symbolVisibilityManager,
+        node.loading,
+    ]);
 
     React.useEffect(() => {
         visibilityManager();
         onFullyLoaded(() => {
             if (isMounted.current) {
-                visibilityManager()
+                visibilityManager();
             }
         });
-    }, [visibilityManager, highlightedSymbol, state, expandNode, activeFilters])
-
+    }, [
+        visibilityManager,
+        highlightedSymbol,
+        state,
+        expandVAllTheWay,
+        activeFilters,
+    ]);
 
     function onFullyLoaded(callback) {
         setTimeout(function () {
-            requestAnimationFrame(callback)
-        })
+            requestAnimationFrame(callback);
+        });
     }
-    React.useEffect(() => {
-        window.addEventListener('resize', visibilityManager);
-        return _ => {
-            window.removeEventListener('resize', visibilityManager)
-            isMounted.current = false;
-        }
-    })
+    useResizeObserver(setContainerRef, visibilityManager);
 
     const classNames2 = `set_value`;
-    const renderedSymbols = contentToShow.filter(symbol =>
-        symbolShouldBeShown(symbol)).map(s => {
-            return <Symbol key={JSON.stringify(s)} symbolIdentifier={s} isSubnode={isSubnode} handleClick={handleClick}/>
-        })
+    const renderedSymbols = contentToShow
+        .filter((symbol) => symbolShouldBeShown(symbol))
+        .map((s) => {
+            return (
+                <Symbol
+                    key={JSON.stringify(s)}
+                    symbolIdentifier={s}
+                    isSubnode={isSubnode}
+                    handleClick={handleClick}
+                />
+            );
+        });
 
     return (
         <div
             className={`set_container ${
-                node.uuid.includes('loading') ? 'hidden' : ''
+                node.loading === true ? 'hidden' : ''
             }`}
             style={{color: colorPalette.dark}}
+            ref={setContainerRef}
         >
             <span className={classNames2}>
                 {renderedSymbols.length > 0 ? renderedSymbols : ''}
@@ -180,37 +235,48 @@ NodeContent.propTypes = {
     /**
      * Set the vertical overflow state of the Node
      */
-    setIsOverflowV: PropTypes.func,
+    setIsExpandableV: PropTypes.func,
     /**
      * If the node is expanded
      */
-    expandNode: PropTypes.bool,
+    expandVAllTheWay: PropTypes.bool,
     /**
      * If the node is a subnode
      */
-    isSubnode: PropTypes.bool
-}
+    isSubnode: PropTypes.bool,
+};
 
 function RecursionButton(props) {
-    const { node } = props;
-    const [, toggleShownRecursion,] = useShownRecursion();
+    const {node} = props;
+    const [, toggleShownRecursion] = useShownRecursion();
     const colorPalette = useColorPalette();
-
 
     function handleClick(e) {
         e.stopPropagation();
         toggleShownRecursion(node.uuid);
     }
 
-    return <div className={"recursion_button"} onClick={handleClick}>
-        {!node.recursive ? null :
-            <div className={"recursion_button_text"} style={{ "backgroundColor": colorPalette.primary, "color": colorPalette.light }}>
-                <Suspense fallback={<div>R</div>}>
-                    <IconWrapper icon={clockwiseVerticalArrows} width="9" height="9" />
-                </Suspense>
-            </div>
-        }
-    </div>
+    return (
+        <div className={'recursion_button'} onClick={handleClick}>
+            {!node.recursive ? null : (
+                <div
+                    className={'recursion_button_text'}
+                    style={{
+                        backgroundColor: colorPalette.primary,
+                        color: colorPalette.light,
+                    }}
+                >
+                    <Suspense fallback={<div>R</div>}>
+                        <IconWrapper
+                            icon={clockwiseVerticalArrows}
+                            width="9"
+                            height="9"
+                        />
+                    </Suspense>
+                </div>
+            )}
+        </div>
+    );
 }
 
 RecursionButton.propTypes = {
@@ -218,72 +284,181 @@ RecursionButton.propTypes = {
      * object containing the node data to be displayed
      * */
     node: NODE,
-}
+};
 
 function OverflowButton(props) {
-    const { setExpandNode } = props;
+    const {setExpandVAllTheWay, isOverflowV} = props;
+    const [isIconRotated, setIsIconRotated] = React.useState(false);
     const colorPalette = useColorPalette();
 
     function handleClick(e) {
         e.stopPropagation();
-        setExpandNode(true);
+        setExpandVAllTheWay(isOverflowV);
     }
+    
+    React.useEffect(() => {
+        setIsIconRotated(!isOverflowV);
+    }, [isOverflowV]);
 
-    return <div style={{ "backgroundColor": colorPalette.primary, "color": colorPalette.light }}
-                className={"bauchbinde"} onClick={handleClick}>
-        <div className={"bauchbinde_text"}>
-            <Suspense fallback={<div>...</div>}>
-                <IconWrapper icon={arrowDownDoubleFill} width="12" height="12" />
-            </Suspense>
+    return (
+        <div
+            style={{
+                backgroundColor: colorPalette.primary,
+                color: colorPalette.light,
+            }}
+            className={'bauchbinde'}
+            onClick={handleClick}
+        >
+            <div className={'bauchbinde_text'}>
+                <Suspense fallback={<div>...</div>}>
+                    <IconWrapper
+                        icon={arrowDownDoubleFill}
+                        width="0.85em"
+                        height="0.85em"
+                        className={isIconRotated ? 'rotate_icon' : ''}
+                    />
+                </Suspense>
+            </div>
         </div>
-    </div>
+    );
 }
 
 OverflowButton.propTypes = {
     /**
      * The function to be called to set the node height
      *  */
-    setExpandNode: PropTypes.func,
-}
-
+    setExpandVAllTheWay: PropTypes.func,
+    /**
+     * If the node is overflowed
+     */
+    isOverflowV: PropTypes.bool,
+};
 
 function useHighlightedNodeToCreateClassName(node) {
-    const [highlightedNode,] = useHighlightedNode()
-    const [classNames, setClassNames] = React.useState(`node_border mouse_over_shadow ${node.uuid} ${highlightedNode === node.uuid ? "highlighted_node" : null}`);
+    const [highlightedNode] = useHighlightedNode();
+    const [classNames, setClassNames] = React.useState(
+        `node_border mouse_over_shadow ${node.uuid} ${
+            highlightedNode === node.uuid ? 'highlighted_node' : null
+        }`
+    );
 
     React.useEffect(() => {
-        setClassNames(`node_border mouse_over_shadow ${node.uuid} ${highlightedNode === node.uuid ? "highlighted_node" : null}`);
+        setClassNames(
+            `node_border mouse_over_shadow ${node.uuid} ${
+                highlightedNode === node.uuid ? 'highlighted_node' : null
+            }`
+        );
     }, [node.uuid, highlightedNode]);
 
     return classNames;
 }
 
+function checkForOverflowE(
+    branchSpace,
+    showMini,
+    overflowBreakingPoint,
+    setOverflowBreakingPoint,
+    setShowMini
+) {
+    if (
+        typeof branchSpace !== 'undefined' &&
+        branchSpace !== null &&
+        branchSpace.current
+    ) {
+        const e = branchSpace.current;
+        const setContainer = findChildByClass(e, 'set_too_high');
+        const nodeBorder = findChildByClass(e, 'node_border');
+        const wouldOverflowNow = setContainer
+            ? setContainer.scrollWidth >
+              nodeBorder.offsetWidth
+               - emToPixel(overflowThreshold)
+            : false;
+        // We overflowed previously but not anymore
+        if (
+            overflowBreakingPoint <=
+            e.offsetWidth - emToPixel(overflowThreshold)
+        ) {
+            setShowMini(false);
+        }
+        if (!showMini && wouldOverflowNow) {
+            // We have to react to overflow now but want to remember when we'll not overflow anymore
+            // on a resize
+            setOverflowBreakingPoint(e.offsetWidth);
+            setShowMini(true);
+        }
+        // We never overflowed and also don't now
+        if (overflowBreakingPoint === null && !wouldOverflowNow) {
+            setShowMini(false);
+        }
+    }
+}
+
 export function Node(props) {
-    const { node, showMini, isSubnode } = props;
-    const [isOverflowV, setIsOverflowV] = React.useState(false);
+    const {node, isSubnode, branchSpace} = props;
+    const [showMini, setShowMini] = React.useState(false);
+    const [isExpandableV, setIsExpandableV] = React.useState(false);
+    const [isCollapsibleV, setIsCollapsibleV] = React.useState(false);
+    const [expandVAllTheWay, setExpandVAllTheWay] = React.useState(false);
+    const [overflowBreakingPoint, setOverflowBreakingPoint] =
+        React.useState(null);
     const colorPalette = useColorPalette();
-    const { dispatch: dispatchShownNodes } = useShownNodes();
+    const {dispatch: dispatchShownNodes} = useShownNodes();
     const classNames = useHighlightedNodeToCreateClassName(node);
-    const [height, setHeight] = React.useState(minimumNodeHeight);
-    const [expandNode, setExpandNode] = React.useState(false);
-    // state updater to force other components to update
-    const [, , startAnimationUpdater, stopAnimationUpdater] = useAnimationUpdater();
-    const { setShownDetail } = useShownDetail();
-    
+    const [height, setHeight] = React.useState(emToPixel(minimumNodeHeight));
+    const {animationState, setAnimationState} = useAnimationUpdater();
+    const setAnimationStateRef = React.useRef(setAnimationState);
+    const {setShownDetail} = useShownDetail();
     const dispatchShownNodesRef = React.useRef(dispatchShownNodes);
     const nodeuuidRef = React.useRef(node.uuid);
+    const animateHeightRef = React.useRef(null);
 
     const notifyClick = (node) => {
         setShownDetail(node.uuid);
-    }
+    };
     React.useEffect(() => {
         const dispatch = dispatchShownNodesRef.current;
-        const nodeuuid = nodeuuidRef.current
-        dispatch(showNode(nodeuuid))
+        const nodeuuid = nodeuuidRef.current;
+        dispatch(showNode(nodeuuid));
         return () => {
-            dispatch(hideNode(nodeuuid))
-        }
-    }, [])
+            dispatch(hideNode(nodeuuid));
+        };
+    }, []);
+
+    React.useEffect(() => {
+        const setAnimationState = setAnimationStateRef.current;
+        const nodeuuid = nodeuuidRef.current;
+        setAnimationState((oldValue) => ({...oldValue, [nodeuuid]: null}));
+        return () => {
+            setAnimationState((v) => {
+                const {[nodeuuid]: _, ...rest} = v;
+                return rest;
+            });
+        };
+    }, []);
+
+    React.useEffect(() => {
+        setIsCollapsibleV(height > emToPixel(standardNodeHeight));
+    }, [height])
+
+    const checkForOverflow = React.useCallback(() => {
+        checkForOverflowE(
+            branchSpace,
+            showMini,
+            overflowBreakingPoint,
+            setOverflowBreakingPoint,
+            setShowMini
+        );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [branchSpace, showMini, overflowBreakingPoint, animationState.graph_zoom]);
+
+    React.useEffect(() => {
+        checkForOverflow();
+    }, [checkForOverflow, node]);
+
+    React.useEffect(() => {
+        window.addEventListener('resize', checkForOverflow);
+        return (_) => window.removeEventListener('resize', checkForOverflow);
+    });
 
     const divID = `${node.uuid}_animate_height`;
 
@@ -309,28 +484,31 @@ export function Node(props) {
                     className={'mini'}
                 />
             ) : (
-                <div className={`set_too_high ${node.uuid.includes('loading') ? 'loading' : null}`}>
-                    <AnimateHeight
-                        id={divID}
-                        duration={500}
-                        height={height}
-                        onHeightAnimationStart={startAnimationUpdater}
-                        onHeightAnimationEnd={stopAnimationUpdater}
-                        >
-                        <NodeContent
-                            node={node}
-                            setHeight={setHeight}
-                            parentID={divID}
-                            setIsOverflowV={setIsOverflowV}
-                            expandNode={expandNode}
-                            isSubnode={isSubnode}
-                        />
-                        <RecursionButton node={node} />
-                    </AnimateHeight>
-                </div>
+                <AnimateHeight
+                    id={divID}
+                    duration={500}
+                    height={height}
+                    ref={animateHeightRef}
+                    contentClassName={`set_too_high ${
+                        node.loading === true ? 'loading' : null
+                    }`}
+                >
+                    <NodeContent
+                        node={node}
+                        setHeight={setHeight}
+                        parentID={divID}
+                        setIsExpandableV={setIsExpandableV}
+                        expandVAllTheWay={expandVAllTheWay}
+                        isSubnode={isSubnode}
+                    />
+                    <RecursionButton node={node} />
+                </AnimateHeight>
             )}
-            {!showMini && isOverflowV ? (
-                <OverflowButton setExpandNode={setExpandNode} />
+            {!showMini && (isExpandableV || isCollapsibleV) ? (
+                <OverflowButton
+                    setExpandVAllTheWay={setExpandVAllTheWay}
+                    isOverflowV={isExpandableV}
+                />
             ) : null}
         </div>
     );
@@ -342,18 +520,19 @@ Node.propTypes = {
      */
     node: NODE,
     /**
-     * If true, shows the minified node without displaying its symbols
-     */
-    showMini: PropTypes.bool,
-    /**
      * If the node is a subnode of a recursive node
      */
-    isSubnode: PropTypes.bool
-}
-
+    isSubnode: PropTypes.bool,
+    /**
+     * The ref to the branch space the node sits in 
+     */
+    branchSpace: PropTypes.object,
+};
 
 export function RecursiveSuperNode(props) {
-    const {node, showMini} = props;
+    const {node, branchSpace} = props;
+    const [showMini, setShowMini] = React.useState(false);
+    const [overflowBreakingPoint, setOverflowBreakingPoint] = React.useState();
     const colorPalette = useColorPalette();
     const {dispatch: dispatchShownNodes} = useShownNodes();
     const classNames = `node_border ${node.uuid}`;
@@ -374,8 +553,25 @@ export function RecursiveSuperNode(props) {
             dispatch(hideNode(nodeuuid));
         };
     }, []);
-    React.useEffect(() => {});
 
+    const checkForOverflow = React.useCallback(() => {
+        checkForOverflowE(
+            branchSpace,
+            showMini,
+            overflowBreakingPoint,
+            setOverflowBreakingPoint,
+            setShowMini
+        );
+    }, [branchSpace, showMini, overflowBreakingPoint]);
+
+    React.useEffect(() => {
+        checkForOverflow();
+    }, [checkForOverflow, node]);
+
+    React.useEffect(() => {
+        window.addEventListener('resize', checkForOverflow);
+        return () => window.removeEventListener('resize', checkForOverflow);
+    });
     return (
         <div
             className={classNames}
@@ -386,20 +582,31 @@ export function RecursiveSuperNode(props) {
                 notifyClick(node);
             }}
         >
-            <RecursionButton node={node} />
-            {node.recursive._graph.nodes
-                .map((e) => e.id)
-                .map((subnode) => {
-                    return (
-                        <Node
-                            key={subnode.uuid}
-                            node={subnode}
-                            notifyClick={notifyClick}
-                            showMini={showMini}
-                            isSubnode={true}
-                        />
-                    );
-                })}
+            {showMini ? (
+                <div
+                    style={{
+                        backgroundColor: colorPalette.primary,
+                        color: colorPalette.primary,
+                    }}
+                    className={'mini'}
+                />
+            ) : (
+                <>
+                    <RecursionButton node={node} />
+                    {node.recursive._graph.nodes
+                        .map((e) => e.id)
+                        .map((subnode) => {
+                            return (
+                                <Node
+                                key={subnode.uuid}
+                                node={subnode}
+                                notifyClick={notifyClick}
+                                isSubnode={true}
+                                />
+                                );
+                        })}
+                </>
+            )}
         </div>
     );
 }
@@ -407,11 +614,10 @@ export function RecursiveSuperNode(props) {
 RecursiveSuperNode.propTypes = {
     /**
      * object containing the node data to be displayed
-     */
-    node: NODE,
-    /**
-     * If true, shows the minified node without displaying its symbols
-     */
-    showMini: PropTypes.bool,
-}
-
+    */
+   node: NODE,
+   /**
+    * The ref to the branch space
+   */
+  branchSpace: PropTypes.object,
+};

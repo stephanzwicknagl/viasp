@@ -1,6 +1,9 @@
 .boxrow_container {
     justify-content: space-around;
     background: transparent;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 3;
 }
 
 .boxrow_row {
@@ -8,4 +11,5 @@
     justify-content: space-around;
     align-content: center;
     background: transparent;
+    overflow: hidden;
 }

@@ -42,7 +42,8 @@ export const NODE = PropTypes.exact({
     reason: PropTypes.object, 
     recursive: PropTypes.oneOfType([PropTypes.bool, GRAPH]),
     space_multiplier: PropTypes.number,
-    uuid: PropTypes.string
+    uuid: PropTypes.string,
+    loading: PropTypes.bool
 })
 export const CLINGRAPHNODE = PropTypes.exact({
     _type: PropTypes.oneOf(['ClingraphNode']),
@@ -63,4 +64,8 @@ export const COLORPALETTE = PropTypes.exact({
     rowShading: PropTypes.arrayOf(PropTypes.string),
     explanationSuccess: PropTypes.string,
     explanationHighlights: PropTypes.arrayOf(PropTypes.string),
+})
+export const MAPZOOMSTATE = PropTypes.exact({
+    scale: PropTypes.number,
+    translation: PropTypes.shape({ x: PropTypes.number, y: PropTypes.number }),
 })

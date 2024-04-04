@@ -1,15 +1,15 @@
 .set_container {
-    width: -moz-fit-content;
     width: fit-content;
     position: relative;
     line-height: 1.5em;
     min-height: 1.5em;
+    cursor: pointer;
 }
 
 .node_border {
-    border-radius: 10px 10px 10px 10px;
-    border: 2px solid;
-    margin: 15px 5px 15px 5px;
+    border-radius: 0.7em;
+    border: .14em solid;
+    margin: 1em 3% 1em 3%;
     position: relative;
     height: max-content;
     overflow: hidden;
@@ -17,24 +17,24 @@
 
 .mouse_over_shadow:hover {
     transition: drop-shadow .1s;
-    filter: drop-shadow(0 0 2px #333);
+    filter: drop-shadow(0 0 .14em #333);
 }
 
 .highlighted_node {
     transition: drop-shadow .1s;
-    filter: drop-shadow(0 0 2px #333);
+    filter: drop-shadow(0 0 .14em #333);
 }
 
 .bauchbinde {
     position: absolute;
     right: 0;
     bottom: 0;
-    border-radius: 4px 0px 8px 0px;
+    border-radius: .28em 0em .57em 0em;
 }
 
 .bauchbinde:hover {
     transition: box-shadow .2s;
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 10px 0 rgba(0, 0, 0, 0.2);
+    box-shadow: 0 .29em .57em 0 rgba(0, 0, 0, 0.2), 0 .43em .71em 0 rgba(0, 0, 0, 0.2);
     transition: .2s ease-in-out;
     -moz-transition: .2s ease-in-out;
     -webkit-transition: .2s ease-in-out;
@@ -42,25 +42,24 @@
 
 .bauchbinde_text {
     cursor: pointer;
-    font-size: 1pt;
-    vertical-align: middle;
+    vertical-align: bottom;
     text-align: center;
 }
 
 .set_too_high {
-    overflow-y: hidden;
+    /* overflow-y: hidden; */
     display: flex;
     justify-content: center;
     align-items: center;
+    min-width: 2.5em;
+    min-height: 2.5em;
 }
 
 .set_value {
     font-family: monospace;
     font-size: 14pt;
-    width: -moz-fit-content;
     width: fit-content;
-    margin: 6px 6px 5px 6px;
-    min-width: 22px;
+    margin: .3em .43em .43em .43em;
 
     position: relative;
     flex: 0 0 auto;
@@ -70,30 +69,27 @@
     align-items: center;
 }
 
-.set_container {
-    cursor: pointer;
-}
+
 
 .mini {
     text-align: center;
     vertical-align: middle;
     width: fit-content;
     height: fit-content;
-    font-size: 12pt;
-    min-width: 8px;
+    /* font-size: 12pt; */
+    min-width: .57em;
     cursor: pointer;
-    min-height: 8px;
+    min-height: .57em;
 }
 
 .recursion_button{
     position: absolute;
     right: 0;
     top: 0;
-    border-radius: 0px 8px 0px 4px;
 }
 
 .recursion_button:hover {
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 10px 0 rgba(0, 0, 0, 0.2);
+    box-shadow: 0 .28em .57em 0 rgba(0, 0, 0, 0.2), 0 .43em .71em 0 rgba(0, 0, 0, 0.2);
     transition: .3s ease-in-out;
     -moz-transition: .3s ease-in-out;
     -webkit-transition: .3s ease-in-out;
@@ -103,7 +99,7 @@
     cursor: pointer;
     font-size: 1pt;
     font-weight: bold;
-    border-radius: 0px 8px 0px 4px;
+    border-radius: 0em .57em 0em .28em;
     padding: 1px;
     vertical-align: middle;
     text-align: center;
@@ -112,20 +108,25 @@
 
 @keyframes loading {
     0% {
-        background-position: -200px 0;
+        background-position: -200em 0;
     }
 
     100% {
-        background-position: calc(200px + 100%) 0;
+        background-position: calc(200em + 100%) 0;
     }
 }
 
 .loading {
     background: linear-gradient(90deg, #f3f3f3 25%, #e0e0e0 50%, #f3f3f3 75%);
-    background-size: 200px 100%;
+    background-size: 200em 100%;
+    border-radius: 0.8em;
     animation: loading 1.5s infinite;
 }
 
 .hidden {
     visibility: hidden
+}
+
+.rotate_icon {
+    transform: rotate(180deg);
 }

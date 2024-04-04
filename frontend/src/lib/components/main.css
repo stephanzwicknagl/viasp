@@ -1,8 +1,23 @@
+:root {
+    --detail-open-width: 20%;
+}
 
 body {
     margin: 0;
     flex-flow: column;
+    overflow: hidden;
+}
+
+.content {
+    height: 100vh;
     overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.graph {
+    height: 100vh;
+    width: 100vw;
+    overflow: auto;
 }
 
 .noselect {
