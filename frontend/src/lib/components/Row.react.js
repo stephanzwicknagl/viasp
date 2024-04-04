@@ -262,7 +262,7 @@ export function Row(props) {
             }));
     }, []);
 
-    const debouncedAnimateResize = React.useMemo(() => {
+    const debouncedAnimateResize = React.useCallback(() => {
         return debounce(animateResize, Constants.DEBOUNCETIMEOUT);
     }, [animateResize]);
     useResizeObserver(rowbodyRef, debouncedAnimateResize);
