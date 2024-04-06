@@ -20,6 +20,7 @@ import useResizeObserver from '@react-hook/resize-observer';
 import {findChildByClass} from '../utils';
 import debounce from 'lodash.debounce';
 import * as Constants from '../constants';
+import {useDebouncedAnimateResize} from '../hooks/useDebouncedAnimateResize';
 
 function any(iterable) {
     for (let index = 0; index < iterable.length; index++) {
@@ -187,6 +188,35 @@ function NodeContent(props) {
         });
     }
     useResizeObserver(setContainerRef, visibilityManager);
+
+    // const nodeUuidRef = React.useRef(node.uuid);
+    // const {setAnimationState} = useAnimationUpdater();
+    // const setAnimationStateRef = React.useRef(setAnimationState);
+    // const animateResize = React.useCallback((entry) => {
+    //     const nodeUuid = nodeUuidRef.current;
+    //     const setAnimationState = setAnimationStateRef.current;
+    //     setAnimationState((oldValue) => ({
+    //         [nodeUuid]: {
+    //             ...oldValue[nodeUuid],
+    //             width: entry.contentRect.width,
+    //             height: entry.contentRect.height,
+    //             top: entry.contentRect.top,
+    //             left: entry.contentRect.left,
+    //         },
+    //     }));
+    // }, []);
+
+    // const debouncedAnimateResize = React.useCallback(
+    //     (entry) => {
+    //         return debounce(
+    //             () => animateResize(entry),
+    //             Constants.DEBOUNCETIMEOUT
+    //         );
+    //     },
+    //     [animateResize]
+    // );
+    // useResizeObserver(setContainerRef, debouncedAnimateResize);
+
 
     const classNames2 = `set_value`;
     const renderedSymbols = contentToShow
@@ -403,12 +433,15 @@ export function Node(props) {
     const {dispatch: dispatchShownNodes} = useShownNodes();
     const classNames = useHighlightedNodeToCreateClassName(node);
     const [height, setHeight] = React.useState(Constants.minimumNodeHeight);
-    const {animationState, setAnimationState} = useAnimationUpdater();
-    const setAnimationStateRef = React.useRef(setAnimationState);
+    const {animationState} = useAnimationUpdater();
     const {setShownDetail} = useShownDetail();
     const dispatchShownNodesRef = React.useRef(dispatchShownNodes);
     const nodeuuidRef = React.useRef(node.uuid);
     const animateHeightRef = React.useRef(null);
+
+    useDebouncedAnimateResize(
+        animateHeightRef, nodeuuidRef
+    );
 
     const notifyClick = (node) => {
         setShownDetail(node.uuid);
@@ -422,17 +455,6 @@ export function Node(props) {
         };
     }, []);
 
-    React.useEffect(() => {
-        const setAnimationState = setAnimationStateRef.current;
-        const nodeuuid = nodeuuidRef.current;
-        setAnimationState((oldValue) => ({...oldValue, [nodeuuid]: null}));
-        return () => {
-            setAnimationState((v) => {
-                const {[nodeuuid]: _, ...rest} = v;
-                return rest;
-            });
-        };
-    }, []);
 
     React.useEffect(() => {
         setIsCollapsibleV(height > Constants.standardNodeHeight);
