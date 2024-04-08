@@ -93,7 +93,8 @@ def test_get_facts(client_with_a_graph):
     client, _, _, _ = client_with_a_graph
     res = client.get(f"/graph/facts")
     assert res.status_code == 200
-    assert type(res.json) == Node
+    assert type(res.json) == list
+    assert type(res.json[0]) == Node
 
 
 def test_get_edges(client_with_a_graph):

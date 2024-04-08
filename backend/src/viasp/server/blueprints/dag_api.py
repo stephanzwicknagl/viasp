@@ -14,7 +14,7 @@ from ...shared.defaults import STATIC_PATH
 from ...shared.model import Transformation, Node, Signature
 from ...shared.util import get_start_node_from_graph, is_recursive, hash_from_sorted_transformations
 from ...shared.io import StableModel
-from ..database import load_recursive_transformations_hashes, save_graph, get_graph, clear_graph, set_current_graph, get_all_sorts, get_current_sort, load_program, load_transformer, load_models, load_clingraph_names
+from ..database import load_recursive_transformations_hashes, save_graph, get_graph, clear_graph, set_current_graph, get_all_sorts, get_current_sort, load_program, load_transformer, load_models, load_clingraph_names, is_sortable
 
 
 bp = Blueprint("dag_api",
@@ -376,6 +376,12 @@ def get_reasons_of():
             "src": source_uuid,
             "tgt": reason_uuid
         } for reason_uuid in reason_uuids])
+    raise NotImplementedError
+
+@bp.route("/graph/sortable", methods=["GET"])
+def get_is_sortable():
+    if request.method == "GET":
+        return jsonify(is_sortable())
     raise NotImplementedError
 
 

@@ -4,6 +4,7 @@ import Xarrow from "react-xarrows";
 import { useAnimationUpdater } from "../contexts/AnimationUpdater";
 import PropTypes from 'prop-types'
 import { v4 as uuidv4 } from 'uuid';
+import debounce from "lodash/debounce";
 
 
 export function Arrows() {
@@ -54,9 +55,14 @@ export function Arrows() {
             });
     }, [highlightedSymbol]);
 
+    const debouncedCalculateArrows = React.useMemo(
+        () => debounce(() => setArrows(calculateArrows()), 10),
+        [calculateArrows]
+    )
+
     React.useEffect(() => {
-        setArrows(calculateArrows());
-    }, [animationState, highlightedSymbol, calculateArrows]);
+        debouncedCalculateArrows();
+    }, [animationState, highlightedSymbol, debouncedCalculateArrows]);
 
     return (
         <div className="arrows_container">

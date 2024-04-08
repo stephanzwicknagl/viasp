@@ -24,6 +24,16 @@ function fetchSorts(backendURL) {
     });
 }
 
+function fetchSortable(backendURL) {
+    return fetch(`${backendURL("graph/sortable")}`).then(r => {
+        if (r.ok) {
+            return r.json()
+        }
+        throw new Error(r.statusText);
+
+    });
+}
+
 function loadFacts(backendURL) {
     return fetch(`${backendURL('graph/facts')}`).then((r) => {
         if (!r.ok) {
@@ -83,6 +93,7 @@ const initialState = {
     canDrop: null,
     transformationNodesMap: null,
     clingraphGraphics: [],
+    isSortable: true,
 };
 
 const HIDE_TRANSFORMATION = 'APP/TRANSFORMATIONS/HIDE';
@@ -94,6 +105,7 @@ const ADD_TRANSFORMATION_SET = 'APP/TRANSFORMATIONS/ADDSET'
 const CLEAR_TRANSFORMATIONS = 'APP/TRANSFORMATIONS/CLEAR';
 const ADD_SORT = 'APP/TRANSFORMATIONS/ADDSORT';
 const SET_CURRENT_SORT = 'APP/TRANSFORMATIONS/SETCURRENTSORT';
+const SET_SORTABLE = 'APP/TRANSFORMATIONS/SETSORTABLE';
 const REORDER_TRANSFORMATION = 'APP/TRANSFORMATIONS/REORDER';
 const SET_CURRENT_DRAGGED = 'APP/TRANSFORMATIONS/SETDRAGGED';
 const SET_NODES = 'APP/NODES/SET';
@@ -109,6 +121,7 @@ const addTransformationSet = (ts) => ({type: ADD_TRANSFORMATION_SET, ts})
 const clearTransformations = (t) => ({type: CLEAR_TRANSFORMATIONS});
 const addSort = (s) => ({ type: ADD_SORT, s })
 const setCurrentSort = (s) => ({ type: SET_CURRENT_SORT, s})
+const setSortable = (s) => ({type: SET_SORTABLE, s});
 const reorderTransformation = (oldIndex, newIndex) => ({type: REORDER_TRANSFORMATION, oldIndex, newIndex})
 const setCurrentDragged = (h) => ({type: SET_CURRENT_DRAGGED, h});
 const setNodes = (t) => ({type: SET_NODES, t});
@@ -274,6 +287,12 @@ const transformationReducer = (state = initialState, action) => {
             ),
         };
     }
+    if (action.type === SET_SORTABLE) {
+        return {
+            ...state,
+            isSortable: action.s,
+        };
+    }
     return {...state}
 }
 
@@ -292,6 +311,14 @@ const TransformationProvider = ({children}) => {
             .then(items => {
                 if (mounted) {
                     items.map((s) => dispatch(addSort(s)))
+                }
+            })
+        fetchSortable(backendUrlRef.current).catch(error => {
+            messageDispatchRef.current(showError(`Failed to get sortable: ${error}`))
+        })
+            .then((answer) => {
+                if (mounted) {
+                    dispatch(setSortable(answer))
                 }
             })
             return () => { mounted = false };

@@ -13,13 +13,9 @@ import {MAPZOOMSTATE, TRANSFORMATION, TRANSFORMATIONWRAPPER} from '../types/prop
 import {ColorPaletteContext} from '../contexts/ColorPalette';
 import {useShownRecursion} from '../contexts/ShownRecursion';
 import {make_default_nodes} from '../utils';
-import useResizeObserver from '@react-hook/resize-observer';
-import {
-    AnimationUpdater,
-    useAnimationUpdater,
-} from '../contexts/AnimationUpdater';
+import {AnimationUpdater} from '../contexts/AnimationUpdater';
 import {DragHandle} from './DragHandle.react';
-import debounce from 'lodash/debounce';
+import {useDebouncedAnimateResize} from '../hooks/useDebouncedAnimateResize';
 
 
 export class RowTemplate extends React.Component {
@@ -203,9 +199,8 @@ RowTemplate.propTypes = {
 
 export function Row(props) {
     const {transformation, dragHandleProps, transform} = props;
-
     const {
-        state: {transformations, transformationNodesMap},
+        state: {transformations, transformationNodesMap, isSortable},
     } = useTransformations();
     const [nodes, setNodes] = React.useState(make_default_nodes());
     const rowbodyRef = React.useRef(null);
@@ -213,8 +208,8 @@ export function Row(props) {
     const handleRef = React.useRef(null);
     const [shownRecursion, ,] = useShownRecursion();
     const transformationIdRef = React.useRef(transformation.id);
-    const {setAnimationState} = useAnimationUpdater();
-    const setAnimationStateRef = React.useRef(setAnimationState);
+
+    useDebouncedAnimateResize(rowbodyRef, transformationIdRef);
 
     React.useEffect(() => {
         if (headerRef.current && handleRef.current) {
@@ -223,20 +218,6 @@ export function Row(props) {
         }
     }, []);
 
-    React.useEffect(() => {
-        const setAnimationState = setAnimationStateRef.current;
-        const transformationId = transformationIdRef.current;
-        setAnimationState((oldValue) => ({
-            ...oldValue,
-            [transformationId]: null,
-        }));
-        return () => {
-            setAnimationState((v) => {
-                const {[transformationId]: _, ...rest} = v;
-                return rest;
-            });
-        };
-    }, []);
 
     React.useEffect(() => {
         if (
@@ -247,25 +228,6 @@ export function Row(props) {
         }
     }, [transformationNodesMap, transformation.id]);
 
-    const animateResize = React.useCallback(() => {
-        const transformationId = transformationIdRef.current;
-        const setAnimationState = setAnimationStateRef.current;
-        const element = rowbodyRef.current;
-        setAnimationState((oldValue) => ({
-            [transformationId]: {
-                ...oldValue[transformationId],
-                width: element.clientWidth,
-                height: element.clientHeight,
-                top: element.offsetTop,
-                left: element.offsetLeft,
-            },
-            }));
-    }, []);
-
-    const debouncedAnimateResize = React.useCallback(() => {
-        return debounce(animateResize, Constants.DEBOUNCETIMEOUT);
-    }, [animateResize]);
-    useResizeObserver(rowbodyRef, debouncedAnimateResize);
 
     const showNodes =
         transformations.find(
@@ -288,7 +250,7 @@ export function Row(props) {
                     transformation={transformation.rules}
                 />
             )}
-            {dragHandleProps === null ? null : (
+            {dragHandleProps === null || !isSortable ? null : (
                 <DragHandle
                     ref={handleRef}
                     dragHandleProps={dragHandleProps}

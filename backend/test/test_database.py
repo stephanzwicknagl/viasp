@@ -74,7 +74,7 @@ def test_graph_json_database(graph_info):
     db = GraphAccessor()
     encoding_id = "test"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         db.load_graph_json(graph_info[1], encoding_id)
     db.save_graph(graph_info[0], graph_info[1], graph_info[2], encoding_id)
     r = db.load_graph_json(graph_info[1], encoding_id)
@@ -86,7 +86,7 @@ def test_graph_database(graph_info):
     db = GraphAccessor()
     encoding_id = "test"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         db.load_graph(graph_info[1], encoding_id)
     db.save_graph(graph_info[0], graph_info[1], graph_info[2], encoding_id)
     r = db.load_graph(graph_info[1], encoding_id)
@@ -98,7 +98,7 @@ def test_current_graph_json_database(graph_info):
     db = GraphAccessor()
     encoding_id = "test"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         db.load_current_graph_json(encoding_id)
     db.save_graph(graph_info[0], graph_info[1], graph_info[2], encoding_id)
     db.set_current_graph(graph_info[1], encoding_id)
@@ -109,7 +109,7 @@ def test_current_graph_database(graph_info):
     db = GraphAccessor()
     encoding_id = "test"
 
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         db.load_current_graph(encoding_id)
     db.save_graph(graph_info[0], graph_info[1], graph_info[2], encoding_id)
     db.set_current_graph(graph_info[1], encoding_id)
@@ -132,13 +132,24 @@ def test_sorts_database(get_sort_program_all_sorts, program_multiple_sorts):
     program = program_multiple_sorts
     sorts, _ = get_sort_program_all_sorts(program)
 
+    with pytest.raises(KeyError):
+        db.load_current_graph(encoding_id)
     r = db.load_all_sorts(encoding_id)
     assert type(r) == list
     assert len(r) == 0
+    
     db.save_many_sorts([(hash_from_sorted_transformations(sort), sort, encoding_id) for sort in sorts])
     r = db.load_all_sorts(encoding_id)
     assert len(r) == 2
     assert type(r) == list
+
+    db.set_current_graph(hash_from_sorted_transformations(sorts[0]), encoding_id)
+    with pytest.raises(ValueError):
+        db.load_current_graph(encoding_id)
+    db.clear_all_sorts(encoding_id)
+    r = db.load_all_sorts(encoding_id)
+    assert type(r) == list
+    assert len(r) == 0
 
 
 def test_current_sort_database(graph_info):
@@ -162,7 +173,7 @@ def test_recursion_database(app_context):
     r = db.load_recursive_transformations_hashes(encoding_id)
     assert type(r) == set
     assert len(r) == 0
-    
+
     db.save_recursive_transformations_hashes(recursion, encoding_id)
     r = db.load_recursive_transformations_hashes(encoding_id)
     assert type(r) == set
@@ -196,6 +207,15 @@ def test_clingraph_database():
     r = db.load_all_clingraphs(encoding_id)
     assert type(r) == list
     assert len(r) == 0
+
+def test_sortable_database(app_context):
+    db = GraphAccessor()
+    encoding_id = "test"
+    assert db.is_sortable(encoding_id) == True
+    db.set_sortable(False, encoding_id)
+    assert db.is_sortable(encoding_id) == False
+    db.set_sortable(True, encoding_id)
+    assert db.is_sortable(encoding_id) == True
 
 
 def test_warnings(app_context, load_analyzer, program_simple):

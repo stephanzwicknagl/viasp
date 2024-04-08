@@ -116,6 +116,10 @@ def get_all_sorts() -> List[str]:
     encoding_id = get_or_create_encoding_id()
     return get_database().load_all_sorts(encoding_id)
 
+def clear_all_sorts():
+    encoding_id = get_or_create_encoding_id()
+    get_database().clear_all_sorts(encoding_id)
+
 
 def save_graph(data: nx.DiGraph, hash: str, sort: List[Transformation]):
     encoding_id = get_or_create_encoding_id()
@@ -166,6 +170,15 @@ def load_transformer() -> Optional[Transformer]:
     encoding_id = get_or_create_encoding_id()
     return get_database().load_transformer(encoding_id)
 
+
+def set_sortable(sortable: bool):
+    encoding_id = get_or_create_encoding_id()
+    get_database().set_sortable(sortable, encoding_id)
+
+
+def is_sortable() -> bool:
+    encoding_id = get_or_create_encoding_id()
+    return get_database().is_sortable(encoding_id)
 
 def clear_graph():
     get_database().clear()
@@ -256,6 +269,14 @@ class GraphAccessor:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 encoding_id TEXT,
                 warning TEXT,
+                FOREIGN KEY(encoding_id) REFERENCES encodings(id)
+            )
+        """)
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sortable (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                encoding_id TEXT UNIQUE,
+                sortable INTEGER,
                 FOREIGN KEY(encoding_id) REFERENCES encodings(id)
             )
         """)
@@ -365,6 +386,8 @@ class GraphAccessor:
             SELECT data FROM graphs WHERE hash = ? AND encoding_id = ?
         """, (hash, encoding_id))
         result = self.cursor.fetchone()
+        if not result:
+            raise KeyError("The hash is not in the database")
         if result and result[0]:
             return result[0]
         raise ValueError("No graph found")
@@ -422,10 +445,20 @@ class GraphAccessor:
         loaded_sorts: List[str] = [r[0] for r in result]
         current_sort_hash = self.get_current_graph(encoding_id)
         if current_sort_hash != "":
-            index_of_current_sort: int = loaded_sorts.index(current_sort_hash)
-            loaded_sorts = loaded_sorts[
-                index_of_current_sort:] + loaded_sorts[:index_of_current_sort]
+            try:
+                index_of_current_sort: int = loaded_sorts.index(current_sort_hash)
+                loaded_sorts = loaded_sorts[
+                    index_of_current_sort:] + loaded_sorts[:index_of_current_sort]
+            except ValueError:
+                pass
         return loaded_sorts
+    
+    def clear_all_sorts(self, encoding_id: str):
+        self.cursor.execute(
+            """
+            DELETE FROM graphs WHERE encoding_id = (?)
+        """, (encoding_id, ))
+        self.conn.commit()
 
     # # # # # # # #
     #  RECURSION  #
@@ -447,7 +480,7 @@ class GraphAccessor:
         """, (encoding_id, ))
         result = self.cursor.fetchall()
         return {r[0] for r in result}
-    
+
     def clear_recursive_transformations_hashes(self, encoding_id: str):
         self.cursor.execute(
             """
@@ -529,6 +562,25 @@ class GraphAccessor:
         """, (encoding_id, ))
         result = self.cursor.fetchone()
         return current_app.json.loads(result[0]) if result is not None else None
+
+    # # # # # # # #
+    #   SORTABLE  #
+    # # # # # # # #
+
+    def set_sortable(self, sortable: bool, encoding_id: str):
+        self.cursor.execute(
+            """
+            INSERT OR REPLACE INTO sortable (sortable, encoding_id) VALUES (?, ?)
+        """, (int(sortable), encoding_id))
+        self.conn.commit()
+
+    def is_sortable(self, encoding_id: str) -> bool:
+        self.cursor.execute(
+            """
+            SELECT sortable FROM sortable WHERE encoding_id = (?)
+        """, (encoding_id, ))
+        result = self.cursor.fetchone()
+        return bool(result[0]) if result is not None else True
 
     # # # # # # # #
     #   GENERAL   #
