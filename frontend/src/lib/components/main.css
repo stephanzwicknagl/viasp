@@ -1,7 +1,3 @@
-:root {
-    --detail-open-width: 20%;
-}
-
 body {
     margin: 0;
     flex-flow: column;

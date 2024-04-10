@@ -51,6 +51,7 @@ import {MapInteraction} from 'react-map-interaction';
 import useResizeObserver from '@react-hook/resize-observer';
 import * as Constants from '../constants';
 import debounce from 'lodash.debounce';
+import { useDebouncedAnimateResize } from '../hooks/useDebouncedAnimateResize';
 
 function postCurrentSort(backendURL, hash) {
     return fetch(`${backendURL('graph/sorts')}`, {
@@ -166,6 +167,10 @@ function MainWindow(props) {
         scale: 1,
     });
     const contentDivRef = React.useRef(null);
+    const translationRef = React.useRef('translation')
+
+    useDebouncedAnimateResize(contentDivRef, translationRef);
+
 
     React.useEffect(() => {
         fetch(backendURLRef.current('graph/sorts')).catch(() => {
@@ -363,11 +368,11 @@ function MainWindow(props) {
         });
     }, [shownDetail, translationBounds]);
 
-    const debouncedAnimateResize = React.useMemo(
-        () => debounce(animateResize, Constants.DEBOUNCETIMEOUT),
-        [animateResize]
-    );
-    useResizeObserver(contentDivRef, debouncedAnimateResize);
+    // const debouncedAnimateResize = React.useMemo(
+    //     () => debounce(animateResize, Constants.DEBOUNCETIMEOUT),
+    //     [animateResize]
+    // );
+    // useResizeObserver(contentDivRef, debouncedAnimateResize);
 
     // observe scroll position
     // Add a state for the scroll position

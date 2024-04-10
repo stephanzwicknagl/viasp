@@ -1,3 +1,6 @@
+:root {
+    --detail-open-width: 20%;
+}
 
 .detail {
     float: right;

@@ -123,3 +123,11 @@ export function Detail() {
 }
 
 Detail.propTypes = {}
+
+export function getDetailOpenWidthRatio() {
+    return parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue(
+            '--detail-open-width'
+        )
+    ) / 100;
+}
