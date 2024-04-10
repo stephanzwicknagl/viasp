@@ -29,7 +29,7 @@ def is_fact(rule, dependencies):
 
 
 def make_signature(literal: ast.Literal) -> Tuple[str, int]:  # type: ignore
-    if literal.atom.ast_type in [ASTType.BodyAggregate]:
+    if literal.atom.ast_type in [ASTType.BodyAggregate, ASTType.BooleanConstant]:
         return literal, 0
     unpacked = literal.atom.symbol
     if unpacked.ast_type in [ASTType.Variable, ASTType.Function]:
@@ -44,10 +44,7 @@ def make_signature(literal: ast.Literal) -> Tuple[str, int]:  # type: ignore
         )
     if unpacked.ast_type == ASTType.Pool:
         unpacked = unpacked.arguments[0]
-        return (
-            unpacked.name,
-            len(unpacked.arguments)
-        )
+        return (unpacked.name, len(unpacked.arguments))
     raise ValueError(f"Could not make signature of {literal}")
 
 def filter_body_arithmetic(elem: ast.Literal):  # type: ignore
