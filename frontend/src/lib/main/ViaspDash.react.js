@@ -412,7 +412,6 @@ function MainWindow(props) {
 
     return (
         <>
-            <Detail />
             <div className="content" id="content" ref={contentDivRef}>
                 <Search />
                 <div
@@ -455,6 +454,7 @@ function MainWindow(props) {
                     transform={mapShiftValue}
                 />
             </div>
+            <Detail />
         </>
     );
 }
