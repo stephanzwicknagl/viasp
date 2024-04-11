@@ -51,7 +51,7 @@ import {MapInteraction} from 'react-map-interaction';
 import useResizeObserver from '@react-hook/resize-observer';
 import * as Constants from '../constants';
 import debounce from 'lodash.debounce';
-import { useDebouncedAnimateResize } from '../hooks/useDebouncedAnimateResize';
+
 
 function postCurrentSort(backendURL, hash) {
     return fetch(`${backendURL('graph/sorts')}`, {
@@ -110,7 +110,7 @@ function GraphContainer(props) {
     const graphContainerRef = React.useRef(null);
     return (
         <div className="graph_container" ref={graphContainerRef}>
-            <Facts />
+            <Facts transform={transform}/>
             <Suspense fallback={<div>Loading...</div>}>
                 <Settings />
             </Suspense>
@@ -167,9 +167,6 @@ function MainWindow(props) {
         scale: 1,
     });
     const contentDivRef = React.useRef(null);
-    const translationRef = React.useRef('translation')
-
-    useDebouncedAnimateResize(contentDivRef, translationRef);
 
 
     React.useEffect(() => {
@@ -342,7 +339,7 @@ function MainWindow(props) {
         handleMapChangeOnDetailChange();
     }, [shownDetail, handleMapChangeOnDetailChange]);
 
-    const animateResize = React.useCallback(() => {
+    const shiftZoomOnResize = React.useCallback(() => {
         setMapShiftValue((oldShiftValue) => {
             const contentWidth = contentDivRef.current.clientWidth;
             const detailWidth = shownDetail === null
@@ -368,11 +365,11 @@ function MainWindow(props) {
         });
     }, [shownDetail, translationBounds]);
 
-    // const debouncedAnimateResize = React.useMemo(
-    //     () => debounce(animateResize, Constants.DEBOUNCETIMEOUT),
-    //     [animateResize]
-    // );
-    // useResizeObserver(contentDivRef, debouncedAnimateResize);
+    const debouncedShiftZoomOnResize = React.useMemo(
+        () => debounce(shiftZoomOnResize, Constants.SMALLERDEBOUNCETIMEOUT),
+        [shiftZoomOnResize]
+    );
+    useResizeObserver(contentDivRef, debouncedShiftZoomOnResize);
 
     // observe scroll position
     // Add a state for the scroll position

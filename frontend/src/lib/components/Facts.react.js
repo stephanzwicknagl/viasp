@@ -1,12 +1,13 @@
 import "./facts.css";
 import React from "react";
 import * as Constants from "../constants";
+import {MAPZOOMSTATE} from "../types/propTypes";
 import {Node} from "./Node.react";
 import {useTransformations} from "../contexts/transformations";
 import {make_default_nodes} from "../utils";
 import {useDebouncedAnimateResize} from "../hooks/useDebouncedAnimateResize";
-
-export function Facts() {
+export function Facts(props) {
+    const {transform} = props;
     const { state: {currentDragged, transformationNodesMap} } = useTransformations();
     const [fact, setFact] = React.useState(make_default_nodes()[0]);
     const [style, setStyle] = React.useState({opacity: 1.0});
@@ -33,6 +34,19 @@ export function Facts() {
             setStyle(prevStyle => ({...prevStyle, opacity: 1.0}));
         }
     }, [currentDragged]);
+
+    React.useEffect(() => {
+        if (transform.scale < 1) {
+            setStyle((prevStyle) => ({
+                ...prevStyle,
+                width: `${transform.scale * 100}%`,
+            }));
+        } else {
+            setStyle((prevStyle) => ({
+                ...prevStyle, 
+                width: '100%'}));
+        }
+    }, [transform.scale]);
 
 
 
@@ -64,5 +78,7 @@ export function Facts() {
     );
 }
 
-Facts.propTypes = {}
+Facts.propTypes = {
+    transform: MAPZOOMSTATE
+}
 
