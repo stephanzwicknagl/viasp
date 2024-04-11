@@ -316,7 +316,6 @@ RecursionButton.propTypes = {
 
 function OverflowButton(props) {
     const {setExpandVAllTheWay, isOverflowV} = props;
-    const [isIconRotated, setIsIconRotated] = React.useState(false);
     const colorPalette = useColorPalette();
 
     function handleClick(e) {
@@ -324,26 +323,26 @@ function OverflowButton(props) {
         setExpandVAllTheWay(isOverflowV);
     }
     
-    React.useEffect(() => {
-        setIsIconRotated(!isOverflowV);
-    }, [isOverflowV]);
 
     return (
         <div
-            style={{
-                backgroundColor: colorPalette.primary,
-                color: colorPalette.light,
-            }}
-            className={'bauchbinde'}
-            onClick={handleClick}
+        className={'bauchbinde'}
+        onClick={handleClick}
         >
-            <div className={'bauchbinde_text'}>
+            <div 
+                className={'bauchbinde_text'}
+                style={{
+                    backgroundColor: `${colorPalette.primary}a1`,
+                    background: `linear-gradient(to top, ${colorPalette.primary}a1, transparent)`,
+                    color: colorPalette.dark,
+                }}
+                >
                 <Suspense fallback={<div>...</div>}>
                     <IconWrapper
                         icon={arrowDownDoubleFill}
-                        width="0.85em"
-                        height="0.85em"
-                        className={isIconRotated ? 'rotate_icon' : ''}
+                            width="0.4em"
+                            // height="0.4em"
+                        className={!isOverflowV ? 'rotate_icon' : ''}
                     />
                 </Suspense>
             </div>
