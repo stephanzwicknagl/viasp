@@ -137,7 +137,7 @@ def test_sorts_database(get_sort_program_all_sorts, program_multiple_sorts):
     r = db.load_all_sorts(encoding_id)
     assert type(r) == list
     assert len(r) == 0
-    
+
     db.save_many_sorts([(hash_from_sorted_transformations(sort), sort, encoding_id) for sort in sorts])
     r = db.load_all_sorts(encoding_id)
     assert len(r) == 2
@@ -241,6 +241,46 @@ def test_warnings(app_context, load_analyzer, program_simple):
     assert len(r) == 0
 
 
+def test_related_graphs(app_context):
+    db = GraphAccessor()
+
+    encoding_id = "test"
+    hash_1 = "hash1"
+    hash_2 = "hash2"
+
+    elements = ['x:-a.', 'y:-a.', 'z:-a.']
+    sort_1 = [Transformation(i, (elements[i], )) for i in range(len(elements))]
+    sort_2 = [
+        Transformation(i, (elements[(i + 1) % len(elements)], ))
+        for i in range(len(elements))
+    ]
+
+    db.save_sort(hash_1, sort_1, encoding_id)
+    r = db.get_adjacent_graphs_hashes(hash_1, encoding_id)
+    assert r == []
+
+    db.insert_graph_adjacency(hash_1, hash_2, sort_2, encoding_id)
+
+    r = db.get_adjacent_graphs_hashes(hash_1, encoding_id)
+    assert type(r) == list
+    assert len(r) == 1
+    assert hash_2 in r
+
+    # assert bi-directional, many-to-many
+    hash_3 = "hash3"
+    sort_3 = [
+        Transformation(i, (elements[(i + 2) % len(elements)], ))
+        for i in range(len(elements))
+    ]
+    db.insert_graph_adjacency(hash_2, hash_3, sort_3, encoding_id)
+
+    r = db.get_adjacent_graphs_hashes(hash_2, encoding_id)
+    assert type(r) == list
+    assert len(r) == 2
+    assert hash_3 in r
+    assert hash_1 in r
+
+
 @pytest.mark.skip(reason="Transformer not registered bc of base exception?")
 def test_transformer_database(app_context):
     db = GraphAccessor()
@@ -248,7 +288,7 @@ def test_transformer_database(app_context):
     encoding_id = "test"
     transformer = ExampleTransfomer()
     path = str(
-        pathlib.Path(__file__).parent.parent.resolve() / "src" / "viasp" / "exampleTransformer.py")
+        pathlib.Path(__file__).parent.parent.resolve() / "src" / "viasp" / "exampleTransformer.py") # type: ignore
     transformer_transport = TransformerTransport.merge(transformer, "", path)
     db.save_transformer(transformer_transport, encoding_id)
     r = db.load_transformer(encoding_id)

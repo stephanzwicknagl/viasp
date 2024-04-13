@@ -219,6 +219,9 @@ def get_clingo_stable_models() -> Callable[[str], List[StableModel]]:
         return wrapped_models
     return c
 
+@pytest.fixture
+def make_a_dependency_graph():
+    pass
 
 @pytest.fixture(scope="session", autouse=True)
 def cleanup(request):

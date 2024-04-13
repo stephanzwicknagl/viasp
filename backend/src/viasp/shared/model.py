@@ -79,7 +79,8 @@ class ClingraphNode:
 @dataclass(frozen=False)
 class Transformation:
     id: int = field(hash=True)
-    rules: Tuple[Rule, ...] = field(default_factory=tuple, hash=True) # type: ignore
+    rules: Tuple[Rule, ...] = field(default_factory=tuple, hash=True)  # type: ignore
+    adjacent_sort_indices: List[int] = field(default=[], hash=False)
     hash: str = field(default="", hash=True)
 
     def __post_init__(self):

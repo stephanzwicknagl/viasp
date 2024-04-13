@@ -14,7 +14,7 @@ from ...shared.defaults import STATIC_PATH
 from ...shared.model import Transformation, Node, Signature
 from ...shared.util import get_start_node_from_graph, is_recursive, hash_from_sorted_transformations
 from ...shared.io import StableModel
-from ..database import load_recursive_transformations_hashes, save_graph, get_graph, clear_graph, set_current_graph, get_all_sorts, get_current_sort, load_program, load_transformer, load_models, load_clingraph_names, is_sortable
+from ..database import load_recursive_transformations_hashes, save_graph, get_graph, clear_graph, set_current_graph, get_adjacent_graphs_hashes, get_current_graph_hash, get_current_sort, load_program, load_transformer, load_models, load_clingraph_names, is_sortable, save_sort
 
 
 bp = Blueprint("dag_api",
@@ -168,13 +168,20 @@ def get_possible_transformation_orders():
         if request.json is None:
             return jsonify({'error': 'Missing JSON in request'}), 400
         hash = request.json["hash"]
+        sort = request.json["sort"] if "sort" in request.json else [] # could be as much as the switched indices
+        if sort:
+            # TODO: calculate the new adjacent_sort_indices for this sort
+            hash = hash_from_sorted_transformations(sort)
+            save_sort(hash, sort)
+            # TODO: also extract the adjacent sorts from the primary_sort and
+            # register those in the database
         try:
             set_current_graph(hash)
         except ValueError:
             generate_graph()
         return "ok", 200
     elif request.method == "GET":
-        sorts = get_all_sorts()
+        sorts = get_adjacent_graphs_hashes(get_current_graph_hash())
         return jsonify(sorts)
     raise NotImplementedError
 

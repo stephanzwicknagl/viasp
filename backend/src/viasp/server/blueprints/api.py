@@ -6,13 +6,12 @@ from time import time
 
 from clingo import Control
 from clingraph.orm import Factbase
-from clingo.ast import Transformer
 from clingraph.graphviz import compute_graphs, render
 
 from .dag_api import generate_graph, set_current_graph, wrap_marked_models, \
         load_program, load_transformer, load_models, \
         load_clingraph_names
-from ..database import CallCenter, get_database, save_recursive_transformations_hashes, set_models, clear_models, save_many_sorts, save_clingraph, clear_clingraph, save_transformer, save_warnings, clear_warnings, load_warnings, save_warnings, set_sortable, clear_all_sorts
+from ..database import CallCenter, get_database, save_recursive_transformations_hashes, set_models, clear_models, save_many_sorts, save_sort, save_clingraph, clear_clingraph, save_transformer, save_warnings, clear_warnings, load_warnings, save_warnings, set_sortable, clear_all_sorts
 from ...asp.reify import ProgramAnalyzer
 from ...asp.relax import ProgramRelaxer, relax_constraints
 from ...shared.model import ClingoMethodCall, StableModel, TransformerTransport
@@ -163,8 +162,10 @@ def set_primary_sort(analyzer: ProgramAnalyzer):
     try:
         _ = set_current_graph(primary_hash)
     except KeyError:
-        save_many_sorts([((hash_from_sorted_transformations(primary_sort),
-                           primary_sort))])
+        save_sort(hash_from_sorted_transformations(primary_sort),
+                           primary_sort)
+        # TODO: also extract the adjacent sorts from the primary_sort and 
+        # register those in the database
         generate_graph()
     except ValueError:
         generate_graph()
@@ -172,6 +173,7 @@ def set_primary_sort(analyzer: ProgramAnalyzer):
 
 def save_analyzer_values(analyzer: ProgramAnalyzer):
     save_recursive_transformations_hashes(analyzer.check_positive_recursion())
+    ## TODO: save attributes
 
 
 
@@ -185,9 +187,8 @@ def show_selected_models():
     marked_models = wrap_marked_models(marked_models,
                                        analyzer.get_conflict_free_showTerm())
     if analyzer.will_work():
-        save_all_sorts(analyzer, batch_size=SORTGENERATION_BATCH_SIZE)
-        save_analyzer_values(analyzer)
         set_primary_sort(analyzer)
+        save_analyzer_values(analyzer)
 
     return "ok", 200
 

@@ -67,143 +67,6 @@ class CallCenter:
         self.used.add(call.uuid)
 
 
-def get_database():
-    if 'graph_accessor' not in g:
-        g.graph_accessor = GraphAccessor()
-    return g.graph_accessor
-
-
-def load_program() -> str:
-    encoding_id = get_or_create_encoding_id()
-    return get_database().load_program(encoding_id)
-
-
-def set_models(models: Sequence[Union[StableModel, str]]):
-    encoding_id = get_or_create_encoding_id()
-    get_database().set_models(models, encoding_id)
-
-
-def load_models() -> List[StableModel]:
-    encoding_id = get_or_create_encoding_id()
-    return get_database().load_models(encoding_id)
-
-
-def clear_models():
-    encoding_id = get_or_create_encoding_id()
-    get_database().clear_models(encoding_id)
-
-
-def set_current_graph(hash: str) -> str:
-    encoding_id = get_or_create_encoding_id()
-    db = get_database()
-    if db.get_current_graph(encoding_id) != hash:
-        db.set_current_graph(hash, encoding_id)
-    return get_graph_json()
-
-def save_many_sorts(sorts: List[Tuple[str, List[Transformation]]]) -> None:
-    encoding_id = get_or_create_encoding_id()
-    sorts_with_encoding_id = [(name, sort, encoding_id)
-                              for name, sort in sorts]
-    database = get_database()
-    database.save_many_sorts(sorts_with_encoding_id)
-
-
-def get_current_sort() -> List[Transformation]:
-    encoding_id = get_or_create_encoding_id()
-    return get_database().get_current_sort(encoding_id)
-
-def get_all_sorts() -> List[str]:
-    encoding_id = get_or_create_encoding_id()
-    return get_database().load_all_sorts(encoding_id)
-
-def clear_all_sorts():
-    encoding_id = get_or_create_encoding_id()
-    get_database().clear_all_sorts(encoding_id)
-
-
-def save_graph(data: nx.DiGraph, hash: str, sort: List[Transformation]):
-    encoding_id = get_or_create_encoding_id()
-    get_database().save_graph(data, hash, sort, encoding_id)
-
-
-def get_graph() -> nx.DiGraph:
-    encoding_id = get_or_create_encoding_id()
-    graph = get_database().load_current_graph(encoding_id)
-    return graph
-
-
-def get_graph_json() -> str:
-    encoding_id = get_or_create_encoding_id()
-    return get_database().load_current_graph_json(encoding_id)
-
-
-def save_recursive_transformations_hashes(transformation_hashes: Set[str]):
-    encoding_id = get_or_create_encoding_id()
-    get_database().save_recursive_transformations_hashes(
-        transformation_hashes, encoding_id)
-
-
-def load_recursive_transformations_hashes() -> Set[str]:
-    encoding_id = get_or_create_encoding_id()
-    return get_database().load_recursive_transformations_hashes(encoding_id)
-
-
-def save_clingraph(filename: str):
-    database = get_database()
-    encoding_id = get_or_create_encoding_id()
-    database.save_clingraph(filename, encoding_id)
-
-
-def clear_clingraph():
-    database = get_database()
-    encoding_id = get_or_create_encoding_id()
-    database.clear_clingraph(encoding_id)
-
-
-def load_clingraph_names():
-    encoding_id = get_or_create_encoding_id()
-    database = get_database()
-    return database.load_all_clingraphs(encoding_id)
-
-
-def load_transformer() -> Optional[Transformer]:
-    encoding_id = get_or_create_encoding_id()
-    return get_database().load_transformer(encoding_id)
-
-
-def set_sortable(sortable: bool):
-    encoding_id = get_or_create_encoding_id()
-    get_database().set_sortable(sortable, encoding_id)
-
-
-def is_sortable() -> bool:
-    encoding_id = get_or_create_encoding_id()
-    return get_database().is_sortable(encoding_id)
-
-def clear_graph():
-    get_database().clear()
-
-
-def save_transformer(transformer: TransformerTransport):
-    encoding_id = get_or_create_encoding_id()
-    get_database().save_transformer(transformer, encoding_id)
-
-def save_warnings(warnings: List[TransformationError]):
-    encoding_id = get_or_create_encoding_id()
-    get_database().save_warnings(warnings, encoding_id)
-
-
-def load_warnings() -> List[str]:
-    encoding_id = get_or_create_encoding_id()
-    return get_database().load_warnings(encoding_id)
-
-
-def clear_warnings():
-    encoding_id = get_or_create_encoding_id()
-    get_database().clear_warnings(encoding_id)
-
-
-
 class GraphAccessor:
 
     def __init__(self):
@@ -239,6 +102,16 @@ class GraphAccessor:
                 encoding_id TEXT,
                 FOREIGN KEY(hash) REFERENCES graphs(hash)
                 FOREIGN KEY(encoding_id) REFERENCES encodings(id)
+            )
+        """)
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS graph_relations (
+                graph_hash_1 TEXT,
+                graph_hash_2 TEXT,
+                encoding_id TEXT,
+                PRIMARY KEY (graph_hash_1, graph_hash_2),
+                FOREIGN KEY(graph_hash_1) REFERENCES graphs(hash),
+                FOREIGN KEY(graph_hash_2) REFERENCES graphs(hash)
             )
         """)
         self.cursor.execute("""
@@ -370,7 +243,7 @@ class GraphAccessor:
             (hash, encoding_id))
         self.conn.commit()
 
-    def get_current_graph(self, encoding_id: str) -> str:
+    def get_current_graph_hash(self, encoding_id: str) -> str:
         self.cursor.execute(
             """
             SELECT hash FROM current_graph WHERE encoding_id = (?)
@@ -397,7 +270,7 @@ class GraphAccessor:
         return nx.node_link_graph(current_app.json.loads(graph_json_str))
 
     def load_current_graph_json(self, encoding_id: str) -> str:
-        hash = self.get_current_graph(encoding_id)
+        hash = self.get_current_graph_hash(encoding_id)
         return self.load_graph_json(hash, encoding_id)
 
     def load_current_graph(self, encoding_id: str) -> nx.DiGraph:
@@ -426,7 +299,7 @@ class GraphAccessor:
         self.conn.commit()
 
     def get_current_sort(self, encoding_id: str) -> List[Transformation]:
-        hash = self.get_current_graph(encoding_id)
+        hash = self.get_current_graph_hash(encoding_id)
         self.cursor.execute(
             """
             SELECT sort FROM graphs WHERE hash = ?
@@ -443,16 +316,46 @@ class GraphAccessor:
         """, (encoding_id, ))
         result: List[str] = self.cursor.fetchall()
         loaded_sorts: List[str] = [r[0] for r in result]
-        current_sort_hash = self.get_current_graph(encoding_id)
+        current_sort_hash = self.get_current_graph_hash(encoding_id)
         if current_sort_hash != "":
             try:
-                index_of_current_sort: int = loaded_sorts.index(current_sort_hash)
+                index_of_current_sort: int = loaded_sorts.index(
+                    current_sort_hash)
                 loaded_sorts = loaded_sorts[
-                    index_of_current_sort:] + loaded_sorts[:index_of_current_sort]
+                    index_of_current_sort:] + loaded_sorts[:
+                                                           index_of_current_sort]
             except ValueError:
                 pass
         return loaded_sorts
-    
+
+    def insert_graph_adjacency(self, hash1: str, hash2: str,
+                              sort2: List[Transformation], encoding_id: str):
+        self.cursor.execute("SELECT hash FROM graphs WHERE hash = ?",
+                            (hash2, ))
+        result = self.cursor.fetchone()
+
+        if result is None:
+            self.save_sort(hash2, sort2, encoding_id)
+
+        self.cursor.execute(
+            """
+            INSERT INTO graph_relations (graph_hash_1, graph_hash_2, encoding_id) VALUES (?, ?, ?)
+        """, (hash1, hash2, encoding_id))
+        self.cursor.execute(
+            """
+            INSERT INTO graph_relations (graph_hash_1, graph_hash_2, encoding_id) VALUES (?, ?, ?)
+        """, (hash2, hash1, encoding_id))
+        self.conn.commit()
+
+    def get_adjacent_graphs_hashes(self, hash: str,
+                                  encoding_id: str) -> List[str]:
+        self.cursor.execute(
+            """
+            SELECT graph_hash_2 FROM graph_relations WHERE graph_hash_1 = ? AND encoding_id = ?
+        """, (hash, encoding_id))
+        result = self.cursor.fetchall()
+        return [r[0] for r in result]
+
     def clear_all_sorts(self, encoding_id: str):
         self.cursor.execute(
             """
@@ -465,7 +368,7 @@ class GraphAccessor:
     # # # # # # # #
 
     def save_recursive_transformations_hashes(self, transformations: Set[str],
-                                      encoding_id: str):
+                                              encoding_id: str):
         for t in transformations:
             self.cursor.execute(
                 """
@@ -473,7 +376,8 @@ class GraphAccessor:
             """, (encoding_id, t))
         self.conn.commit()
 
-    def load_recursive_transformations_hashes(self, encoding_id: str) -> Set[str]:
+    def load_recursive_transformations_hashes(self,
+                                              encoding_id: str) -> Set[str]:
         self.cursor.execute(
             """
             SELECT recursive_hash FROM recursion WHERE encoding_id = (?)
@@ -561,7 +465,8 @@ class GraphAccessor:
             SELECT transformer FROM transformer WHERE encoding_id = (?)
         """, (encoding_id, ))
         result = self.cursor.fetchone()
-        return current_app.json.loads(result[0]) if result is not None else None
+        return current_app.json.loads(
+            result[0]) if result is not None else None
 
     # # # # # # # #
     #   SORTABLE  #
@@ -591,7 +496,161 @@ class GraphAccessor:
         self.cursor.execute("DELETE FROM models")
         self.cursor.execute("DELETE FROM graphs")
         self.cursor.execute("DELETE FROM current_graph")
+        self.cursor.execute("DELETE FROM graph_relations")
         self.cursor.execute("DELETE FROM clingraph")
         self.cursor.execute("DELETE FROM transformer")
         self.cursor.execute("DELETE FROM warnings")
         self.conn.commit()
+
+
+def get_database():
+    if 'graph_accessor' not in g:
+        g.graph_accessor = GraphAccessor()
+    return g.graph_accessor
+
+
+def load_program() -> str:
+    encoding_id = get_or_create_encoding_id()
+    return get_database().load_program(encoding_id)
+
+
+def set_models(models: Sequence[Union[StableModel, str]]):
+    encoding_id = get_or_create_encoding_id()
+    get_database().set_models(models, encoding_id)
+
+
+def load_models() -> List[StableModel]:
+    encoding_id = get_or_create_encoding_id()
+    return get_database().load_models(encoding_id)
+
+
+def clear_models():
+    encoding_id = get_or_create_encoding_id()
+    get_database().clear_models(encoding_id)
+
+
+def get_current_graph_hash() -> str:
+    encoding_id = get_or_create_encoding_id()
+    return get_database().get_current_graph_hash(encoding_id)
+
+def save_sort(hash: str, sort: List[Transformation]):
+    encoding_id = get_or_create_encoding_id()
+    get_database().save_sort(hash, sort, encoding_id)
+
+def save_many_sorts(sorts: List[Tuple[str, List[Transformation]]]) -> None:
+    encoding_id = get_or_create_encoding_id()
+    sorts_with_encoding_id = [(name, sort, encoding_id)
+                              for name, sort in sorts]
+    database = get_database()
+    database.save_many_sorts(sorts_with_encoding_id)
+
+
+def get_current_sort() -> List[Transformation]:
+    encoding_id = get_or_create_encoding_id()
+    return get_database().get_current_sort(encoding_id)
+
+def get_all_sorts() -> List[str]:
+    encoding_id = get_or_create_encoding_id()
+    return get_database().load_all_sorts(encoding_id)
+
+def insert_graph_relation(hash1: str, hash2: str, sort2: List[Transformation]):
+    encoding_id = get_or_create_encoding_id()
+    get_database().insert_graph_adjacency(hash1, hash2, sort2, encoding_id)
+
+def get_adjacent_graphs_hashes(hash: str) -> List[str]:
+    encoding_id = get_or_create_encoding_id()
+    return get_database().get_adjacent_graphs_hashes(hash, encoding_id)
+
+def clear_all_sorts():
+    encoding_id = get_or_create_encoding_id()
+    get_database().clear_all_sorts(encoding_id)
+
+
+def save_graph(data: nx.DiGraph, hash: str, sort: List[Transformation]):
+    encoding_id = get_or_create_encoding_id()
+    get_database().save_graph(data, hash, sort, encoding_id)
+
+
+def get_graph() -> nx.DiGraph:
+    encoding_id = get_or_create_encoding_id()
+    graph = get_database().load_current_graph(encoding_id)
+    return graph
+
+
+def get_graph_json() -> str:
+    encoding_id = get_or_create_encoding_id()
+    return get_database().load_current_graph_json(encoding_id)
+
+
+def set_current_graph(hash: str) -> str:
+    encoding_id = get_or_create_encoding_id()
+    db = get_database()
+    if db.get_current_graph_hash(encoding_id) != hash:
+        db.set_current_graph(hash, encoding_id)
+    return get_graph_json()
+
+
+def save_recursive_transformations_hashes(transformation_hashes: Set[str]):
+    encoding_id = get_or_create_encoding_id()
+    get_database().save_recursive_transformations_hashes(
+        transformation_hashes, encoding_id)
+
+
+def load_recursive_transformations_hashes() -> Set[str]:
+    encoding_id = get_or_create_encoding_id()
+    return get_database().load_recursive_transformations_hashes(encoding_id)
+
+
+def save_clingraph(filename: str):
+    database = get_database()
+    encoding_id = get_or_create_encoding_id()
+    database.save_clingraph(filename, encoding_id)
+
+
+def clear_clingraph():
+    database = get_database()
+    encoding_id = get_or_create_encoding_id()
+    database.clear_clingraph(encoding_id)
+
+
+def load_clingraph_names():
+    encoding_id = get_or_create_encoding_id()
+    database = get_database()
+    return database.load_all_clingraphs(encoding_id)
+
+
+def load_transformer() -> Optional[Transformer]:
+    encoding_id = get_or_create_encoding_id()
+    return get_database().load_transformer(encoding_id)
+
+
+def set_sortable(sortable: bool):
+    encoding_id = get_or_create_encoding_id()
+    get_database().set_sortable(sortable, encoding_id)
+
+
+def is_sortable() -> bool:
+    encoding_id = get_or_create_encoding_id()
+    return get_database().is_sortable(encoding_id)
+
+def clear_graph():
+    get_database().clear()
+
+
+def save_transformer(transformer: TransformerTransport):
+    encoding_id = get_or_create_encoding_id()
+    get_database().save_transformer(transformer, encoding_id)
+
+def save_warnings(warnings: List[TransformationError]):
+    encoding_id = get_or_create_encoding_id()
+    get_database().save_warnings(warnings, encoding_id)
+
+
+def load_warnings() -> List[str]:
+    encoding_id = get_or_create_encoding_id()
+    return get_database().load_warnings(encoding_id)
+
+
+def clear_warnings():
+    encoding_id = get_or_create_encoding_id()
+    get_database().clear_warnings(encoding_id)

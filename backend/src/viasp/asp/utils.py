@@ -3,8 +3,9 @@ import networkx as nx
 from clingo import Symbol, ast
 from clingo.ast import ASTType, AST
 from typing import Generator, List, Sequence, Tuple, Dict, Set, FrozenSet, Optional
+
 from ..shared.simple_logging import warn
-from ..shared.model import Node, SymbolIdentifier
+from ..shared.model import Node, SymbolIdentifier, Transformation
 from ..shared.util import pairwise, get_root_node_from_graph
 
 
@@ -233,6 +234,37 @@ def topological_sort(g: nx.DiGraph, rules: Sequence[ast.Rule]) -> List:  # type:
         warn("Could not sort the graph.")
         raise Exception("Could not sort the graph.")
     return sorted
+
+def find_adjacent_topological_sorts(g: nx.DiGraph, sort: Sequence[Tuple[ast.Rule, ...]]) -> Set[Tuple[ast.Rule, ...]]:  # type: ignore
+    adjacent_topological_sorts: Set[Tuple[ast.Rule, ...]] = set()  # type: ignore
+    for transformation in g.nodes:
+        lower_bound = max([sort.index(u) for u in g.predecessors(transformation)]+[-1])
+        upper_bound = min([sort.index(u) for u in g.successors(transformation)]+[len(sort)])
+        new_indices = list(range(lower_bound+1,
+                                    upper_bound))
+        new_indices.remove(sort.index(transformation))
+        print(f"New indexes of {list(map(str,transformation))}: range({lower_bound}, {upper_bound}) ... {new_indices}")
+        for new_index in new_indices:
+            new_sort = list(sort)
+            new_sort.remove(transformation)
+            new_sort.insert(new_index, transformation)
+            adjacent_topological_sorts.add(tuple(new_sort))
+    return adjacent_topological_sorts
+
+
+def find_index_mapping_for_adjacent_topological_sorts(
+    g: nx.DiGraph,
+    sorted_program: List[Transformation]) -> Dict[int, List[int]]:
+    new_indices: Dict[int, List[int]] = {}
+    sort = [t.rules for t in sorted_program]
+    for i, transformation in enumerate(g.nodes):
+        lower_bound = max([sort.index(u) for u in g.predecessors(transformation)]+[-1])
+        upper_bound = min([sort.index(u) for u in g.successors(transformation)]+[len(sort)])
+        new_indices[i] = list(range(lower_bound+1,
+                                    upper_bound))
+        new_indices[i].remove(sort.index(transformation))
+        print(f"New indexes of {list(map(str,transformation))}: range({lower_bound}, {upper_bound}) ... {new_indices}")
+    return new_indices
 
 
 def filter_body_aggregates(element: AST):
