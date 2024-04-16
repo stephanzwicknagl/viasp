@@ -13,8 +13,9 @@ from ...asp.justify import build_graph
 from ...shared.defaults import STATIC_PATH
 from ...shared.model import Transformation, Node, Signature
 from ...shared.util import get_start_node_from_graph, is_recursive, hash_from_sorted_transformations
+from ...asp.utils import register_adjacent_sorts, recalculate_transformation_ids
 from ...shared.io import StableModel
-from ..database import load_recursive_transformations_hashes, save_graph, get_graph, clear_graph, set_current_graph, get_adjacent_graphs_hashes, get_current_graph_hash, get_current_sort, load_program, load_transformer, load_models, load_clingraph_names, is_sortable, save_sort
+from ..database import load_recursive_transformations_hashes, save_graph, get_graph, clear_graph, set_current_graph, get_adjacent_graphs_hashes, get_current_graph_hash, get_current_sort, load_program, load_transformer, load_models, load_clingraph_names, is_sortable, save_sort, load_dependency_graph
 
 
 bp = Blueprint("dag_api",
@@ -167,22 +168,27 @@ def get_possible_transformation_orders():
     if request.method == "POST":
         if request.json is None:
             return jsonify({'error': 'Missing JSON in request'}), 400
-        hash = request.json["hash"]
-        sort = request.json["sort"] if "sort" in request.json else [] # could be as much as the switched indices
-        if sort:
-            # TODO: calculate the new adjacent_sort_indices for this sort
-            hash = hash_from_sorted_transformations(sort)
-            save_sort(hash, sort)
-            # TODO: also extract the adjacent sorts from the primary_sort and
-            # register those in the database
+        moved_transformation = request.json["moved_transformation"] if "moved_transformation" in request.json else {
+            "old_index": -1,
+            "new_index": -1,
+        }
+        
+        sorted_program_rules = [t.rules for t in get_current_sort()]
+        print(f"OLD SORT: {sorted_program_rules}", flush=True)
+        moved_item = sorted_program_rules.pop(moved_transformation["old_index"])
+        sorted_program_rules.insert(moved_transformation["new_index"], moved_item)
+        sorted_program_transformations = ProgramAnalyzer(load_dependency_graph()).make_transformations_from_sorted_program(sorted_program_rules)
+        hash = hash_from_sorted_transformations(sorted_program_transformations)
+        save_sort(hash, sorted_program_transformations)
+        register_adjacent_sorts(sorted_program_transformations, hash)
+        print(f"NEW SORT WITH EDITED ATTRIBUTES: {sorted_program_transformations}", flush =True)
         try:
             set_current_graph(hash)
         except ValueError:
             generate_graph()
-        return "ok", 200
+        return jsonify({"hash":hash})
     elif request.method == "GET":
-        sorts = get_adjacent_graphs_hashes(get_current_graph_hash())
-        return jsonify(sorts)
+        return jsonify(get_current_graph_hash())
     raise NotImplementedError
 
 

@@ -8,7 +8,6 @@ from uuid import uuid4
 
 import networkx as nx
 
-
 def get_start_node_from_graph(graph: nx.DiGraph) -> Any:
     if graph.number_of_nodes() == 0:
         raise ValueError("Graph is empty")

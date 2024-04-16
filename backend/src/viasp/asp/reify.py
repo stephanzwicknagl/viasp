@@ -20,7 +20,7 @@ from viasp.asp.ast_types import (
     UNSUPPORTED_TYPES,
     UNKNOWN_TYPES,
 )
-from ..shared.model import Transformation, TransformationError, FailedReason
+from ..shared.model import Transformation, TransformationError, FailedReason, RuleContainer
 from ..shared.simple_logging import warn, error
 
 
@@ -169,7 +169,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     Receives a ASP program and finds it's dependencies within, can sort a program by it's dependencies.
     """
 
-    def __init__(self):
+    def __init__(self, dependency_graph: Optional[nx.DiGraph] = None):
         DependencyCollector.__init__(self, in_analyzer=True)
         FilteredTransformer.__init__(self)
         self.dependants: Dict[Tuple[str, int],
@@ -187,6 +187,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         self.rules: List[ast.Rule] = []  # type: ignore
         self.names: Set[str] = set()
         self.temp_names: Set[str] = set()
+        self.dependency_graph: Optional[nx.DiGraph] = dependency_graph
 
     def _get_conflict_free_version_of_name(self, name: str) -> str:
         anti_candidates = self.names.union(self.temp_names)
@@ -484,9 +485,19 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
     def get_primary_sort(self) -> List[Transformation]:
         sorted_program = self.primary_sort_program_by_dependencies()
+        return self.make_transformations_from_sorted_program(sorted_program)
+
+    def make_transformations_from_sorted_program(
+        self, sorted_program: List[Tuple[ast.Rule]]  # type: ignore
+    ) -> List[Transformation]:
         adjacency_index_mapping = self.get_index_mapping_for_adjacent_topological_sorts(
             sorted_program)
-        return [Transformation(i, prg, adjacency_index_mapping[i]) for i, prg in enumerate(sorted_program)]
+        transformations = [
+            Transformation(i, prg, adjacency_index_mapping[i])
+            for i, prg in enumerate(sorted_program)
+        ]
+        transformations.sort(key=lambda t: t.id)
+        return transformations
 
     def make_dependency_graph(
         self,
@@ -532,7 +543,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         deps = merge_constraints(deps)
         deps, _ = merge_cycles(deps)
         deps, _ = remove_loops(deps)
-        self.dependency_graph = deps
+        self.dependency_graph = cast(nx.DiGraph, deps.copy())
         sorted_program = topological_sort(deps, self.rules)
         return sorted_program
 
@@ -543,14 +554,26 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         Given a sorted program, return all other valid topological sorts that are achieved
         by taking one Transformation and inserting it at another index.
         """
+        if self.dependency_graph is None:
+            raise ValueError(
+                "Dependency graph has not been created yet. Call primary_sort_program_by_dependencies first."
+            )
         adjacent_sorts = find_adjacent_topological_sorts(
             self.dependency_graph, [t.rules for t in sorted_program])
         return [[
             Transformation(i, prg) for i, prg in enumerate(adjacent_sort)
         ] for adjacent_sort in adjacent_sorts]
 
-    def get_index_mapping_for_adjacent_topological_sorts(self, sorted_program: List[Transformation]) -> Dict[int, List[int]]:
-        return find_index_mapping_for_adjacent_topological_sorts(self.dependency_graph, sorted_program)
+    def get_index_mapping_for_adjacent_topological_sorts(
+        self,
+        sorted_program: List[Tuple[ast.Rule]]  # type: ignore
+    ) -> Dict[int, List[int]]:
+        if self.dependency_graph is None:
+            raise ValueError(
+                "Dependency graph has not been created yet. Call primary_sort_program_by_dependencies first."
+            )
+        return find_index_mapping_for_adjacent_topological_sorts(
+            self.dependency_graph, sorted_program)
 
     def check_positive_recursion(self) -> Set[str]:
         deps1 = self.make_dependency_graph(self.dependants,

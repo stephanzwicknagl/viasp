@@ -1,13 +1,14 @@
 """Mostly graph utility functions."""
+from re import U
 import networkx as nx
 from clingo import Symbol, ast
 from clingo.ast import ASTType, AST
 from typing import Generator, List, Sequence, Tuple, Dict, Set, FrozenSet, Optional
 
 from ..shared.simple_logging import warn
-from ..shared.model import Node, SymbolIdentifier, Transformation
-from ..shared.util import pairwise, get_root_node_from_graph
-
+from ..shared.model import Node, SymbolIdentifier, Transformation, RuleContainer
+from ..shared.util import pairwise, get_root_node_from_graph, hash_from_sorted_transformations
+from ..server.database import insert_graph_relation
 
 def is_constraint(rule: AST) -> bool:
     return rule.ast_type == ASTType.Rule and "atom" in rule.head.child_keys and rule.head.atom.ast_type == ASTType.BooleanConstant  # type: ignore
@@ -198,7 +199,7 @@ def calculate_spacing_factor(g: nx.DiGraph) -> None:
         children_next = []
 
 
-def topological_sort(g: nx.DiGraph, rules: Sequence[ast.Rule]) -> List:  # type: ignore
+def topological_sort(g: nx.DiGraph, rules: Sequence[Tuple[ast.Rule]]) -> List:  # type: ignore
     """ Topological sort of the graph.
         If the order is ambiguous, prefer the order of the rules.
         Note: Rule = Node
@@ -243,7 +244,6 @@ def find_adjacent_topological_sorts(g: nx.DiGraph, sort: Sequence[Tuple[ast.Rule
         new_indices = list(range(lower_bound+1,
                                     upper_bound))
         new_indices.remove(sort.index(transformation))
-        print(f"New indexes of {list(map(str,transformation))}: range({lower_bound}, {upper_bound}) ... {new_indices}")
         for new_index in new_indices:
             new_sort = list(sort)
             new_sort.remove(transformation)
@@ -254,17 +254,36 @@ def find_adjacent_topological_sorts(g: nx.DiGraph, sort: Sequence[Tuple[ast.Rule
 
 def find_index_mapping_for_adjacent_topological_sorts(
     g: nx.DiGraph,
-    sorted_program: List[Transformation]) -> Dict[int, List[int]]:
+    sorted_program: List[Tuple[ast.Rule]]) -> Dict[int, List[int]]:  # type: ignore
     new_indices: Dict[int, List[int]] = {}
-    sort = [t.rules for t in sorted_program]
-    for i, transformation in enumerate(g.nodes):
-        lower_bound = max([sort.index(u) for u in g.predecessors(transformation)]+[-1])
-        upper_bound = min([sort.index(u) for u in g.successors(transformation)]+[len(sort)])
+    print(f"Recalculate...\n{sorted_program}\n", flush=True)
+    for i, rules_tuple in enumerate(sorted_program):
+        print(f"For transformation {rules_tuple}:\n\
+              max({[sorted_program.index(u) for u in g.predecessors(rules_tuple)]+[-1]})\n\
+              min({[sorted_program.index(u) for u in g.successors(rules_tuple)]+[len(sorted_program)]})", flush=True)
+        lower_bound = max([sorted_program.index(u) for u in g.predecessors(rules_tuple)]+[-1])
+        upper_bound = min([sorted_program.index(u) for u in g.successors(rules_tuple)]+[len(sorted_program)])
         new_indices[i] = list(range(lower_bound+1,
                                     upper_bound))
-        new_indices[i].remove(sort.index(transformation))
-        print(f"New indexes of {list(map(str,transformation))}: range({lower_bound}, {upper_bound}) ... {new_indices}")
+        new_indices[i].remove(sorted_program.index(rules_tuple))
+    print(F"New indices: \n{new_indices}", flush=True)
     return new_indices
+
+
+def register_adjacent_sorts(primary_sort: List[Transformation], primary_hash: str) -> None:
+    for transformation in primary_sort:
+        for new_index in transformation.adjacent_sort_indices:
+            new_sort_rules = [t.rules for t in primary_sort]
+            new_sort_rules.remove(transformation.rules)
+            new_sort_rules.insert(new_index, transformation.rules)
+            new_sort_transformations = [Transformation(id=i, rules=rules) for i, rules in enumerate(new_sort_rules)]
+            new_hash = hash_from_sorted_transformations(new_sort_transformations)
+            insert_graph_relation(primary_hash, new_hash, new_sort_transformations)
+
+
+def recalculate_transformation_ids(sort: List[Transformation]):
+    for i, transformation in enumerate(sort):
+        transformation.id = i
 
 
 def filter_body_aggregates(element: AST):

@@ -115,6 +115,13 @@ class GraphAccessor:
             )
         """)
         self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS dependency_graph (
+                    encoding_id TEXT PRIMARY KEY,
+                    data TEXT,
+                    FOREIGN KEY(encoding_id) REFERENCES encodings(id)
+            )
+        """)
+        self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS recursion (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 encoding_id TEXT,
@@ -292,6 +299,7 @@ class GraphAccessor:
 
     def save_sort(self, hash: str, sort: List[Transformation],
                   encoding_id: str):
+        print(f"Save sort {hash}\n{sort}", flush=True)
         self.cursor.execute(
             """
             INSERT OR REPLACE INTO graphs (hash, data, sort, encoding_id) VALUES (?, ?, ?, ?)
@@ -306,7 +314,9 @@ class GraphAccessor:
         """, (hash, ))
         result = self.cursor.fetchone()
         if result and result[0]:
-            return current_app.json.loads(result[0])
+            loaded = current_app.json.loads(result[0])
+            loaded.sort(key=lambda x: x.id)
+            return loaded 
         raise ValueError("No sort found")
 
     def load_all_sorts(self, encoding_id: str) -> List[str]:
@@ -336,16 +346,35 @@ class GraphAccessor:
 
         if result is None:
             self.save_sort(hash2, sort2, encoding_id)
-
-        self.cursor.execute(
-            """
-            INSERT INTO graph_relations (graph_hash_1, graph_hash_2, encoding_id) VALUES (?, ?, ?)
-        """, (hash1, hash2, encoding_id))
-        self.cursor.execute(
-            """
-            INSERT INTO graph_relations (graph_hash_1, graph_hash_2, encoding_id) VALUES (?, ?, ?)
-        """, (hash2, hash1, encoding_id))
+        self.insert_graph_adjacency_element(hash1, hash2, encoding_id)
+        self.insert_graph_adjacency_element(hash2, hash1, encoding_id)
         self.conn.commit()
+
+    def insert_graph_adjacency_element(self, hash1: str, hash2: str, encoding_id: str):
+        try:
+            self.cursor.execute(
+                """
+                INSERT INTO graph_relations (graph_hash_1, graph_hash_2, encoding_id) VALUES (?, ?, ?)
+            """, (hash1, hash2, encoding_id))
+        except sqlite3.IntegrityError:
+            pass
+
+    def save_dependency_graph(self, data: nx.DiGraph, encoding_id: str):
+        self.cursor.execute(
+            """
+            INSERT OR REPLACE INTO dependency_graph (data, encoding_id) VALUES (?, ?)
+        """, (current_app.json.dumps(nx.node_link_data(data)), encoding_id))
+        self.conn.commit()
+
+    def load_dependency_graph(self, encoding_id: str) -> nx.DiGraph:
+        self.cursor.execute(
+            """
+            SELECT data FROM dependency_graph WHERE encoding_id = (?)
+        """, (encoding_id, ))
+        result = self.cursor.fetchone()
+        if result and result[0]:
+            return nx.node_link_graph(current_app.json.loads(result[0]))
+        raise ValueError("No dependency graph found")
 
     def get_adjacent_graphs_hashes(self, hash: str,
                                   encoding_id: str) -> List[str]:
@@ -560,6 +589,14 @@ def insert_graph_relation(hash1: str, hash2: str, sort2: List[Transformation]):
 def get_adjacent_graphs_hashes(hash: str) -> List[str]:
     encoding_id = get_or_create_encoding_id()
     return get_database().get_adjacent_graphs_hashes(hash, encoding_id)
+
+def save_dependency_graph(data: nx.DiGraph):
+    encoding_id = get_or_create_encoding_id()
+    get_database().save_dependency_graph(data, encoding_id)
+
+def load_dependency_graph() -> nx.DiGraph:
+    encoding_id = get_or_create_encoding_id()
+    return get_database().load_dependency_graph(encoding_id)
 
 def clear_all_sorts():
     encoding_id = get_or_create_encoding_id()

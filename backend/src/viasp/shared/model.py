@@ -2,6 +2,7 @@ from copy import copy
 from dataclasses import dataclass, field
 from enum import Enum
 from inspect import Signature as inspect_Signature
+from re import U
 from typing import Any, Sequence, Dict, Union, FrozenSet, Collection, List, Tuple
 from types import MappingProxyType
 from uuid import UUID, uuid4
@@ -80,7 +81,7 @@ class ClingraphNode:
 class Transformation:
     id: int = field(hash=True)
     rules: Tuple[Rule, ...] = field(default_factory=tuple, hash=True)  # type: ignore
-    adjacent_sort_indices: List[int] = field(default=[], hash=False)
+    adjacent_sort_indices: List[int] = field(default_factory=list, hash=False)
     hash: str = field(default="", hash=True)
 
     def __post_init__(self):
@@ -107,8 +108,20 @@ class Transformation:
         return True
 
     def __repr__(self):
-        return f"Transformation(id={self.id}, rules={list(map(str,self.rules))}, hash={self.hash})"
+        return f"Transformation(id={self.id}, rules={list(map(str,self.rules))}, adjacent_sort_indices={self.adjacent_sort_indices}, hash={self.hash})"
 
+@dataclass(frozen=True)
+class RuleContainer:
+    rules: Tuple[Union[AST, str], ...]
+
+    def __hash__(self):
+        return hash(self.rules)
+    
+    def __eq__(self, o):
+        return isinstance(o, type(self)) and self.rules == o.rules
+    
+    def __repr__(self):
+        return str(self.rules)
 
 @dataclass(frozen=True)
 class Signature:

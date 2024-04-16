@@ -5,7 +5,7 @@ from json import JSONDecoder, JSONEncoder
 # from enum import IntEnum
 from flask.json.provider import JSONProvider
 from dataclasses import is_dataclass
-from typing import Union, Collection, Iterable, Sequence, cast
+from typing import Union, Collection, Iterable, Sequence, cast, Tuple
 from pathlib import PosixPath
 from uuid import UUID
 import os
@@ -26,7 +26,7 @@ from clingo import Model as clingo_Model, ModelType, Symbol, Application
 from clingo.ast import AST, ASTType
 
 from .interfaces import ViaspClient
-from .model import Node, ClingraphNode, Transformation, Signature, StableModel, ClingoMethodCall, TransformationError, FailedReason, SymbolIdentifier, TransformerTransport
+from .model import Node, ClingraphNode, Transformation, Signature, StableModel, ClingoMethodCall, TransformationError, FailedReason, SymbolIdentifier, TransformerTransport, RuleContainer
 from ..server.database import get_database
 from .util import get_or_create_encoding_id
 
@@ -64,6 +64,9 @@ def object_hook(obj):
         return ClingraphNode(**obj)
     elif t == "Transformation":
         return Transformation(**obj)
+    elif t == "RuleContainer":
+        print(f"Decoding a rule")
+        return RuleContainer(**obj)
     elif t == "Signature":
         return Signature(**obj)
     elif t == "Graph":
@@ -115,6 +118,9 @@ def dataclass_to_dict(o):
             "adjacent_sort_indices": o.adjacent_sort_indices,
             "hash": o.hash
         }
+    # elif isinstance(o, RuleContainer):
+    #     print(f"Encode a rule")
+    #     return {"_type": "RuleContainer", "rules": get_rules_from_input_program(o.rules)}
     elif isinstance(o, StableModel):
         return {"_type": "StableModel", "cost": o.cost, "optimality_proven": o.optimality_proven, "type": o.type,
                 "atoms": o.atoms, "terms": o.terms, "shown": o.shown, "theory": o.theory}
@@ -172,6 +178,8 @@ def encode_object(o):
     elif isinstance(o, set):
         return list(o)
     elif isinstance(o, AST):
+        if o.ast_type == ASTType.Rule:
+            return get_rules_from_input_program(tuple([o]))[0]
         return str(o)
     elif isinstance(o, Iterable):
         return list(o)
@@ -263,7 +271,7 @@ def symbol_to_dict(symbol: clingo.Symbol) -> dict:
 #         return super().default(o)
 
 
-def get_rules_from_input_program(rules) -> Sequence[str]:
+def get_rules_from_input_program(rules: Tuple) -> Sequence[str]:
     rules_from_input_program: Sequence[str] = []
     encoding_id = get_or_create_encoding_id()
     db = get_database()

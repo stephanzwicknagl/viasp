@@ -11,12 +11,12 @@ export function Boxrow() {
     const [overflowBreakingPoint, setOverflowBreakingPoint] = React.useState(null);
     const boxrowRef = React.useRef(null);
     const {
-        state: {currentDragged, clingraphGraphics},
+        state: {transformationDropIndices, clingraphGraphics},
     } = useTransformations();
     const [style, setStyle] = React.useState({opacity: 1.0});
 
     React.useEffect(() => {
-        if (currentDragged.length > 0) {
+        if (transformationDropIndices !== null) {
             setStyle((prevStyle) => ({
                 ...prevStyle,
                 opacity: 1 - Constants.opacityMultiplier,
@@ -24,7 +24,7 @@ export function Boxrow() {
         } else {
             setStyle((prevStyle) => ({...prevStyle, opacity: 1.0}));
         }
-    }, [currentDragged]);
+    }, [transformationDropIndices]);
 
 
     const checkForOverflow = useCallback(() => {

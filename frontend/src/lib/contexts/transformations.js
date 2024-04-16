@@ -2,7 +2,7 @@ import React from "react";
 import {showError, useMessages} from "./UserMessages";
 import {useSettings} from "./Settings";
 import PropTypes from "prop-types";
-import { computeSortHash, make_default_nodes, make_default_clingraph_nodes } from "../utils/index";
+import { make_default_nodes, make_default_clingraph_nodes } from "../utils/index";
 
 function fetchTransformations(backendURL) {
     return fetch(`${backendURL("graph/transformations")}`).then(r => {
@@ -14,7 +14,7 @@ function fetchTransformations(backendURL) {
     });
 }
 
-function fetchSorts(backendURL) {
+function fetchSortHash(backendURL) {
     return fetch(`${backendURL("graph/sorts")}`).then(r => {
         if (r.ok) {
             return r.json()
@@ -63,34 +63,11 @@ function loadClingraphChildren(backendURL) {
     });
 }
 
-async function canBeDropped(
-    transformations,
-    possibleSorts,
-    currentDragged,
-    hash
-) {
-    if (currentDragged !== '') {
-        const sort = transformations.map((t) => t.hash);
-        const oldIndex = sort.findIndex((h) => h === currentDragged);
-        const [removed] = sort.splice(oldIndex, 1);
-        let newIndex = sort.findIndex((h) => h === hash);
-        if (newIndex >= oldIndex) {
-            newIndex += 1;
-        }
-        sort.splice(newIndex, 0, removed);
-        const newHash = await computeSortHash(sort);
-        return possibleSorts?.includes(newHash) ? newHash : '';
-    }
-    return '';
-}
-
 
 const initialState = {
     transformations: [],
-    possibleSorts: [],
+    transformationDropIndices: null,
     currentSort: '',
-    currentDragged: '',
-    canDrop: null,
     transformationNodesMap: null,
     clingraphGraphics: [],
     isSortable: true,
@@ -107,11 +84,11 @@ const ADD_SORT = 'APP/TRANSFORMATIONS/ADDSORT';
 const SET_CURRENT_SORT = 'APP/TRANSFORMATIONS/SETCURRENTSORT';
 const SET_SORTABLE = 'APP/TRANSFORMATIONS/SETSORTABLE';
 const REORDER_TRANSFORMATION = 'APP/TRANSFORMATIONS/REORDER';
-const SET_CURRENT_DRAGGED = 'APP/TRANSFORMATIONS/SETDRAGGED';
 const SET_NODES = 'APP/NODES/SET';
 const CLEAR_NODES = 'APP/NODES/CLEAR';
 const SET_CLINGRAPH_GRAPHICS = 'APP/CLINGRAPH/SETGRAPHICS';
 const CLEAR_CLINGRAPH_GRAHICS = 'APP/CLINGRAPH/CLEAR';
+const SET_TRANSFORMATION_DROP_INDICES = 'APP/TRANSFORMATIONS/SETTRANSFORMATIONDROPINDICES';
 const hideTransformation = (t) => ({type: HIDE_TRANSFORMATION, t})
 const showTransformation = (t) => ({type: SHOW_TRANSFORMATION, t})
 const toggleTransformation = (t) => ({type: TOGGLE_TRANSFORMATION, t})
@@ -123,11 +100,11 @@ const addSort = (s) => ({ type: ADD_SORT, s })
 const setCurrentSort = (s) => ({ type: SET_CURRENT_SORT, s})
 const setSortable = (s) => ({type: SET_SORTABLE, s});
 const reorderTransformation = (oldIndex, newIndex) => ({type: REORDER_TRANSFORMATION, oldIndex, newIndex})
-const setCurrentDragged = (h) => ({type: SET_CURRENT_DRAGGED, h});
 const setNodes = (t) => ({type: SET_NODES, t});
 const clearNodes = () => ({type: CLEAR_NODES});
 const setClingraphGraphics = (g) => ({type: SET_CLINGRAPH_GRAPHICS, g});
 const clearClingraphGraphics = () => ({type: CLEAR_CLINGRAPH_GRAHICS});
+const setTransformationDropIndices = (t) => ({type: SET_TRANSFORMATION_DROP_INDICES, t});
 const TransformationContext = React.createContext();
 
 const transformationReducer = (state = initialState, action) => {
@@ -138,6 +115,7 @@ const transformationReducer = (state = initialState, action) => {
         }
     }
     if (action.type === ADD_TRANSFORMATION_SET) {
+        console.log("Adding Transformation Set", action.ts)
         return {
             ...state,
             transformations: action.ts.map(t => ({transformation: t, shown: true, hash: t.hash}))
@@ -201,40 +179,15 @@ const transformationReducer = (state = initialState, action) => {
         }
     }
     if (action.type === ADD_SORT) {
-        if (state.currentSort === "") {
-            return {
-                ...state,
-                possibleSorts: state.possibleSorts.concat([action.s]),
-                currentSort: action.s
-            }
-        }
         return {
             ...state,
-            possibleSorts: state.possibleSorts.concat([action.s])
+            currentSort: action.s,
         }
     }
     if (action.type === SET_CURRENT_SORT) {
         return {
             ...state,
             currentSort: action.s
-        }
-    }
-    if (action.type === SET_CURRENT_DRAGGED) {
-        const newCanDrop = new Object();
-        state.transformations.forEach(t => {
-            canBeDropped(
-                    state.transformations,
-                    state.possibleSorts,
-                    action.h,
-                    t.hash
-                ).then((ans) => {
-                    newCanDrop[t.hash] = ans;
-                });
-        });
-        return {
-            ...state,
-            currentDragged: action.h,
-            canDrop: newCanDrop
         }
     }
     if (action.type === SET_NODES) {
@@ -293,6 +246,13 @@ const transformationReducer = (state = initialState, action) => {
             isSortable: action.s,
         };
     }
+    if (action.type === SET_TRANSFORMATION_DROP_INDICES) {
+        console.log("New Transformation Drop Indices", action.t)
+        return {
+            ...state,
+            transformationDropIndices: action.t,
+        };
+    }
     return {...state}
 }
 
@@ -305,12 +265,12 @@ const TransformationProvider = ({children}) => {
 
     React.useEffect(() => {
         let mounted = true;
-        fetchSorts(backendUrlRef.current).catch(error => {
+        fetchSortHash(backendUrlRef.current).catch(error => {
             messageDispatchRef.current(showError(`Failed to get dependency sorts: ${error}`))
         })
-            .then(items => {
+            .then(hash => {
                 if (mounted) {
-                    items.map((s) => dispatch(addSort(s)))
+                    dispatch(addSort(hash))
                 }
             })
         fetchSortable(backendUrlRef.current).catch(error => {
@@ -380,7 +340,7 @@ const TransformationProvider = ({children}) => {
                         dispatch(addTransformationSet(items));
                         loadtransformationNodesMap(items);
                     }
-                });
+            });
         }
         return () => {
             mounted = false;
@@ -407,5 +367,5 @@ export {
     showOnlyTransformation,
     reorderTransformation,
     setCurrentSort,
-    setCurrentDragged,
+    setTransformationDropIndices,
 };

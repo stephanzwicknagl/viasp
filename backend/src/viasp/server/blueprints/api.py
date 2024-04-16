@@ -11,11 +11,12 @@ from clingraph.graphviz import compute_graphs, render
 from .dag_api import generate_graph, set_current_graph, wrap_marked_models, \
         load_program, load_transformer, load_models, \
         load_clingraph_names
-from ..database import CallCenter, get_database, save_recursive_transformations_hashes, set_models, clear_models, save_many_sorts, save_sort, save_clingraph, clear_clingraph, save_transformer, save_warnings, clear_warnings, load_warnings, save_warnings, set_sortable, clear_all_sorts
+from ..database import CallCenter, get_database, insert_graph_relation, save_dependency_graph, save_recursive_transformations_hashes, set_models, clear_models, save_many_sorts, save_sort, save_clingraph, clear_clingraph, save_transformer, save_warnings, clear_warnings, load_warnings, save_warnings, set_sortable, clear_all_sorts
 from ...asp.reify import ProgramAnalyzer
 from ...asp.relax import ProgramRelaxer, relax_constraints
-from ...shared.model import ClingoMethodCall, StableModel, TransformerTransport
+from ...shared.model import ClingoMethodCall, StableModel, Transformation, TransformerTransport
 from ...shared.util import hash_from_sorted_transformations
+from ...asp.utils import register_adjacent_sorts
 from ...shared.defaults import CLINGRAPH_PATH, SORTGENERATION_BATCH_SIZE, SORTGENERATION_TIMEOUT_SECONDS
 from ...asp.replayer import apply_multiple
 
@@ -159,13 +160,11 @@ def save_all_sorts(analyzer: ProgramAnalyzer,
 def set_primary_sort(analyzer: ProgramAnalyzer):
     primary_sort = analyzer.get_primary_sort()
     primary_hash = hash_from_sorted_transformations(primary_sort)
+    register_adjacent_sorts(primary_sort, primary_hash)
     try:
         _ = set_current_graph(primary_hash)
     except KeyError:
-        save_sort(hash_from_sorted_transformations(primary_sort),
-                           primary_sort)
-        # TODO: also extract the adjacent sorts from the primary_sort and 
-        # register those in the database
+        save_sort(primary_hash, primary_sort)
         generate_graph()
     except ValueError:
         generate_graph()
@@ -173,6 +172,7 @@ def set_primary_sort(analyzer: ProgramAnalyzer):
 
 def save_analyzer_values(analyzer: ProgramAnalyzer):
     save_recursive_transformations_hashes(analyzer.check_positive_recursion())
+    save_dependency_graph(analyzer.dependency_graph) if analyzer.dependency_graph else None
     ## TODO: save attributes
 
 

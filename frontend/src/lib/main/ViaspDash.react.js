@@ -15,7 +15,7 @@ import {
     useTransformations,
     reorderTransformation,
     setCurrentSort,
-    setCurrentDragged,
+    setTransformationDropIndices,
 } from '../contexts/transformations';
 import {ColorPaletteProvider} from '../contexts/ColorPalette';
 import {HighlightedNodeProvider} from '../contexts/HighlightedNode';
@@ -53,16 +53,19 @@ import * as Constants from '../constants';
 import debounce from 'lodash.debounce';
 
 
-function postCurrentSort(backendURL, hash) {
+function postCurrentSort(backendURL, oldIndex, newIndex) {
     return fetch(`${backendURL('graph/sorts')}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({hash: hash}),
+        body: JSON.stringify({moved_transformation: {
+            old_index: oldIndex,
+            new_index: newIndex}
+        }),
     }).then((r) => {
         if (r.ok) {
-            return r;
+            return r.json();
         }
         throw new Error(r.statusText);
     });
@@ -71,7 +74,7 @@ function postCurrentSort(backendURL, hash) {
 function GraphContainer(props) {
     const {notifyDash, scrollContainer, transform} = props;
     const {
-        state: {transformations, canDrop, clingraphGraphics},
+        state: {transformations, clingraphGraphics, transformationDropIndices},
         dispatch: dispatchTransformation,
     } = useTransformations();
     const {highlightedSymbol} = useHighlightedSymbol();
@@ -85,27 +88,36 @@ function GraphContainer(props) {
     const clingraphUsed = clingraphGraphics.length > 0;
 
     function onMoveEnd(newList, movedItem, oldIndex, newIndex) {
-        dispatchTransformation(setCurrentDragged(''));
-        const indexOfOldItemAtNewIndex =
-            oldIndex < newIndex ? newIndex - 1 : newIndex + 1;
-        const newHash = canDrop[newList[indexOfOldItemAtNewIndex].hash] || '';
+        dispatchTransformation(setTransformationDropIndices(null));
 
-        if (newHash.length > 0) {
+        if (transformationDropIndices.indexOf(newIndex) !== -1) {
             setShownRecursion([]);
             setHighlightedSymbol([]);
             dispatchTransformation(reorderTransformation(oldIndex, newIndex));
-            postCurrentSort(backendUrlRef.current, newHash)
+            postCurrentSort(backendUrlRef.current, oldIndex, newIndex)
                 .catch((error) => {
                     messageDispatchRef.current(
                         showError(`Failed to set new current graph: ${error}`)
                     );
                 })
                 .then((r) => {
-                    dispatchTransformation(setCurrentSort(newHash));
+                    console.log(r)
+                    dispatchTransformation(setCurrentSort(r.hash));
                 });
             return;
         }
     }
+
+    // function onDragStart(draggedItem) {
+    //     console.log('draggedItem', draggedItem)
+    //     if (draggedItem) {
+    //         dispatchTransformation(setTransformationDropIndices(draggedItem.transformation.adjacent_sort_indices));
+    //     }
+    // }
+
+    React.useEffect(() => {
+        console.log("transformations changed", transformations)
+    }, [transformations])
 
     const graphContainerRef = React.useRef(null);
     return (
@@ -120,6 +132,7 @@ function GraphContainer(props) {
                 template={RowTemplate}
                 list={transformations}
                 onMoveEnd={onMoveEnd}
+                // onDragStart={onDragStart}
                 container={() => scrollContainer.current}
                 autoScrollRegionSize={200}
                 padding={0}
@@ -169,15 +182,15 @@ function MainWindow(props) {
     const contentDivRef = React.useRef(null);
 
 
-    React.useEffect(() => {
-        fetch(backendURLRef.current('graph/sorts')).catch(() => {
-            dispatchRef.current(
-                showError(
-                    `Couldn't connect to server at ${backendURLRef.current('')}`
-                )
-            );
-        });
-    }, []);
+    // React.useEffect(() => {
+    //     fetch(backendURLRef.current('graph/sorts')).catch(() => {
+    //         dispatchRef.current(
+    //             showError(
+    //                 `Couldn't connect to server at ${backendURLRef.current('')}`
+    //             )
+    //         );
+    //     });
+    // }, []);
 
     React.useEffect(() => {
         const setAnimationState = setAnimationStateRef.current;

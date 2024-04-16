@@ -8,7 +8,7 @@ import {make_default_nodes} from "../utils";
 import {useDebouncedAnimateResize} from "../hooks/useDebouncedAnimateResize";
 export function Facts(props) {
     const {transform} = props;
-    const { state: {currentDragged, transformationNodesMap} } = useTransformations();
+    const { state: {transformationDropIndices, transformationNodesMap} } = useTransformations();
     const [fact, setFact] = React.useState(make_default_nodes()[0]);
     const [style, setStyle] = React.useState({opacity: 1.0});
     const branchSpaceRef = React.useRef(null);
@@ -27,13 +27,13 @@ export function Facts(props) {
     }, [transformationNodesMap]);
     
     React.useEffect(() => {
-        if (currentDragged.length > 0) {
+        if (transformationDropIndices !== null) {
             setStyle(prevStyle => ({...prevStyle, opacity: 1 - Constants.opacityMultiplier}));
         }
         else {
             setStyle(prevStyle => ({...prevStyle, opacity: 1.0}));
         }
-    }, [currentDragged]);
+    }, [transformationDropIndices]);
 
     React.useEffect(() => {
         if (transform.scale < 1) {
