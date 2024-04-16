@@ -10,6 +10,7 @@ import networkx as nx
 
 from clingo import Symbol, ModelType
 from clingo.ast import AST, Transformer, Rule
+from viasp.shared.io import get_rules_from_input_program
 from .util import DefaultMappingProxyType, hash_transformation_rules
 
 @dataclass()
@@ -110,18 +111,25 @@ class Transformation:
     def __repr__(self):
         return f"Transformation(id={self.id}, rules={list(map(str,self.rules))}, adjacent_sort_indices={self.adjacent_sort_indices}, hash={self.hash})"
 
-@dataclass(frozen=True)
+
+@dataclass(frozen=False)
 class RuleContainer:
-    rules: Tuple[Union[AST, str], ...]
+    rules_AST: Tuple[AST, ...] = field(default_factory=tuple, hash=True)
+    rules_str: Tuple[str, ...] = field(default_factory=tuple, hash=False)
+
+    def __post_init__(self):
+        if isinstance(self.rules_AST, AST) and len(self.rules_str) == 0:
+            self.rules_str = tuple(get_rules_from_input_program(self.rules_AST))
 
     def __hash__(self):
-        return hash(self.rules)
+        return hash(self.rules_AST)
     
     def __eq__(self, o):
-        return isinstance(o, type(self)) and self.rules == o.rules
+        return isinstance(o, type(self)) and self.rules_AST == o.rules_AST
     
     def __repr__(self):
-        return str(self.rules)
+        return str(self.rules_str)
+
 
 @dataclass(frozen=True)
 class Signature:

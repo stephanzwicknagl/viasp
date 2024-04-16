@@ -174,14 +174,12 @@ def get_possible_transformation_orders():
         }
         
         sorted_program_rules = [t.rules for t in get_current_sort()]
-        print(f"OLD SORT: {sorted_program_rules}", flush=True)
         moved_item = sorted_program_rules.pop(moved_transformation["old_index"])
         sorted_program_rules.insert(moved_transformation["new_index"], moved_item)
         sorted_program_transformations = ProgramAnalyzer(load_dependency_graph()).make_transformations_from_sorted_program(sorted_program_rules)
         hash = hash_from_sorted_transformations(sorted_program_transformations)
         save_sort(hash, sorted_program_transformations)
         register_adjacent_sorts(sorted_program_transformations, hash)
-        print(f"NEW SORT WITH EDITED ATTRIBUTES: {sorted_program_transformations}", flush =True)
         try:
             set_current_graph(hash)
         except ValueError:

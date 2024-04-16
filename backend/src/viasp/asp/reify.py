@@ -12,7 +12,7 @@ from clingo.ast import (
 )
 from viasp.shared.util import hash_transformation_rules
 
-from .utils import find_index_mapping_for_adjacent_topological_sorts, is_constraint, merge_constraints, topological_sort, filter_body_aggregates, find_adjacent_topological_sorts
+from .utils import find_index_mapping_for_adjacent_topological_sorts, is_constraint, merge_constraints, topological_sort, filter_body_aggregates
 from ..asp.utils import merge_cycles, remove_loops
 from viasp.asp.ast_types import (
     SUPPORTED_TYPES,
@@ -464,10 +464,10 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
     def sort_program(self, program) -> List[Transformation]:
         parse_string(program, lambda rule: self.visit(rule) and None)
-        sorted_programs = self.sort_program_by_dependencies()
+        sorted_program = self.primary_sort_program_by_dependencies()
         return [
             Transformation(i, prg)
-            for i, prg in enumerate(next(sorted_programs))
+            for i, prg in enumerate(sorted_program)
         ]
 
     def get_sort_program_and_graph(
@@ -479,7 +479,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
     def get_sorted_program(
             self) -> Generator[List[Transformation], None, None]:
-        sorted_programs = self.sort_program_by_dependencies()
+        sorted_programs = self.primary_sort_program_by_dependencies()
         for program in sorted_programs:
             yield [Transformation(i, (prg)) for i, prg in enumerate(program)]
 
@@ -529,14 +529,6 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
         return g
 
-    def sort_program_by_dependencies(self):
-        deps = self.make_dependency_graph(self.dependants, self.conditions)
-        deps = merge_constraints(deps)
-        deps, _ = merge_cycles(deps)
-        deps, _ = remove_loops(deps)
-        programs = nx.all_topological_sorts(deps)
-        return programs
-
     def primary_sort_program_by_dependencies(
             self) -> List[ast.Rule]:  # type: ignore
         deps = self.make_dependency_graph(self.dependants, self.conditions)
@@ -546,23 +538,6 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         self.dependency_graph = cast(nx.DiGraph, deps.copy())
         sorted_program = topological_sort(deps, self.rules)
         return sorted_program
-
-    def get_adjacent_topological_sorts(
-            self, sorted_program: List[Transformation]
-    ) -> List[List[Transformation]]:
-        """
-        Given a sorted program, return all other valid topological sorts that are achieved
-        by taking one Transformation and inserting it at another index.
-        """
-        if self.dependency_graph is None:
-            raise ValueError(
-                "Dependency graph has not been created yet. Call primary_sort_program_by_dependencies first."
-            )
-        adjacent_sorts = find_adjacent_topological_sorts(
-            self.dependency_graph, [t.rules for t in sorted_program])
-        return [[
-            Transformation(i, prg) for i, prg in enumerate(adjacent_sort)
-        ] for adjacent_sort in adjacent_sorts]
 
     def get_index_mapping_for_adjacent_topological_sorts(
         self,

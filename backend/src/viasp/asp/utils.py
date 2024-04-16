@@ -1,5 +1,4 @@
 """Mostly graph utility functions."""
-from re import U
 import networkx as nx
 from clingo import Symbol, ast
 from clingo.ast import ASTType, AST
@@ -236,37 +235,17 @@ def topological_sort(g: nx.DiGraph, rules: Sequence[Tuple[ast.Rule]]) -> List:  
         raise Exception("Could not sort the graph.")
     return sorted
 
-def find_adjacent_topological_sorts(g: nx.DiGraph, sort: Sequence[Tuple[ast.Rule, ...]]) -> Set[Tuple[ast.Rule, ...]]:  # type: ignore
-    adjacent_topological_sorts: Set[Tuple[ast.Rule, ...]] = set()  # type: ignore
-    for transformation in g.nodes:
-        lower_bound = max([sort.index(u) for u in g.predecessors(transformation)]+[-1])
-        upper_bound = min([sort.index(u) for u in g.successors(transformation)]+[len(sort)])
-        new_indices = list(range(lower_bound+1,
-                                    upper_bound))
-        new_indices.remove(sort.index(transformation))
-        for new_index in new_indices:
-            new_sort = list(sort)
-            new_sort.remove(transformation)
-            new_sort.insert(new_index, transformation)
-            adjacent_topological_sorts.add(tuple(new_sort))
-    return adjacent_topological_sorts
-
 
 def find_index_mapping_for_adjacent_topological_sorts(
     g: nx.DiGraph,
     sorted_program: List[Tuple[ast.Rule]]) -> Dict[int, List[int]]:  # type: ignore
     new_indices: Dict[int, List[int]] = {}
-    print(f"Recalculate...\n{sorted_program}\n", flush=True)
     for i, rules_tuple in enumerate(sorted_program):
-        print(f"For transformation {rules_tuple}:\n\
-              max({[sorted_program.index(u) for u in g.predecessors(rules_tuple)]+[-1]})\n\
-              min({[sorted_program.index(u) for u in g.successors(rules_tuple)]+[len(sorted_program)]})", flush=True)
         lower_bound = max([sorted_program.index(u) for u in g.predecessors(rules_tuple)]+[-1])
         upper_bound = min([sorted_program.index(u) for u in g.successors(rules_tuple)]+[len(sorted_program)])
         new_indices[i] = list(range(lower_bound+1,
                                     upper_bound))
         new_indices[i].remove(sorted_program.index(rules_tuple))
-    print(F"New indices: \n{new_indices}", flush=True)
     return new_indices
 
 
