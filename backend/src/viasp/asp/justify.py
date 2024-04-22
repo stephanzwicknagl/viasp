@@ -8,7 +8,7 @@ from clingo import Control, Symbol, Model
 
 from clingo.ast import AST, ASTType
 
-from .reify import ProgramAnalyzer, reify_recursion_transformation
+from .reify import ProgramAnalyzer, reify_recursion_transformation, LiteralWrapper
 from .recursion import RecursionReasoner
 from .utils import insert_atoms_into_nodes, identify_reasons, calculate_spacing_factor
 from ..shared.model import Node, RuleContainer, Transformation, SymbolIdentifier
@@ -233,6 +233,7 @@ def get_recursion_subgraph(
         clear_temp_names=analyzer.clear_temp_names,
         conflict_free_model=analyzer.get_conflict_free_model(),
         conflict_free_iterindex=analyzer.get_conflict_free_iterindex(),
+        conflict_free_derivable=analyzer.get_conflict_free_derivable()
     )
     justification_program += "\n".join(map(str, justifier_rules))
     justification_program += f"\n{model_str}(@new())."

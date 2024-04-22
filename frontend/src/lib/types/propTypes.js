@@ -28,7 +28,10 @@ export const TRANSFORMATION = PropTypes.exact({
     _type: PropTypes.oneOf(['Transformation']),
     id: PropTypes.number,
     rules: RULECONTAINER,
-    adjacent_sort_indices: PropTypes.array,
+    adjacent_sort_indices: PropTypes.exact({
+        lower_bound: PropTypes.number,
+        upper_bound: PropTypes.number
+    }),
     hash: PropTypes.string
 })
 export const TRANSFORMATIONWRAPPER = PropTypes.exact({

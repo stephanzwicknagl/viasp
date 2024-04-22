@@ -167,8 +167,8 @@ def show_selected_models():
     marked_models = wrap_marked_models(marked_models,
                                        analyzer.get_conflict_free_showTerm())
     if analyzer.will_work():
-        set_primary_sort(analyzer)
         save_analyzer_values(analyzer)
+        set_primary_sort(analyzer)
 
     return "ok", 200
 

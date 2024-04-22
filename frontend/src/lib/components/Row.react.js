@@ -106,8 +106,9 @@ export class RowTemplate extends React.Component {
                                             const background = rowShading;
                                             const thisCanDrop =
                                                 transformationDropIndices !== null
-                                                    ? transformationDropIndices.indexOf(transformation.id) !== -1
+                                                    ? transformationDropIndices.lower_bound <= (transformation.id) && transformation.id <= transformationDropIndices.upper_bound
                                                     : false;
+                                                
 
                                             const containerStyle = {
                                                 position: 'relative',

@@ -110,7 +110,7 @@ class RuleContainer:
 class Transformation:
     id: int = field(hash=True)
     rules: RuleContainer = field(default_factory=RuleContainer, hash=True)
-    adjacent_sort_indices: List[int] = field(default_factory=list, hash=False)
+    adjacent_sort_indices: Dict[str, int] = field(default_factory=dict, hash=False)
     hash: str = field(default="", hash=True)
 
     def __post_init__(self):

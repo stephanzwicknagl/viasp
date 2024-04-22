@@ -216,20 +216,20 @@ def topological_sort(g: nx.DiGraph, rules: Sequence[ast.Rule]) -> List:  # type:
 
 def find_index_mapping_for_adjacent_topological_sorts(
     g: nx.DiGraph,
-    sorted_program: List[RuleContainer]) -> Dict[int, List[int]]:
-    new_indices: Dict[int, List[int]] = {}
+    sorted_program: List[RuleContainer]) -> Dict[int, Dict[str, int]]:
+    new_indices: Dict[int, Dict[str, int]] = {}
     for i, rule_container in enumerate(sorted_program):
         lower_bound = max([sorted_program.index(u) for u in g.predecessors(rule_container)]+[-1])
         upper_bound = min([sorted_program.index(u) for u in g.successors(rule_container)]+[len(sorted_program)])
-        new_indices[i] = list(range(lower_bound+1,
-                                    upper_bound))
-        new_indices[i].remove(sorted_program.index(rule_container))
+        new_indices[i] = {"lower_bound": lower_bound+1, "upper_bound": upper_bound-1}
     return new_indices
 
 
 def register_adjacent_sorts(primary_sort: List[Transformation], primary_hash: str) -> None:
     for transformation in primary_sort:
-        for new_index in transformation.adjacent_sort_indices:
+        for new_index in range(transformation.adjacent_sort_indices["lower_bound"], transformation.adjacent_sort_indices["upper_bound"]+1):
+            if new_index == transformation.id:
+                continue
             new_sort_rules = [t.rules for t in primary_sort]
             new_sort_rules.remove(transformation.rules)
             new_sort_rules.insert(new_index, transformation.rules)

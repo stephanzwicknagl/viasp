@@ -65,8 +65,9 @@ def test_query_multiple_sorts(client_with_a_graph):
     switch_from, switch_to = (None, None)
     for _ in range(3):
         for t in sample(sorted_program, k=len(sorted_program)):
-            if len(t.adjacent_sort_indices)>0:
-                switch_from, switch_to= (t.id, t.adjacent_sort_indices[0])
+            if t.adjacent_sort_indices["upper_bound"] - t.adjacent_sort_indices["lower_bound"]>0:
+                switch_to = sample(range(t.adjacent_sort_indices["lower_bound"], t.adjacent_sort_indices["upper_bound"]+1), 1)[0]
+                switch_from = t.id
                 break
         if switch_from is not None:
             res = client.post("graph/sorts", json={"old_index": switch_from, "new_index": switch_to})

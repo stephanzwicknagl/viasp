@@ -232,6 +232,13 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         transformations.
         """
         return self._get_conflict_free_version_of_name("n")
+    
+    def get_conflict_free_derivable(self):
+        """
+        For use in generation of subgraphs at recursive
+        transformations.
+        """
+        return self._get_conflict_free_version_of_name("derivable")
 
     def clear_temp_names(self):
         self.temp_names = set()
@@ -542,7 +549,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     def get_index_mapping_for_adjacent_topological_sorts(
         self,
         sorted_program: List[RuleContainer]
-    ) -> Dict[int, List[int]]:
+    ) -> Dict[int, Dict[str, int]]:
         if self.dependency_graph is None:
             raise ValueError(
                 "Dependency graph has not been created yet. Call primary_sort_program_by_dependencies first."
@@ -783,6 +790,7 @@ class ProgramReifierForRecursions(ProgramReifier):
     def __init__(self, *args, **kwargs):
         self.model_str: str = kwargs.pop("conflict_free_model", "model")
         self.n_str: str = kwargs.pop("conflict_free_iterindex", "n")
+        self.derivable_str: str = kwargs.pop("conflict_free_derivable", "derivable")
         super().__init__(*args, **kwargs)
 
     def visit_Rule(self, rule: ast.Rule) -> List[AST]:  # type: ignore
@@ -821,6 +829,11 @@ class ProgramReifierForRecursions(ProgramReifier):
             dep_fun = ast.Function(loc, f"{self.model_str}", [dependant], 0)
             dep_atm = ast.SymbolicAtom(dep_fun)
             conditions.append(ast.Literal(loc, ast.Sign.Negation, dep_atm))
+
+            # # Append dependant wrapped in derivable
+            # derivable_fun = ast.Function(loc, self.derivable_str, [dependant], 0)
+            # derivable_atm = ast.SymbolicAtom(derivable_fun)
+            # conditions.append(ast.Literal(loc, ast.Sign.NoSign, derivable_atm))
 
             new_rules.extend([
                 ast.Rule(rule.location, new_head, conditions)

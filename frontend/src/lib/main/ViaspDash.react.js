@@ -90,7 +90,7 @@ function GraphContainer(props) {
     function onMoveEnd(newList, movedItem, oldIndex, newIndex) {
         dispatchTransformation(setTransformationDropIndices(null));
 
-        if (transformationDropIndices.indexOf(newIndex) !== -1) {
+        if (transformationDropIndices.lower_bound <= newIndex && newIndex <= transformationDropIndices.upper_bound) {
             setShownRecursion([]);
             setHighlightedSymbol([]);
             dispatchTransformation(reorderTransformation(oldIndex, newIndex));
@@ -101,19 +101,11 @@ function GraphContainer(props) {
                     );
                 })
                 .then((r) => {
-                    console.log(r)
                     dispatchTransformation(setCurrentSort(r.hash));
                 });
             return;
         }
     }
-
-    // function onDragStart(draggedItem) {
-    //     console.log('draggedItem', draggedItem)
-    //     if (draggedItem) {
-    //         dispatchTransformation(setTransformationDropIndices(draggedItem.transformation.adjacent_sort_indices));
-    //     }
-    // }
 
     React.useEffect(() => {
         console.log("transformations changed", transformations)
@@ -132,7 +124,6 @@ function GraphContainer(props) {
                 template={RowTemplate}
                 list={transformations}
                 onMoveEnd={onMoveEnd}
-                // onDragStart={onDragStart}
                 container={() => scrollContainer.current}
                 autoScrollRegionSize={200}
                 padding={0}

@@ -305,7 +305,6 @@ class GraphAccessor:
 
     def save_sort(self, hash: str, sort: List[Transformation],
                   encoding_id: str):
-        print(f"Save sort {hash}\n{sort}", flush=True)
         self.cursor.execute(
             """
             INSERT OR REPLACE INTO graphs (hash, data, sort, encoding_id) VALUES (?, ?, ?, ?)
@@ -635,6 +634,7 @@ def set_current_graph(hash: str) -> str:
 
 def save_recursive_transformations_hashes(transformation_hashes: Set[str]):
     encoding_id = get_or_create_encoding_id()
+    print(f"Saving recursive, {transformation_hashes}", flush=True)
     get_database().save_recursive_transformations_hashes(
         transformation_hashes, encoding_id)
 

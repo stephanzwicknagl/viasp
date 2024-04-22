@@ -35,9 +35,10 @@ def test_adjacent_sorts(app_context):
 
     adjacent_sorts = analyzer.get_index_mapping_for_adjacent_topological_sorts([t.rules for t in sorted])
     assert len(adjacent_sorts.keys()) == 2
-    assert adjacent_sorts[0] == [1]
-    assert adjacent_sorts[1] == [0]
-
+    assert adjacent_sorts[0]["lower_bound"] == 0
+    assert adjacent_sorts[0]["upper_bound"] == 1
+    assert adjacent_sorts[1]["lower_bound"] == 0
+    assert adjacent_sorts[1]["upper_bound"] == 1
 
 def test_adjacent_sorts_2(app_context):
     rules = ["x:-y.",
@@ -52,10 +53,10 @@ def test_adjacent_sorts_2(app_context):
 
     adjacent_sorts = analyzer.get_index_mapping_for_adjacent_topological_sorts([t.rules for t in sorted])
     assert len(adjacent_sorts) == 7
-    assert adjacent_sorts[0] == []
-    assert adjacent_sorts[1] == [2,3,4,5,6]
-    assert adjacent_sorts[2] == [1]
-    assert adjacent_sorts[3] == [4,5,6]
-    assert adjacent_sorts[4] == [3,5]
-    assert adjacent_sorts[5] == [3,4]
-    assert adjacent_sorts[6] == []
+    assert list(adjacent_sorts[0].values()) == [0,0]
+    assert list(adjacent_sorts[1].values()) == [1,6]
+    assert list(adjacent_sorts[2].values()) == [1,2]
+    assert list(adjacent_sorts[3].values()) == [3,6]
+    assert list(adjacent_sorts[4].values()) == [3,5]
+    assert list(adjacent_sorts[5].values()) == [3,5]
+    assert list(adjacent_sorts[6].values()) == [6,6]
