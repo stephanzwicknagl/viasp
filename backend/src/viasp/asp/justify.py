@@ -11,7 +11,7 @@ from clingo.ast import AST, ASTType
 from .reify import ProgramAnalyzer, reify_recursion_transformation
 from .recursion import RecursionReasoner
 from .utils import insert_atoms_into_nodes, identify_reasons, calculate_spacing_factor
-from ..shared.model import Node, Transformation, SymbolIdentifier
+from ..shared.model import Node, RuleContainer, Transformation, SymbolIdentifier
 from ..shared.simple_logging import info
 from ..shared.util import pairwise, get_leafs_from_graph
 
@@ -148,7 +148,7 @@ def append_noops(result_graph: nx.DiGraph,
         result_graph.add_edge(leaf,
                               noop_node,
                               transformation=Transformation(
-                                  next_transformation_id, tuple(pass_through)))
+                                  next_transformation_id, RuleContainer(ast=tuple(pass_through))))
 
 
 def build_graph(wrapped_stable_models: List[List[str]],

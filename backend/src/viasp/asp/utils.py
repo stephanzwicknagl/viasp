@@ -16,7 +16,7 @@ def is_constraint(rule: AST) -> bool:
 def merge_constraints(g: nx.DiGraph) -> nx.DiGraph:
     mapping = {}
     constraints = frozenset([
-        ruleset for ruleset in g.nodes for rule in ruleset
+        ruleset for ruleset in g.nodes for rule in ruleset.ast
         if is_constraint(rule)
     ])
     if constraints:
@@ -25,9 +25,9 @@ def merge_constraints(g: nx.DiGraph) -> nx.DiGraph:
     return nx.relabel_nodes(g, mapping)
 
 
-def merge_cycles(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[Tuple[AST,...]]]:
+def merge_cycles(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[RuleContainer]]:
     mapping: Dict[AST, AST] = {}
-    merge_node: Tuple[AST, ...] = ()
+    merge_node: RuleContainer
     where_recursion_happens = set()
     for cycle in nx.algorithms.components.strongly_connected_components(g):
         merge_node = merge_nodes(cycle)
@@ -39,16 +39,16 @@ def merge_cycles(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[Tuple[AST,...]]]:
     return nx.relabel_nodes(g, mapping), frozenset(where_recursion_happens)
 
 
-def merge_nodes(nodes: frozenset) -> Tuple[AST, ...]:
+def merge_nodes(nodes: FrozenSet[RuleContainer]) -> RuleContainer:
     old = set()
     for x in nodes:
-        old.update(x)
-    return tuple(old)
+        old.update(x.ast)
+    return RuleContainer(tuple(old))
 
 
-def remove_loops(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[Tuple[AST, ...]]]:
+def remove_loops(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[RuleContainer]]:
     remove_edges: List[Tuple[AST, AST]] = []
-    where_recursion_happens: Set[Tuple[AST]] = set()
+    where_recursion_happens: Set[RuleContainer] = set()
     for edge in g.edges:
         u, v = edge
         if u == v:
@@ -59,28 +59,6 @@ def remove_loops(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[Tuple[AST, ...]]]
     for edge in remove_edges:
         g.remove_edge(*edge)
     return g, frozenset(where_recursion_happens)
-
-
-def rank_topological_sorts(all_sorts: Generator, rules: Sequence[AST]) -> List:
-    """ 
-    Ranks all topological sorts by the number of rules that are in the same order as in the rules list.
-    The highest rank is the first element in the list.
-
-    :param all_sorts: List of all topological sorts
-    :param rules: List of rules
-    """
-    ranked_sorts = []
-    all_sortss = list(all_sorts)
-    for sort in all_sortss:
-        rank = 0
-        sort_rules = [rule for frznst in sort for rule in frznst]
-        for i in range(len(sort_rules)):
-            rank -= (rules.index(sort_rules[i]) + 1) * (i + 1)
-        ranked_sorts.append((sort, rank))
-        # if len(ranked_sorts)>0:
-        #     break
-    ranked_sorts.sort(key=lambda x: x[1])
-    return [x[0] for x in ranked_sorts]
 
 
 def insert_atoms_into_nodes(path: List[Node]) -> None:
@@ -198,7 +176,7 @@ def calculate_spacing_factor(g: nx.DiGraph) -> None:
         children_next = []
 
 
-def topological_sort(g: nx.DiGraph, rules: Sequence[Tuple[ast.Rule]]) -> List:  # type: ignore
+def topological_sort(g: nx.DiGraph, rules: Sequence[ast.Rule]) -> List:  # type: ignore
     """ Topological sort of the graph.
         If the order is ambiguous, prefer the order of the rules.
         Note: Rule = Node
@@ -215,7 +193,7 @@ def topological_sort(g: nx.DiGraph, rules: Sequence[Tuple[ast.Rule]]) -> List:  
         earliest_node_index = len(rules)
         earliest_node = None
         for node in no_incoming_edge:
-            for rule in node:
+            for rule in node.ast:
                 node_index = rules.index(rule)
                 if node_index < earliest_node_index:
                     earliest_node_index = node_index
@@ -238,14 +216,14 @@ def topological_sort(g: nx.DiGraph, rules: Sequence[Tuple[ast.Rule]]) -> List:  
 
 def find_index_mapping_for_adjacent_topological_sorts(
     g: nx.DiGraph,
-    sorted_program: List[Tuple[ast.Rule]]) -> Dict[int, List[int]]:  # type: ignore
+    sorted_program: List[RuleContainer]) -> Dict[int, List[int]]:
     new_indices: Dict[int, List[int]] = {}
-    for i, rules_tuple in enumerate(sorted_program):
-        lower_bound = max([sorted_program.index(u) for u in g.predecessors(rules_tuple)]+[-1])
-        upper_bound = min([sorted_program.index(u) for u in g.successors(rules_tuple)]+[len(sorted_program)])
+    for i, rule_container in enumerate(sorted_program):
+        lower_bound = max([sorted_program.index(u) for u in g.predecessors(rule_container)]+[-1])
+        upper_bound = min([sorted_program.index(u) for u in g.successors(rule_container)]+[len(sorted_program)])
         new_indices[i] = list(range(lower_bound+1,
                                     upper_bound))
-        new_indices[i].remove(sorted_program.index(rules_tuple))
+        new_indices[i].remove(sorted_program.index(rule_container))
     return new_indices
 
 

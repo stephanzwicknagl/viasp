@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, Tuple, Iterable, Set, Collection, Any, Union, Sequence, Generator, Optional, cast
+from typing import Dict, List, Tuple, Iterable, Set, Collection, Any, Union, Sequence, Optional, cast
 
 import clingo
 import networkx as nx
@@ -169,7 +169,9 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
     Receives a ASP program and finds it's dependencies within, can sort a program by it's dependencies.
     """
 
-    def __init__(self, dependency_graph: Optional[nx.DiGraph] = None):
+    def __init__(self, dependants: Optional[Dict[Tuple[str, int], Set[ast.Rule]]] = None,  # type: ignore
+                    conditions: Optional[Dict[Tuple[str, int], Set[ast.Rule]]] = None,  # type: ignore
+                 dependency_graph: Optional[nx.DiGraph] = None):
         DependencyCollector.__init__(self, in_analyzer=True)
         FilteredTransformer.__init__(self)
         self.dependants: Dict[Tuple[str, int],
@@ -463,6 +465,8 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
                          lambda statement: self.visit(statement) and None)
 
     def sort_program(self, program) -> List[Transformation]:
+        from viasp.server.database import GraphAccessor, get_or_create_encoding_id
+        GraphAccessor().save_program(program, get_or_create_encoding_id())
         parse_string(program, lambda rule: self.visit(rule) and None)
         sorted_program = self.primary_sort_program_by_dependencies()
         return [
@@ -471,24 +475,20 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         ]
 
     def get_sort_program_and_graph(
-            self, program: str) -> Tuple[List[Tuple[AST, ...]], nx.DiGraph]:
+            self, program: str) -> Tuple[List[RuleContainer], nx.DiGraph]:
+        from viasp.server.database import GraphAccessor, get_or_create_encoding_id
+        GraphAccessor().save_program(program, get_or_create_encoding_id())
         parse_string(program, lambda rule: self.visit(rule) and None)
         sorted_programs = self.primary_sort_program_by_dependencies()
         return sorted_programs, self.make_dependency_graph(
             self.dependants, self.conditions)
 
-    def get_sorted_program(
-            self) -> Generator[List[Transformation], None, None]:
-        sorted_programs = self.primary_sort_program_by_dependencies()
-        for program in sorted_programs:
-            yield [Transformation(i, (prg)) for i, prg in enumerate(program)]
-
-    def get_primary_sort(self) -> List[Transformation]:
+    def get_sorted_program(self) -> List[Transformation]:
         sorted_program = self.primary_sort_program_by_dependencies()
         return self.make_transformations_from_sorted_program(sorted_program)
 
     def make_transformations_from_sorted_program(
-        self, sorted_program: List[Tuple[ast.Rule]]  # type: ignore
+        self, sorted_program: List[RuleContainer]  # type: ignore
     ) -> List[Transformation]:
         adjacency_index_mapping = self.get_index_mapping_for_adjacent_topological_sorts(
             sorted_program)
@@ -516,32 +516,32 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
 
         for deps in head_dependencies.values():
             for dep in deps:
-                g.add_node(tuple([dep]))
+                g.add_node(RuleContainer(tuple([dep])))
         for deps in body_dependencies.values():
             for dep in deps:
-                g.add_node(tuple([dep]))
+                g.add_node(RuleContainer(tuple([dep])))
 
         for head_signature, rules_with_head in head_dependencies.items():
             dependent_rules = body_dependencies.get(head_signature, [])
             for parent_rule in rules_with_head:
                 for dependent_rule in dependent_rules:
-                    g.add_edge(tuple([parent_rule]), tuple([dependent_rule]))
+                    g.add_edge(RuleContainer(tuple([parent_rule])), RuleContainer(tuple([dependent_rule])))
 
         return g
 
     def primary_sort_program_by_dependencies(
-            self) -> List[ast.Rule]:  # type: ignore
-        deps = self.make_dependency_graph(self.dependants, self.conditions)
-        deps = merge_constraints(deps)
-        deps, _ = merge_cycles(deps)
-        deps, _ = remove_loops(deps)
-        self.dependency_graph = cast(nx.DiGraph, deps.copy())
-        sorted_program = topological_sort(deps, self.rules)
+            self) -> List[RuleContainer]:
+        graph = self.make_dependency_graph(self.dependants, self.conditions)
+        graph = merge_constraints(graph)
+        graph, _ = merge_cycles(graph)
+        graph, _ = remove_loops(graph)
+        self.dependency_graph = cast(nx.DiGraph, graph.copy())
+        sorted_program = topological_sort(graph, self.rules)
         return sorted_program
 
     def get_index_mapping_for_adjacent_topological_sorts(
         self,
-        sorted_program: List[Tuple[ast.Rule]]  # type: ignore
+        sorted_program: List[RuleContainer]
     ) -> Dict[int, List[int]]:
         if self.dependency_graph is None:
             raise ValueError(
@@ -551,16 +551,16 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             self.dependency_graph, sorted_program)
 
     def check_positive_recursion(self) -> Set[str]:
-        deps1 = self.make_dependency_graph(self.dependants,
+        positive_dependency_graph = self.make_dependency_graph(self.dependants,
                                            self.positive_conditions)
-        deps1 = merge_constraints(deps1)
-        deps2, where1 = merge_cycles(deps1)
-        _, where2 = remove_loops(deps2)
+        positive_dependency_graph = merge_constraints(positive_dependency_graph)
+        positive_dependency_graph_withput_cycles, where1 = merge_cycles(positive_dependency_graph)
+        _, where2 = remove_loops(positive_dependency_graph_withput_cycles)
 
         recursion_rules = set()
         for t in where1.union(where2):
-            if self.should_include_recursive_set(t):
-                recursion_rules.add(hash_transformation_rules(t))
+            if any(not is_constraint(r) for r in t.ast):
+                recursion_rules.add(hash_transformation_rules(t.ast))
         return recursion_rules
 
     def should_include_recursive_set(self, recursive_tuple: Tuple[AST, ...]):
@@ -858,15 +858,7 @@ def transform(program: str, visitor=None, **kwargs):
 def reify(transformation: Transformation, **kwargs):
     visitor = ProgramReifier(transformation.id, **kwargs)
     result: List[AST] = []
-    rules = transformation.rules
-    if any(isinstance(r, str) for r in rules):
-        rules_str = rules
-        rules = []
-        for rule in rules_str:
-            parse_string(
-                rule, lambda rule: rules.append(rule)
-                if rule.ast_type != ASTType.Program else None)
-    for rule in rules:
+    for rule in transformation.rules.ast:
         result.extend(cast(Iterable[AST], visitor.visit(rule)))
     return result
 
@@ -910,15 +902,6 @@ def reify_recursion_transformation(transformation: Transformation,
                                    **kwargs) -> List[AST]:
     visitor = ProgramReifierForRecursions(**kwargs)
     result: List[AST] = []
-    rules = transformation.rules
-    if any(isinstance(r, str) for r in rules):
-        rules_str = rules
-        rules = []
-        for rule in rules_str:
-            parse_string(
-                rule, lambda rule: rules.append(rule)
-                if rule.ast_type != ASTType.Program else None)
-
-    for r in rules:
-        result.extend(cast(Iterable[AST], visitor.visit(r)))
+    for rule in transformation.rules.ast:
+        result.extend(cast(Iterable[AST], visitor.visit(rule)))
     return result

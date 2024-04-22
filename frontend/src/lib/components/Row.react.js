@@ -239,9 +239,9 @@ export function Row(props) {
         <div
             className={`row_container ${transformation.hash}`}
             >
-            {transformation.rules.length === 0 ? null : (
+            {transformation.rules.str_.length === 0 ? null : (
                 <RowHeader
-                    transformation={transformation.rules}
+                    ruleContainer={transformation.rules}
                 />
             )}
             {dragHandleProps === null || !isSortable ? null : (

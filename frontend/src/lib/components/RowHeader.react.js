@@ -1,9 +1,9 @@
 import React from "react";
-import PropTypes from "prop-types";
 import {useColorPalette} from "../contexts/ColorPalette";
+import { RULECONTAINER } from "../types/propTypes";
 
 export function RowHeader(props) {
-    const { transformation } = props;
+    const { ruleContainer } = props;
     const colorPalette = useColorPalette();
         
 
@@ -16,7 +16,7 @@ export function RowHeader(props) {
             }}
             className="row_header"
         >
-            {transformation.map((rule) => (
+            {ruleContainer.str_.map((rule) => (
                 <div
                     key={rule}
                     style={{whiteSpace: 'pre-wrap', padding: '4px 0'}}
@@ -34,7 +34,7 @@ export function RowHeader(props) {
 
 RowHeader.propTypes = {
     /**
-     * The rule string to be displayed in the header
+     * The rule container of the transformation
      */
-    transformation: PropTypes.arrayOf(PropTypes.string),
+    ruleContainer: RULECONTAINER
 };

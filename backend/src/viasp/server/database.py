@@ -9,7 +9,6 @@ import pickle
 from clingo.ast import Transformer
 
 from ..shared.defaults import PROGRAM_STORAGE_PATH, GRAPH_PATH
-from ..shared.util import get_or_create_encoding_id
 from ..shared.event import Event, subscribe
 from ..shared.model import ClingoMethodCall, StableModel, Transformation, TransformerTransport, TransformationError
 
@@ -66,6 +65,13 @@ class CallCenter:
     def mark_call_as_used(self, call: ClingoMethodCall):
         self.used.add(call.uuid)
 
+def get_or_create_encoding_id() -> str:
+    # TODO
+    # if 'encoding_id' not in session:
+    #     session['encoding_id'] = uuid4().hex
+    # print(f"Returing encoding id {session['encoding_id']}", flush=True)
+    # return session['encoding_id']
+    return "0"
 
 class GraphAccessor:
 

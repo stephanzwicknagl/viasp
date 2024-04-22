@@ -97,7 +97,7 @@ def test_clingraph_edges(client_with_a_clingraph):
                       headers={'Content-Type': 'application/json'})
     assert res.status_code == 200
     assert res.data == b'ok'
-
+    
     res = client.post(f"/graph/edges",
                         json={
                             "shownRecursion": [],

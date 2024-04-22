@@ -19,10 +19,15 @@ export const SIGNATURE = PropTypes.exact({
     name: PropTypes.string,
     args: PropTypes.number
 })
+export const RULECONTAINER = PropTypes.exact({
+    _type: PropTypes.oneOf(['RuleContainer']),
+    ast: PropTypes.arrayOf(PropTypes.string),
+    str_: PropTypes.arrayOf(PropTypes.string)
+})
 export const TRANSFORMATION = PropTypes.exact({
     _type: PropTypes.oneOf(['Transformation']),
     id: PropTypes.number,
-    rules: PropTypes.array,
+    rules: RULECONTAINER,
     adjacent_sort_indices: PropTypes.array,
     hash: PropTypes.string
 })

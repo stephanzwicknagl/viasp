@@ -6,7 +6,7 @@ from clingo import Control as InnerControl
 from flask.testing import FlaskClient
 from pytest import raises
 
-from viasp.api import (FactParserError, relax_constraints, clingraph,
+from viasp.api import (FactParserError,
                        add_program_file, add_program_string,
                        clear, load_program_file, load_program_string,
                        mark_from_clingo_model, mark_from_file,
@@ -176,7 +176,7 @@ def test_mark_model_from_clingo_model(client):
     ctl = InnerControl(['0'])
     ctl.add("base", [], r"sample.{encoding} :- sample.")
     ctl.ground([("base", [])])
-    with ctl.solve(yield_=True) as handle:
+    with ctl.solve(yield_=True) as handle:  # type: ignore
         for m in handle:
             mark_from_clingo_model(m)
     show()
@@ -253,7 +253,7 @@ def test_unmark_model_from_clingo_model(client):
     last_model = None
 
     clear()
-    with ctl.solve(yield_=True) as handle:
+    with ctl.solve(yield_=True) as handle:  # type: ignore
         for m in handle:
             mark_from_clingo_model(m)
             last_model = clingo_model_to_stable_model(m)
@@ -264,7 +264,8 @@ def test_unmark_model_from_clingo_model(client):
     assert res.status_code == 200
     assert len(res.json) == 2
 
-    unmark_from_clingo_model(last_model)
+    if last_model is not None:
+        unmark_from_clingo_model(last_model)
     show()
     res = client.get("control/models")
     assert res.status_code == 200
@@ -354,7 +355,7 @@ def test_mix_methods2(client):
     ctl = InnerControl(['0'])
     ctl.add("base", [], r"sample.{encoding} :- sample.")
     ctl.ground([("base", [])])
-    with ctl.solve(yield_=True) as handle:
+    with ctl.solve(yield_=True) as handle:  # type: ignore
         for m in handle:
             mark_from_clingo_model(m)
     show()

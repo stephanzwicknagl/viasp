@@ -62,7 +62,7 @@ export function Boxrow() {
     );
 
     return (
-        <div className="boxrow_container" style={style}>
+        <div className="row_container boxrow_container" style={style}>
             <div ref={boxrowRef} className="boxrow_row">
                 {clingraphGraphics.map((child) => (
                     <Box key={child.uuid} node={child} />

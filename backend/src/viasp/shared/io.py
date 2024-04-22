@@ -27,8 +27,6 @@ from clingo.ast import AST, ASTType
 
 from .interfaces import ViaspClient
 from .model import Node, ClingraphNode, Transformation, Signature, StableModel, ClingoMethodCall, TransformationError, FailedReason, SymbolIdentifier, TransformerTransport, RuleContainer
-from ..server.database import get_database
-from .util import get_or_create_encoding_id
 
 class DataclassJSONProvider(JSONProvider):
     def dumps(self, obj, **kwargs):
@@ -65,8 +63,7 @@ def object_hook(obj):
     elif t == "Transformation":
         return Transformation(**obj)
     elif t == "RuleContainer":
-        print(f"Decoding a rule")
-        return RuleContainer(**obj)
+        return RuleContainer(str_=obj["str_"])
     elif t == "Signature":
         return Signature(**obj)
     elif t == "Graph":
@@ -114,13 +111,12 @@ def dataclass_to_dict(o):
         return {
             "_type": "Transformation",
             "id": o.id,
-            "rules": get_rules_from_input_program(o.rules),
+            "rules": o.rules,
             "adjacent_sort_indices": o.adjacent_sort_indices,
             "hash": o.hash
         }
-    # elif isinstance(o, RuleContainer):
-    #     print(f"Encode a rule")
-    #     return {"_type": "RuleContainer", "rules": get_rules_from_input_program(o.rules)}
+    elif isinstance(o, RuleContainer):
+        return {"_type": "RuleContainer", "ast": o.ast, "str_": o.str_}
     elif isinstance(o, StableModel):
         return {"_type": "StableModel", "cost": o.cost, "optimality_proven": o.optimality_proven, "type": o.type,
                 "atoms": o.atoms, "terms": o.terms, "shown": o.shown, "theory": o.theory}
@@ -178,8 +174,6 @@ def encode_object(o):
     elif isinstance(o, set):
         return list(o)
     elif isinstance(o, AST):
-        if o.ast_type == ASTType.Rule:
-            return get_rules_from_input_program(tuple([o]))[0]
         return str(o)
     elif isinstance(o, Iterable):
         return list(o)
@@ -270,47 +264,6 @@ def symbol_to_dict(symbol: clingo.Symbol) -> dict:
 #             return x
 #         return super().default(o)
 
-
-def get_rules_from_input_program(rules: Tuple) -> Sequence[str]:
-    rules_from_input_program: Sequence[str] = []
-    encoding_id = get_or_create_encoding_id()
-    db = get_database()
-    program = db.load_program(encoding_id).split("\n")
-    for rule in rules:
-        if isinstance(rule, str):
-            rules_from_input_program.append(rule)
-            continue
-        begin_line = rule.location.begin.line
-        begin_colu = rule.location.begin.column
-        end_line = rule.location.end.line
-        end_colu = rule.location.end.column
-        r = ""
-        if begin_line != end_line:
-            r += program[begin_line - 1][begin_colu-1:] + "\n"
-            for i in range(begin_line, end_line - 1):
-                r += program[i] + "\n"
-            r += program[end_line - 1][:end_colu]
-        else:
-            r += program[begin_line - 1][begin_colu - 1:end_colu-1]
-        r = append_hashtag_to_minimize(r, rule, program, begin_line, begin_colu)
-        rules_from_input_program.append(r)
-    return rules_from_input_program
-
-def append_hashtag_to_minimize(r: str, rule: AST, program: Sequence[str], begin_line: int, begin_colu: int) -> str:
-    if rule.ast_type == ASTType.Minimize and r[:2] != ":~":
-        for i in range(begin_line, 0, -1):
-            colu_of_hashtag = program[i - 1].rfind("#")
-            if colu_of_hashtag != -1:
-                if begin_line != i:
-                    pre = program[i - 1][colu_of_hashtag:] + "\n"
-                    for k in range(i, begin_line-1):
-                        pre += program[k] + "\n"
-                    pre += program[begin_line][:begin_colu-1]
-                    r = pre + r + "}."
-                else:
-                    r = program[i - 1][colu_of_hashtag:begin_colu-1] + r + "}."
-                break
-    return r
 
 def reconstruct_transformer(obj: dict) -> TransformerTransport:
     # Reconstruct the class definition

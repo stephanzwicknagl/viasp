@@ -6,7 +6,7 @@ from ..server.database import get_database
 from ..shared.event import Event, publish
 from ..shared.model import ClingoMethodCall
 from ..shared.simple_logging import warn
-from ..shared.util import get_or_create_encoding_id
+from ..server.database import get_or_create_encoding_id
 
 
 def handler(cls):

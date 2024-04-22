@@ -1,34 +1,21 @@
 from viasp.server.database import CallCenter, GraphAccessor
 import pytest
-from typing import Tuple
+from typing import Tuple, List
 import networkx as nx
 
-from helper import get_stable_models_for_program
+from helper import get_clingo_stable_models
 from viasp.shared.util import hash_from_sorted_transformations, hash_transformation_rules
-from viasp.asp.reify import reify_list
-from viasp.asp.justify import build_graph
-from viasp.shared.model import Transformation, TransformerTransport, TransformationError, FailedReason
+from viasp.shared.model import Transformation, TransformerTransport, TransformationError, FailedReason, RuleContainer
 from viasp.exampleTransformer import Transformer as ExampleTransfomer
 
 
 @pytest.fixture(
     params=["program_simple", "program_multiple_sorts", "program_recursive"])
-def graph_info(request,
-    get_sort_program_all_sorts, app_context
-) -> Tuple[nx.DiGraph, str, str]:
+def graph_info(request, get_sort_program_and_get_graph,
+    app_context
+) -> Tuple[nx.DiGraph, str, List[Transformation]]:
     program = request.getfixturevalue(request.param)
-    sorted_programs, analyzer = get_sort_program_all_sorts(program)
-    sorted_program = sorted_programs[0]
-
-    saved_models = get_stable_models_for_program(program)
-    reified = reify_list(sorted_program)
-    recursion_rules = analyzer.check_positive_recursion()
-    g = build_graph(saved_models, reified, sorted_program, analyzer,
-                    recursion_rules)
-    return (g,
-            hash_from_sorted_transformations(sorted_program),
-            sorted_program)
-
+    return get_sort_program_and_get_graph(program)[0]
 
 def test_add_a_call_to_database(clingo_call_run_sample):
     db = CallCenter()
@@ -58,7 +45,7 @@ def test_program_database():
     db.clear_program(encoding_id)
     assert len(db.load_program(encoding_id)) == 0, "Database should be empty after clearing."
 
-def test_models_database(client_with_a_graph, get_clingo_stable_models):
+def test_models_database(client_with_a_graph):
     db = GraphAccessor()
     encoding_id = "test"
     _, _, _, program = client_with_a_graph
@@ -126,11 +113,13 @@ def test_current_graph_database(graph_info):
 
 
 
-def test_sorts_database(get_sort_program_all_sorts, program_multiple_sorts):
+def test_sorts_database(get_sort_program, program_multiple_sorts):
+    # TODO: rewrite / remove this test
+    # test adjacent tests instead
     db = GraphAccessor()
     encoding_id = "test"
     program = program_multiple_sorts
-    sorts, _ = get_sort_program_all_sorts(program)
+    sort, _ = get_sort_program(program)
 
     with pytest.raises(KeyError):
         db.load_current_graph(encoding_id)
@@ -138,12 +127,13 @@ def test_sorts_database(get_sort_program_all_sorts, program_multiple_sorts):
     assert type(r) == list
     assert len(r) == 0
 
-    db.save_many_sorts([(hash_from_sorted_transformations(sort), sort, encoding_id) for sort in sorts])
+    db.save_sort(hash_from_sorted_transformations(sort), sort, encoding_id)
     r = db.load_all_sorts(encoding_id)
-    assert len(r) == 2
+    assert len(r) == 1
     assert type(r) == list
 
-    db.set_current_graph(hash_from_sorted_transformations(sorts[0]), encoding_id)
+    db.set_current_graph(hash_from_sorted_transformations(sort),
+                         encoding_id)
     with pytest.raises(ValueError):
         db.load_current_graph(encoding_id)
     db.clear_all_sorts(encoding_id)
@@ -164,6 +154,9 @@ def test_current_sort_database(graph_info):
     r = db.get_current_sort(encoding_id)
     assert len(r) == 2
     assert type(r) == list
+    for i in range(len(r)):
+        assert type(r[i]) == Transformation
+        assert r[i].id == i
 
 def test_recursion_database(app_context):
     db = GraphAccessor()
@@ -249,9 +242,9 @@ def test_related_graphs(app_context):
     hash_2 = "hash2"
 
     elements = ['x:-a.', 'y:-a.', 'z:-a.']
-    sort_1 = [Transformation(i, (elements[i], )) for i in range(len(elements))]
+    sort_1 = [Transformation(i, RuleContainer(str_=(elements[i], ))) for i in range(len(elements))]
     sort_2 = [
-        Transformation(i, (elements[(i + 1) % len(elements)], ))
+        Transformation(i, RuleContainer(str_=(elements[(i + 1) % len(elements)], )))
         for i in range(len(elements))
     ]
 
@@ -269,7 +262,7 @@ def test_related_graphs(app_context):
     # assert bi-directional, many-to-many
     hash_3 = "hash3"
     sort_3 = [
-        Transformation(i, (elements[(i + 2) % len(elements)], ))
+        Transformation(i, RuleContainer(str_=(elements[(i + 2) % len(elements)], )))
         for i in range(len(elements))
     ]
     db.insert_graph_adjacency(hash_2, hash_3, sort_3, encoding_id)

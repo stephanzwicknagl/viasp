@@ -1,5 +1,6 @@
 from clingo import Control
 from viasp.asp.justify import save_model
+from viasp.shared.io import clingo_model_to_stable_model
 from clingo.ast import parse_string, AST, Transformer as ClingoTransformer
 
 
@@ -35,6 +36,16 @@ def get_stable_models_for_program(program):
     with ctl.solve(yield_=True) as handle: # type: ignore
         for model in handle:
             saved_models.append(save_model(model))
+    return saved_models
+
+def get_clingo_stable_models(program):
+    saved_models = []
+    ctl = Control(["0"])
+    ctl.add("base", [], program)
+    ctl.ground([("base", [])])
+    with ctl.solve(yield_=True) as handle: # type: ignore
+        for model in handle:
+            saved_models.append(clingo_model_to_stable_model(model))
     return saved_models
 
 def parse_program_to_ast(prg: str) -> AST:

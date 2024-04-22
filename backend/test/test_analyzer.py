@@ -1,12 +1,11 @@
-from flask import current_app
 import pytest
 from clingo.ast import AST
 
 from viasp.asp.ast_types import (SUPPORTED_TYPES, UNSUPPORTED_TYPES,
                                  make_unknown_AST_enum_types)
 from viasp.asp.reify import ProgramAnalyzer
-from viasp.shared.model import Transformation
 from viasp.shared.util import hash_transformation_rules
+from viasp.server.database import GraphAccessor, get_or_create_encoding_id
 
 
 def test_simple_fact_analyzed_correctly(app_context):
@@ -76,13 +75,14 @@ def test_show_statement_without_terms_analyzed_correctly(app_context):
 
 def test_show_statement_with_terms_analyzed_correctly(app_context):
     program = "a. #show b : a."
+    GraphAccessor().save_program(program, get_or_create_encoding_id())
 
     transformer = ProgramAnalyzer()
     result = transformer.sort_program(program)
     assert transformer.get_filtered(
     ) == [], "Show Term should not be filtered out."
     assert transformer.will_work(), "Program with ShowTerm should work."
-    assert str(next(iter(result[0].rules))) == "#show b : a."
+    assert next(iter(result[0].rules.str_)) == "#show b : a."
 
 
 def test_defined_statement_analyzed_correctly(app_context):
@@ -117,6 +117,7 @@ def test2():
 #end.
 1{a;b;p(@test2())}.
 """
+    GraphAccessor().save_program(program, get_or_create_encoding_id())
     transformer = ProgramAnalyzer()
     program = transformer.sort_program(program)
     filtered = transformer.get_filtered()
@@ -247,30 +248,32 @@ def test_sorting_facts_independent(get_sort_program):
     program = "c :- b. b :- a. a. "
     result, _ = get_sort_program(program)
     assert len(result) == 2, "Facts should not be sorted."
-    assert str(next(iter(result[0].rules))) == "b :- a."
-    assert str(next(iter(result[1].rules))) == "c :- b."
+    assert str(next(iter(result[0].rules.str_))) == "b :- a."
+    assert str(next(iter(result[1].rules.str_))) == "c :- b."
 
 
 def test_sorting_behemoth(get_sort_program):
     program = "c(1). e(1). f(X,Y) :- b(X,Y). 1 #sum { X,Y : a(X,Y) : b(Y), c(X) ; X,Z : b(X,Z) : e(Z) } :- c(X). e(X) :- c(X)."
     result, _ = get_sort_program(program)
     assert len(result) == 3
-    assert str(next(iter(result[0].rules))) == "e(X) :- c(X)."
+    assert str(next(iter(result[0].rules.str_))) == "e(X) :- c(X)."
     assert str(
-        next(iter(result[1].rules))
-    ) == "1 <= #sum { X,Y: a(X,Y): b(Y), c(X); X,Z: b(X,Z): e(Z) } :- c(X)."
-    assert str(next(iter(result[2].rules))) == "f(X,Y) :- b(X,Y)."
+        next(iter(result[1].rules.str_))
+    ) == "1 #sum { X,Y : a(X,Y) : b(Y), c(X) ; X,Z : b(X,Z) : e(Z) } :- c(X)."
+    assert str(next(iter(result[2].rules.str_))) == "f(X,Y) :- b(X,Y)."
 
 
 def test_data_type_is_correct(get_sort_program):
     program = "d :- c. b :- a. a. c :- b."
     result, _ = get_sort_program(program)
-    assert len(result) > 0 and len(
-        result[0].rules
+    assert len(result) > 0 and len(result[0].rules.ast) > 0 and len(
+        result[0].rules.str_
     ) > 0, "Transformation should return something and the transformation should contain a rule."
-    a_rule = next(iter(result[0].rules))
-    data_type = type(a_rule)
-    assert data_type == AST, f"{a_rule} should be an ASTType, not {data_type}"
+    a_rule = result[0].rules
+    data_type_ast = type(a_rule.ast[0])
+    data_type_str_ = type(a_rule.str_[0])
+    assert data_type_ast == AST, f"{a_rule}.ast should be an ASTType, not {data_type_ast}"
+    assert data_type_str_ == str, f"{a_rule}.str should be a str, not {data_type_str_}"
 
 
 def test_aggregate_in_body_of_constraint(get_sort_program):
@@ -312,7 +315,6 @@ def test_ast_types_do_not_intersect(app_context):
         known), "No type should be known and unknown"
 
 
-
 @pytest.mark.skip(reason="Not implemented yet")
 def test_constraints_gets_put_last(app_context):
     program = """
@@ -326,22 +328,21 @@ def test_constraints_gets_put_last(app_context):
     transformer = ProgramAnalyzer()
     result = transformer.sort_program(program)
     assert len(result) == 3
-    assert len(result[0].rules) == 1
-    assert len(result[1].rules) == 1
-    assert len(result[2].rules) == 3
-
+    assert len(result[0].rules.str_) == 1
+    assert len(result[1].rules.str_) == 1
+    assert len(result[2].rules.str_) == 3
 
 
 def test_body_conditional_literal_sorted_correctly(app_context):
+    rules = ["hc(U,V) :- edge(U,V).", "allnodes :- hc(_,X): node(X), X=1..2."]
     program = """
     node(1..2). edge(1,2). edge(2,1).
-    hc(U,V) :- edge(U,V).
-    allnodes :- node(X): hc(_,X)."""
+    """ + "\n".join(rules)
     transformer = ProgramAnalyzer()
     result = transformer.sort_program(program)
     assert len(result) == 2
-    assert str(next(iter(result[0].rules))) == "hc(U,V) :- edge(U,V)."
-    assert str(next(iter(result[1].rules))) == "allnodes :- node(X): hc(_,X)."
+    for i, rule in enumerate(rules):
+        assert str(next(iter(result[i].rules.str_))) == rule
 
     assert len(transformer.dependants[(
         'allnodes', 0)]) == 1, "allnodes/0 should depend on one rule."
@@ -349,41 +350,20 @@ def test_body_conditional_literal_sorted_correctly(app_context):
         'node', 1)]) == 1, "Node/1 should be a condition of the rule"
     assert len(transformer.conditions[(
         'hc', 2)]) == 1, "hc/2 should be a condition of the rule"
-
-
-def test_body_conditional_literal_sorted_correctly_2(app_context):
-    program = """
-    node(1..2). edge(1,2). edge(2,1).
-    hc(U,V) :- edge(U,V).
-    allnodes :- hc(_,X): node(X), X=1..2."""
-    transformer = ProgramAnalyzer()
-    result = transformer.sort_program(program)
-    assert len(result) == 2
-    assert str(next(iter(result[0].rules))) == "hc(U,V) :- edge(U,V)."
-    assert str(next(iter(
-        result[1].rules))) == "allnodes :- hc(_,X): node(X), X = (1..2)."
-
-    assert len(transformer.dependants[(
-        'allnodes', 0)]) == 1, "allnodes/0 should depend on one rule."
     assert len(transformer.conditions[(
-        'node', 1)]) == 1, "Node/1 should be a condition of the rule"
-    assert len(transformer.conditions[(
-        'hc', 2)]) == 1, "hc/2 should be a condition of the rule"
-    assert len(
-        transformer.conditions[('X = (1..2)', 0)]) == 0, "Body arithmetic is filtered from conditions."
+        'X = (1..2)', 0)]) == 0, "Body arithmetic is filtered from conditions."
 
 
 def test_body_conditional_literal_sorted_in_show_term(app_context):
+    rules = ["hc(U,V) :- edge(U,V).", "#show allnodes : node(X): hc(_,X)."]
     program = """
     node(1..2). edge(1,2). edge(2,1).
-    hc(U,V) :- edge(U,V).
-    #show allnodes : node(X): hc(_,X)."""
+    """ + "\n".join(rules) 
     transformer = ProgramAnalyzer()
     result = transformer.sort_program(program)
-    assert len(result) == 2
-    assert str(next(iter(result[0].rules))) == "hc(U,V) :- edge(U,V)."
-    assert str(next(iter(
-        result[1].rules))) == "#show allnodes : node(X): hc(_,X)."
+    assert len(result) == len(rules)
+    for i, rule in enumerate(rules):
+        assert str(next(iter(result[i].rules.str_))) == rule
 
     assert len(transformer.dependants[(
         'allnodes', 0)]) == 1, "allnodes/0 should depend on one rule."
@@ -394,16 +374,15 @@ def test_body_conditional_literal_sorted_in_show_term(app_context):
 
 
 def test_body_aggregate_sorted_correctly(app_context):
+    rules = ["hc(U,V) :- edge(U,V).", "pathExists :- 1 < #count { 1,X,Y: hc(X,Y) }."]
     program = """
     node(1..2). edge(1,2). edge(2,1).
-    hc(U,V) :- edge(U,V).
-    pathExists :- 1 < #count { 1,X,Y: hc(X,Y) }."""
+    """ + "\n".join(rules)
     transformer = ProgramAnalyzer()
     result = transformer.sort_program(program)
-    assert len(result) == 2
-    assert str(next(iter(result[0].rules))) == "hc(U,V) :- edge(U,V)."
-    assert str(next(iter(
-        result[1].rules))) == "pathExists :- 1 < #count { 1,X,Y: hc(X,Y) }."
+    assert len(result) == len(rules)
+    for i, rule in enumerate(rules):
+        assert str(next(iter(result[i].rules.str_))) == rule
 
     assert len(transformer.dependants[(
         'pathExists', 0)]) == 1, "pathExists/0 should depend on one rule."
@@ -412,16 +391,15 @@ def test_body_aggregate_sorted_correctly(app_context):
 
 
 def test_body_aggregate_sorted_in_show_term(app_context):
+    rules = ["hc(U,V) :- edge(U,V).", "#show pathExists : 1 < #count { 1,X,Y: hc(X,Y) }."]
     program = """
     node(1..2). edge(1,2). edge(2,1).
-    hc(U,V) :- edge(U,V).
-    #show pathExists : 1 < #count { 1,X,Y: hc(X,Y) }."""
+    """ + "\n".join(rules)
     transformer = ProgramAnalyzer()
     result = transformer.sort_program(program)
-    assert len(result) == 2
-    assert str(next(iter(result[0].rules))) == "hc(U,V) :- edge(U,V)."
-    assert str(next(iter(result[1].rules))
-               ) == "#show pathExists : 1 < #count { 1,X,Y: hc(X,Y) }."
+    assert len(result) == len(rules)
+    for i, rule in enumerate(rules):
+        assert str(next(iter(result[i].rules.str_))) == rule
 
     assert len(transformer.dependants[(
         'pathExists', 0)]) == 1, "pathExists/0 should depend on one rule."
@@ -448,6 +426,9 @@ def test_loop_recursion_gets_recognized(app_context):
     recursive_rules = transformer.check_positive_recursion()
 
     assert isinstance(recursive_rules, set), "The result should be a set."
-    assert isinstance(next(iter(recursive_rules)), str), "The result should be a set of tuples."
+    assert isinstance(next(iter(recursive_rules)),
+                      str), "The result should be a set of tuples."
     assert len(recursive_rules) == 1, "The rule should be recursive."
-    assert hash_transformation_rules(("a :- a.",)) in recursive_rules, "Hash is determined by transformatinos."
+    assert hash_transformation_rules(
+        ("a :- a.",
+         )) in recursive_rules, "Hash is determined by transformatinos."

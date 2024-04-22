@@ -1,3 +1,5 @@
+from helper import get_clingo_stable_models
+
 def test_add_call_endpoint(client, clingo_call_run_sample):
     bad_value = {"foo": "bar"}
     res = client.post("/control/add_call", json=bad_value)
@@ -23,7 +25,7 @@ def test_reconstruct_endpoint(client, clingo_call_run_sample):
     assert res.status_code == 405
 
 
-def test_model_endpoint(client, get_clingo_stable_models):
+def test_model_endpoint(client):
     program = "{b;c}."
     res = client.post("/control/models", json=get_clingo_stable_models(program))
     assert res.status_code == 200
@@ -35,7 +37,7 @@ def test_model_endpoint(client, get_clingo_stable_models):
     assert len(res.json) == 0
 
 
-def test_show_endpoint(client, get_clingo_stable_models):
+def test_show_endpoint(client):
     program = "{b;c}."
     client.delete("/graph")
     client.post("/control/models", json=get_clingo_stable_models(program))

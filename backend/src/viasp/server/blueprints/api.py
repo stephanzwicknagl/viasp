@@ -137,28 +137,8 @@ def set_warnings():
     return "ok"
 
 
-def save_all_sorts(analyzer: ProgramAnalyzer,
-                   batch_size: int = SORTGENERATION_BATCH_SIZE):
-    sorts = []
-    t_start = time()
-    for sorted_program in analyzer.get_sorted_program():
-        sorts.append(
-            (hash_from_sorted_transformations(sorted_program), sorted_program))
-        if len(sorts) >= batch_size:
-            save_many_sorts(sorts)
-            sorts = []
-            if time() - t_start > SORTGENERATION_TIMEOUT_SECONDS:
-                set_sortable(False)
-                clear_all_sorts()
-                break
-    if len(sorts) == 1:
-        set_sortable(False)
-    if sorts:
-        save_many_sorts(sorts)
-
-
 def set_primary_sort(analyzer: ProgramAnalyzer):
-    primary_sort = analyzer.get_primary_sort()
+    primary_sort = analyzer.get_sorted_program()
     primary_hash = hash_from_sorted_transformations(primary_sort)
     register_adjacent_sorts(primary_sort, primary_hash)
     try:
