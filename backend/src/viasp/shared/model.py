@@ -2,14 +2,15 @@ from copy import copy
 from dataclasses import dataclass, field
 from enum import Enum
 from inspect import Signature as inspect_Signature
+from re import U
 from typing import Any, Sequence, Dict, Union, FrozenSet, Collection, List, Tuple
 from types import MappingProxyType
 from uuid import UUID, uuid4
 import networkx as nx
 
 from clingo import Symbol, ModelType
-from clingo.ast import AST, Transformer, Rule
-from .util import DefaultMappingProxyType, hash_transformation_rules
+from clingo.ast import AST, Transformer
+from .util import DefaultMappingProxyType, hash_transformation_rules, get_rules_from_input_program, get_ast_from_input_string
 
 @dataclass()
 class SymbolIdentifier:
@@ -75,38 +76,72 @@ class ClingraphNode:
     def __repr__(self):
         return f"ClingraphNode(uuid={self.uuid})"
 
+@dataclass(frozen=False)
+class RuleContainer:
+    ast: Tuple[AST, ...] = field(default_factory=tuple, hash=True)
+    str_: Tuple[str, ...] = field(default_factory=tuple, hash=False)
+
+    def __post_init__(self):
+        if isinstance(self.ast, AST):
+            self.ast = (self.ast, )
+        if isinstance(self.ast, List):
+            self.ast = tuple(self.ast)
+        if isinstance(self.str_, str):
+            self.str_ = (self.str_, )
+        if isinstance(self.str_, List):
+            self.str_ = tuple(self.str_)
+
+        if len(self.str_) == 0 and len(self.ast) > 0:
+            self.str_ = tuple(get_rules_from_input_program(self.ast))
+        if len(self.ast) == 0 and len(self.str_) > 0:
+            self.ast = tuple(get_ast_from_input_string(self.str_))
+    
+    def __hash__(self):
+        return hash(self.ast)
+
+    def __eq__(self, o):
+        return isinstance(o, type(self)) and self.ast == o.ast
+
+    def __repr__(self):
+        return str(self.str_)
+
 
 @dataclass(frozen=False)
 class Transformation:
     id: int = field(hash=True)
-    rules: Tuple[Rule, ...] = field(default_factory=tuple, hash=True) # type: ignore
+    rules: RuleContainer = field(default_factory=RuleContainer, hash=True)
+    adjacent_sort_indices: Dict[str, int] = field(default_factory=dict, hash=False)
     hash: str = field(default="", hash=True)
 
     def __post_init__(self):
         if isinstance(self.rules, AST):
-            self.rules = (self.rules,)
+            self.rules = RuleContainer(ast=(self.rules,))
         if isinstance(self.rules, List):
-            self.rules = tuple(self.rules)
+            self.rules = RuleContainer(ast=tuple(self.rules))
+        if isinstance(self.rules, Tuple):
+            self.rules = RuleContainer(ast=self.rules)
         if self.hash == "":
-            self.hash = hash_transformation_rules(self.rules)
+            self.hash = hash_transformation_rules(self.rules.ast)
 
     def __hash__(self):
-        return hash(tuple(self.rules))
+        return hash(self.rules.ast)
 
     def __eq__(self, o):
         if not isinstance(o, type(self)):
             return False
         if self.id != o.id:
             return False
-        if len(self.rules) != len(o.rules):
+        if len(self.rules.ast) != len(o.rules.ast):
             return False
-        for r in o.rules:
-            if r not in self.rules:
+        for r in o.rules.ast:
+            if r not in self.rules.ast:
                 return False
         return True
 
     def __repr__(self):
-        return f"Transformation(id={self.id}, rules={list(map(str,self.rules))}, hash={self.hash})"
+        return f"Transformation(id={self.id}, rules={self.rules}, adjacent_sort_indices={self.adjacent_sort_indices}, hash={self.hash})"
+
+
 
 
 @dataclass(frozen=True)

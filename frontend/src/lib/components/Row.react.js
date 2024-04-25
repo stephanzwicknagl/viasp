@@ -6,12 +6,11 @@ import PropTypes from 'prop-types';
 import {RowHeader} from './RowHeader.react';
 import {
     useTransformations,
-    setCurrentDragged,
+    setTransformationDropIndices,
     TransformationContext,
 } from '../contexts/transformations';
 import {MAPZOOMSTATE, TRANSFORMATION, TRANSFORMATIONWRAPPER} from '../types/propTypes';
 import {ColorPaletteContext} from '../contexts/ColorPalette';
-import {useShownRecursion} from '../contexts/ShownRecursion';
 import {make_default_nodes} from '../utils';
 import {AnimationUpdater} from '../contexts/AnimationUpdater';
 import {DragHandle} from './DragHandle.react';
@@ -27,7 +26,6 @@ export class RowTemplate extends React.Component {
             canBeDropped: false,
             transformations: [],
             possibleSorts: [],
-            currentDragged: '',
         };
         this.intervalId = null;
     }
@@ -36,28 +34,27 @@ export class RowTemplate extends React.Component {
         this.setState({
             transformations: this.context.state.transformations,
             possibleSorts: this.context.state.possibleSorts,
-            currentDragged: this.context.state.currentDragged,
         });
     }
 
     componentDidUpdate(prevProps, prevState) {
         if (
             this.props.itemSelected > prevProps.itemSelected &&
-            this.context.state.currentDragged !==
-                this.props.item.transformation.hash &&
+            this.context.state.transformationDropIndices !==
+                this.props.item.transformation.adjacent_sort_indices &&
             prevProps.itemSelected !== this.props.itemSelected
         ) {
             this.context.dispatch(
-                setCurrentDragged(this.props.item.transformation.hash)
-            );
+                setTransformationDropIndices(this.props.item.transformation.adjacent_sort_indices)
+            )
         }
         if (
             this.props.itemSelected < prevProps.itemSelected &&
-            this.context.state.currentDragged ===
-                this.props.item.transformation.hash &&
+            this.context.state.transformationDropIndices ===
+                this.props.item.transformation.adjacent_sort_indices &&
             prevProps.itemSelected !== this.props.itemSelected
         ) {
-            this.context.dispatch(setCurrentDragged(''));
+            this.context.dispatch(setTransformationDropIndices(null));
         }
         if (this.props.itemSelected > Constants.rowAnimationPickupThreshold && this.intervalId === null) {
             this.intervalId = setInterval(() => {
@@ -93,7 +90,7 @@ export class RowTemplate extends React.Component {
                     this.setAnimationState = setAnimationState;
                     return (
                         <TransformationContext.Consumer>
-                            {({state: {canDrop}}) => {
+                            {({state: {transformationDropIndices}}) => {
                                 return (
                                     <ColorPaletteContext.Consumer>
                                         {({rowShading}) => {
@@ -107,12 +104,10 @@ export class RowTemplate extends React.Component {
                                                 0;
                                             const background = rowShading;
                                             const thisCanDrop =
-                                                canDrop !== null
-                                                    ? canDrop[
-                                                          item.transformation
-                                                              .hash
-                                                      ] || ''
-                                                    : '';
+                                                transformationDropIndices !== null
+                                                    ? transformationDropIndices.lower_bound <= (transformation.id) && transformation.id <= transformationDropIndices.upper_bound
+                                                    : false;
+                                                
 
                                             const containerStyle = {
                                                 position: 'relative',
@@ -128,8 +123,7 @@ export class RowTemplate extends React.Component {
                                                             background.length
                                                     ],
                                                 opacity:
-                                                    thisCanDrop.length > 0 ||
-                                                    itemSelected
+                                                    thisCanDrop || itemSelected
                                                         ? 1
                                                         : 1 -
                                                           Constants.opacityMultiplier *
@@ -206,7 +200,6 @@ export function Row(props) {
     const rowbodyRef = React.useRef(null);
     const headerRef = React.useRef(null);
     const handleRef = React.useRef(null);
-    const [shownRecursion, ,] = useShownRecursion();
     const transformationIdRef = React.useRef(transformation.id);
 
     useDebouncedAnimateResize(rowbodyRef, transformationIdRef);
@@ -245,9 +238,9 @@ export function Row(props) {
         <div
             className={`row_container ${transformation.hash}`}
             >
-            {transformation.rules.length === 0 ? null : (
+            {transformation.rules.str_.length === 0 ? null : (
                 <RowHeader
-                    transformation={transformation.rules}
+                    ruleContainer={transformation.rules}
                 />
             )}
             {dragHandleProps === null || !isSortable ? null : (
@@ -268,7 +261,7 @@ export function Row(props) {
                         const space_multiplier = child.space_multiplier * 100;
                         if (
                             child.recursive &&
-                            shownRecursion.indexOf(child.uuid) !== -1
+                            child.shownRecursion
                         ) {
                             return (
                                 <div

@@ -6,7 +6,7 @@ import {hideNode, showNode, useShownNodes} from '../contexts/ShownNodes';
 import {useColorPalette} from '../contexts/ColorPalette';
 import {useHighlightedNode} from '../contexts/HighlightedNode';
 import {useHighlightedSymbol} from '../contexts/HighlightedSymbol';
-import {useShownRecursion} from '../contexts/ShownRecursion';
+import {toggleShownRecursion, useTransformations} from '../contexts/transformations';
 import {useSettings} from '../contexts/Settings';
 import {useShownDetail} from '../contexts/ShownDetail';
 import {NODE} from '../types/propTypes';
@@ -276,12 +276,22 @@ NodeContent.propTypes = {
 
 function RecursionButton(props) {
     const {node} = props;
-    const [, toggleShownRecursion] = useShownRecursion();
+    const {state, dispatch, reloadEdges} = useTransformations();
     const colorPalette = useColorPalette();
 
     function handleClick(e) {
         e.stopPropagation();
-        toggleShownRecursion(node.uuid);
+        dispatch(toggleShownRecursion(node.uuid));
+        const shownRecursionNodes = Object.values(state.transformationNodesMap)
+            .flat()
+            .filter(node => node.shownRecursion)
+            .map(node => node.uuid);
+        if (node.shownRecursion) {
+            shownRecursionNodes.splice(shownRecursionNodes.indexOf(node.uuid), 1)
+        } else { 
+            shownRecursionNodes.push(node.uuid)
+        }
+        reloadEdges(shownRecursionNodes, state.clingraphGraphics.length > 0);
     }
 
     return (

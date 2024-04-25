@@ -6,15 +6,15 @@ import clingo.ast
 from clingo import Control, ModelType
 
 from viasp.shared.io import clingo_model_to_stable_model
-from viasp.shared.model import StableModel, ClingoMethodCall, Signature, Transformation, TransformationError, \
+from viasp.shared.model import RuleContainer, StableModel, ClingoMethodCall, Signature, Transformation, TransformationError, \
     FailedReason
-from viasp.server.database import get_database 
+from viasp.server.database import get_database
 
 
 def test_networkx_graph_with_dataclasses_is_isomorphic_after_dumping_and_loading_again(get_sort_program_and_get_graph):
     program = "c(1). c(2). b(X) :- c(X). a(X) :- b(X)."
     graph_info, _ = get_sort_program_and_get_graph(program)
-    graph = nx.node_link_graph(graph_info[0])
+    graph = graph_info[0]
 
     assert len(graph.nodes()) > 0, "The graph to check serialization should contain nodes."
     assert len(graph.edges()) > 0, "The graph to check serialization should contain edges."
@@ -55,9 +55,13 @@ def test_failed_reason(app_context):
     serialized = current_app.json.dumps(object_to_serialize)
     assert serialized
 
+def test_rule_container(app_context):
+    object_to_serialize = RuleContainer(str_=tuple(["test."]))
+    serialized = current_app.json.dumps(object_to_serialize)
+    assert serialized
 
 def test_transformation(app_context):
-    object_to_serialize = Transformation(1, tuple())
+    object_to_serialize = Transformation(1, RuleContainer(tuple()))
     serialized = current_app.json.dumps(object_to_serialize)
     assert serialized
 
@@ -82,7 +86,7 @@ def test_signature(app_context):
     assert serialized
 
 def test_minimize_rule_representation(app_context):
-    sort = [Transformation(0, tuple([":~ last(N). [N@0,1]"]))]
+    sort = [Transformation(0, RuleContainer(str_=tuple([":~ last(N). [N@0,1]"])))]
     db = get_database()
     sort_hash = "0"
     encoding_id = "1"

@@ -3,10 +3,11 @@ import networkx as nx
 from clingo import Symbol, ast
 from clingo.ast import ASTType, AST
 from typing import Generator, List, Sequence, Tuple, Dict, Set, FrozenSet, Optional
-from ..shared.simple_logging import warn
-from ..shared.model import Node, SymbolIdentifier
-from ..shared.util import pairwise, get_root_node_from_graph
 
+from ..shared.simple_logging import warn
+from ..shared.model import Node, SymbolIdentifier, Transformation, RuleContainer
+from ..shared.util import pairwise, get_root_node_from_graph, hash_from_sorted_transformations
+from ..server.database import insert_graph_relation
 
 def is_constraint(rule: AST) -> bool:
     return rule.ast_type == ASTType.Rule and "atom" in rule.head.child_keys and rule.head.atom.ast_type == ASTType.BooleanConstant  # type: ignore
@@ -15,7 +16,7 @@ def is_constraint(rule: AST) -> bool:
 def merge_constraints(g: nx.DiGraph) -> nx.DiGraph:
     mapping = {}
     constraints = frozenset([
-        ruleset for ruleset in g.nodes for rule in ruleset
+        ruleset for ruleset in g.nodes for rule in ruleset.ast
         if is_constraint(rule)
     ])
     if constraints:
@@ -24,9 +25,9 @@ def merge_constraints(g: nx.DiGraph) -> nx.DiGraph:
     return nx.relabel_nodes(g, mapping)
 
 
-def merge_cycles(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[Tuple[AST,...]]]:
+def merge_cycles(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[RuleContainer]]:
     mapping: Dict[AST, AST] = {}
-    merge_node: Tuple[AST, ...] = ()
+    merge_node: RuleContainer
     where_recursion_happens = set()
     for cycle in nx.algorithms.components.strongly_connected_components(g):
         merge_node = merge_nodes(cycle)
@@ -38,16 +39,16 @@ def merge_cycles(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[Tuple[AST,...]]]:
     return nx.relabel_nodes(g, mapping), frozenset(where_recursion_happens)
 
 
-def merge_nodes(nodes: frozenset) -> Tuple[AST, ...]:
+def merge_nodes(nodes: FrozenSet[RuleContainer]) -> RuleContainer:
     old = set()
     for x in nodes:
-        old.update(x)
-    return tuple(old)
+        old.update(x.ast)
+    return RuleContainer(tuple(old))
 
 
-def remove_loops(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[Tuple[AST, ...]]]:
+def remove_loops(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[RuleContainer]]:
     remove_edges: List[Tuple[AST, AST]] = []
-    where_recursion_happens: Set[Tuple[AST]] = set()
+    where_recursion_happens: Set[RuleContainer] = set()
     for edge in g.edges:
         u, v = edge
         if u == v:
@@ -58,28 +59,6 @@ def remove_loops(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[Tuple[AST, ...]]]
     for edge in remove_edges:
         g.remove_edge(*edge)
     return g, frozenset(where_recursion_happens)
-
-
-def rank_topological_sorts(all_sorts: Generator, rules: Sequence[AST]) -> List:
-    """ 
-    Ranks all topological sorts by the number of rules that are in the same order as in the rules list.
-    The highest rank is the first element in the list.
-
-    :param all_sorts: List of all topological sorts
-    :param rules: List of rules
-    """
-    ranked_sorts = []
-    all_sortss = list(all_sorts)
-    for sort in all_sortss:
-        rank = 0
-        sort_rules = [rule for frznst in sort for rule in frznst]
-        for i in range(len(sort_rules)):
-            rank -= (rules.index(sort_rules[i]) + 1) * (i + 1)
-        ranked_sorts.append((sort, rank))
-        # if len(ranked_sorts)>0:
-        #     break
-    ranked_sorts.sort(key=lambda x: x[1])
-    return [x[0] for x in ranked_sorts]
 
 
 def insert_atoms_into_nodes(path: List[Node]) -> None:
@@ -214,7 +193,7 @@ def topological_sort(g: nx.DiGraph, rules: Sequence[ast.Rule]) -> List:  # type:
         earliest_node_index = len(rules)
         earliest_node = None
         for node in no_incoming_edge:
-            for rule in node:
+            for rule in node.ast:
                 node_index = rules.index(rule)
                 if node_index < earliest_node_index:
                     earliest_node_index = node_index
@@ -233,6 +212,35 @@ def topological_sort(g: nx.DiGraph, rules: Sequence[ast.Rule]) -> List:  # type:
         warn("Could not sort the graph.")
         raise Exception("Could not sort the graph.")
     return sorted
+
+
+def find_index_mapping_for_adjacent_topological_sorts(
+    g: nx.DiGraph,
+    sorted_program: List[RuleContainer]) -> Dict[int, Dict[str, int]]:
+    new_indices: Dict[int, Dict[str, int]] = {}
+    for i, rule_container in enumerate(sorted_program):
+        lower_bound = max([sorted_program.index(u) for u in g.predecessors(rule_container)]+[-1])
+        upper_bound = min([sorted_program.index(u) for u in g.successors(rule_container)]+[len(sorted_program)])
+        new_indices[i] = {"lower_bound": lower_bound+1, "upper_bound": upper_bound-1}
+    return new_indices
+
+
+def register_adjacent_sorts(primary_sort: List[Transformation], primary_hash: str) -> None:
+    for transformation in primary_sort:
+        for new_index in range(transformation.adjacent_sort_indices["lower_bound"], transformation.adjacent_sort_indices["upper_bound"]+1):
+            if new_index == transformation.id:
+                continue
+            new_sort_rules = [t.rules for t in primary_sort]
+            new_sort_rules.remove(transformation.rules)
+            new_sort_rules.insert(new_index, transformation.rules)
+            new_sort_transformations = [Transformation(id=i, rules=rules) for i, rules in enumerate(new_sort_rules)]
+            new_hash = hash_from_sorted_transformations(new_sort_transformations)
+            insert_graph_relation(primary_hash, new_hash, new_sort_transformations)
+
+
+def recalculate_transformation_ids(sort: List[Transformation]):
+    for i, transformation in enumerate(sort):
+        transformation.id = i
 
 
 def filter_body_aggregates(element: AST):

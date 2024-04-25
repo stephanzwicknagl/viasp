@@ -13,8 +13,9 @@ from ...asp.justify import build_graph
 from ...shared.defaults import STATIC_PATH
 from ...shared.model import Transformation, Node, Signature
 from ...shared.util import get_start_node_from_graph, is_recursive, hash_from_sorted_transformations
+from ...asp.utils import register_adjacent_sorts
 from ...shared.io import StableModel
-from ..database import load_recursive_transformations_hashes, save_graph, get_graph, clear_graph, set_current_graph, get_all_sorts, get_current_sort, load_program, load_transformer, load_models, load_clingraph_names, is_sortable
+from ..database import load_recursive_transformations_hashes, save_graph, get_graph, clear_graph, set_current_graph, get_current_graph_hash, get_current_sort, load_program, load_transformer, load_models, load_clingraph_names, is_sortable, save_sort, load_dependency_graph
 
 
 bp = Blueprint("dag_api",
@@ -104,7 +105,10 @@ def get_src_tgt_mapping_from_graph(shown_recursive_ids=[],
 
     for recursive_uuid in shown_recursive_ids:
         # get node from graph where node attribute uuid is uuid
-        node = next(n for n in graph.nodes if n.uuid == recursive_uuid)
+        try:
+            node = next(n for n in graph.nodes if n.uuid == recursive_uuid)
+        except StopIteration:
+            continue
         _, _, edge = next(e for e in graph.in_edges(node, data=True))
         for source, target in node.recursive.edges:
             to_be_added.append({
@@ -167,15 +171,25 @@ def get_possible_transformation_orders():
     if request.method == "POST":
         if request.json is None:
             return jsonify({'error': 'Missing JSON in request'}), 400
-        hash = request.json["hash"]
+        moved_transformation = request.json["moved_transformation"] if "moved_transformation" in request.json else {
+            "old_index": -1,
+            "new_index": -1,
+        }
+        
+        sorted_program_rules = [t.rules for t in get_current_sort()]
+        moved_item = sorted_program_rules.pop(moved_transformation["old_index"])
+        sorted_program_rules.insert(moved_transformation["new_index"], moved_item)
+        sorted_program_transformations = ProgramAnalyzer(dependency_graph=load_dependency_graph()).make_transformations_from_sorted_program(sorted_program_rules)
+        hash = hash_from_sorted_transformations(sorted_program_transformations)
+        save_sort(hash, sorted_program_transformations)
+        register_adjacent_sorts(sorted_program_transformations, hash)
         try:
             set_current_graph(hash)
         except ValueError:
             generate_graph()
-        return "ok", 200
+        return jsonify({"hash":hash})
     elif request.method == "GET":
-        sorts = get_all_sorts()
-        return jsonify(sorts)
+        return jsonify(get_current_graph_hash())
     raise NotImplementedError
 
 
@@ -236,9 +250,12 @@ def entire_graph():
         if request.json is None:
             return jsonify({'error': 'Missing JSON in request'}), 400
         data = request.json['data']
+        data = nx.node_link_graph(data) if type(data) == dict else data
         hash = request.json['hash']
         sort = request.json['sort']
+        sort = current_app.json.loads(sort) if type(sort) == str else sort
         save_graph(data, hash, sort)
+        register_adjacent_sorts(sort, hash)
         _ = set_current_graph(hash)
         return jsonify({'message': 'ok'}), 200
     elif request.method == "GET":
@@ -331,8 +348,8 @@ def search():
                 result.append(node)
         for _, _, edge in graph.edges(data=True):
             transformation = edge["transformation"]
-            if any(query in str(r) for r in
-                   transformation.rules) and transformation not in result:
+            if any(query in rule for rule in
+                   transformation.rules.str_) and transformation not in result:
                 result.append(transformation)
         return jsonify(result[:10])
     return jsonify([])

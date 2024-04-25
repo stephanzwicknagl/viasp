@@ -1,13 +1,14 @@
 import "./facts.css";
 import React from "react";
 import * as Constants from "../constants";
+import {MAPZOOMSTATE} from "../types/propTypes";
 import {Node} from "./Node.react";
 import {useTransformations} from "../contexts/transformations";
 import {make_default_nodes} from "../utils";
 import {useDebouncedAnimateResize} from "../hooks/useDebouncedAnimateResize";
-
-export function Facts() {
-    const { state: {currentDragged, transformationNodesMap} } = useTransformations();
+export function Facts(props) {
+    const {transform} = props;
+    const { state: {transformationDropIndices, transformationNodesMap} } = useTransformations();
     const [fact, setFact] = React.useState(make_default_nodes()[0]);
     const [style, setStyle] = React.useState({opacity: 1.0});
     const branchSpaceRef = React.useRef(null);
@@ -26,13 +27,26 @@ export function Facts() {
     }, [transformationNodesMap]);
     
     React.useEffect(() => {
-        if (currentDragged.length > 0) {
+        if (transformationDropIndices !== null) {
             setStyle(prevStyle => ({...prevStyle, opacity: 1 - Constants.opacityMultiplier}));
         }
         else {
             setStyle(prevStyle => ({...prevStyle, opacity: 1.0}));
         }
-    }, [currentDragged]);
+    }, [transformationDropIndices]);
+
+    React.useEffect(() => {
+        if (transform.scale < 1) {
+            setStyle((prevStyle) => ({
+                ...prevStyle,
+                width: `${transform.scale * 100}%`,
+            }));
+        } else {
+            setStyle((prevStyle) => ({
+                ...prevStyle, 
+                width: '100%'}));
+        }
+    }, [transform.scale]);
 
 
 
@@ -64,5 +78,7 @@ export function Facts() {
     );
 }
 
-Facts.propTypes = {}
+Facts.propTypes = {
+    transform: MAPZOOMSTATE
+}
 

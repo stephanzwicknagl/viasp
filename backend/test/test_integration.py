@@ -85,7 +85,7 @@ def test_client_mark_models_duplicates_are_removed(client, sample_models):
 
 @pytest.mark.skip(reason="Transformer not registered bc of base exception?")
 def test_client_add_transformer(client_with_a_graph):
-    client = client_with_a_graph[0]
+    client, _, _, _ = client_with_a_graph
     serializable_transformer = TransformerTransport.merge(Transformer, "", str(os.path.abspath(__file__)))
     serialized = current_app.json.dumps(serializable_transformer)
     res = client.post("/control/add_transformer",

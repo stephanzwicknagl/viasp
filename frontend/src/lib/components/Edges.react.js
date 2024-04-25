@@ -2,12 +2,12 @@ import React from "react";
 import LineTo from "react-lineto";
 import PropTypes from "prop-types";
 import {useColorPalette} from "../contexts/ColorPalette";
-import { useEdges } from "../contexts/Edges";
+import { useTransformations } from "../contexts/transformations";
 
 export function Edges(props) {
     const colorPalete = useColorPalette();
-    const { edges } = useEdges();
-    
+    const { state: {edges} } = useTransformations();
+
     return <>
             {edges.map(link => {
                 if (link.recursion === "in") {

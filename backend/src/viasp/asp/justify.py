@@ -8,10 +8,10 @@ from clingo import Control, Symbol, Model
 
 from clingo.ast import AST, ASTType
 
-from .reify import ProgramAnalyzer, reify_recursion_transformation
+from .reify import ProgramAnalyzer, reify_recursion_transformation, LiteralWrapper
 from .recursion import RecursionReasoner
 from .utils import insert_atoms_into_nodes, identify_reasons, calculate_spacing_factor
-from ..shared.model import Node, Transformation, SymbolIdentifier
+from ..shared.model import Node, RuleContainer, Transformation, SymbolIdentifier
 from ..shared.simple_logging import info
 from ..shared.util import pairwise, get_leafs_from_graph
 
@@ -148,7 +148,7 @@ def append_noops(result_graph: nx.DiGraph,
         result_graph.add_edge(leaf,
                               noop_node,
                               transformation=Transformation(
-                                  next_transformation_id, tuple(pass_through)))
+                                  next_transformation_id, RuleContainer(ast=tuple(pass_through))))
 
 
 def build_graph(wrapped_stable_models: List[List[str]],
@@ -233,6 +233,7 @@ def get_recursion_subgraph(
         clear_temp_names=analyzer.clear_temp_names,
         conflict_free_model=analyzer.get_conflict_free_model(),
         conflict_free_iterindex=analyzer.get_conflict_free_iterindex(),
+        conflict_free_derivable=analyzer.get_conflict_free_derivable()
     )
     justification_program += "\n".join(map(str, justifier_rules))
     justification_program += f"\n{model_str}(@new())."
@@ -241,6 +242,7 @@ def get_recursion_subgraph(
 
     try:
         RecursionReasoner(init=init,
+                          derivables=supernode_symbols,
                           program=justification_program,
                           callback=h_syms.add,
                           conflict_free_h=conflict_free_h,

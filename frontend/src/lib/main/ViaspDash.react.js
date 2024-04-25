@@ -15,7 +15,7 @@ import {
     useTransformations,
     reorderTransformation,
     setCurrentSort,
-    setCurrentDragged,
+    setTransformationDropIndices,
 } from '../contexts/transformations';
 import {ColorPaletteProvider} from '../contexts/ColorPalette';
 import {HighlightedNodeProvider} from '../contexts/HighlightedNode';
@@ -24,7 +24,6 @@ import {
     useMessages,
     UserMessagesProvider,
 } from '../contexts/UserMessages';
-import {EdgeProvider} from '../contexts/Edges';
 import {useShownDetail, ShownDetailProvider} from '../contexts/ShownDetail';
 import {Settings} from '../LazyLoader';
 import {UserMessages} from '../components/messages';
@@ -39,10 +38,6 @@ import {
     useHighlightedSymbol,
 } from '../contexts/HighlightedSymbol';
 import {
-    ShownRecursionProvider,
-    useShownRecursion,
-} from '../contexts/ShownRecursion';
-import {
     useAnimationUpdater,
     AnimationUpdaterProvider,
 } from '../contexts/AnimationUpdater';
@@ -51,58 +46,30 @@ import {MapInteraction} from 'react-map-interaction';
 import useResizeObserver from '@react-hook/resize-observer';
 import * as Constants from '../constants';
 import debounce from 'lodash.debounce';
-import { useDebouncedAnimateResize } from '../hooks/useDebouncedAnimateResize';
 
-function postCurrentSort(backendURL, hash) {
-    return fetch(`${backendURL('graph/sorts')}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({hash: hash}),
-    }).then((r) => {
-        if (r.ok) {
-            return r;
-        }
-        throw new Error(r.statusText);
-    });
-}
+
+
 
 function GraphContainer(props) {
     const {notifyDash, scrollContainer, transform} = props;
     const {
-        state: {transformations, canDrop, clingraphGraphics},
+        state: {transformations, clingraphGraphics, transformationDropIndices},
         dispatch: dispatchTransformation,
+        setSortAndFetchGraph,
     } = useTransformations();
     const {highlightedSymbol} = useHighlightedSymbol();
     const [, message_dispatch] = useMessages();
     const {backendURL} = useSettings();
-    const [, , setShownRecursion] = useShownRecursion();
-    const backendUrlRef = React.useRef(backendURL);
-    const messageDispatchRef = React.useRef(message_dispatch);
     const draggableListRef = React.useRef(null);
     const {setHighlightedSymbol} = useHighlightedSymbol();
     const clingraphUsed = clingraphGraphics.length > 0;
 
     function onMoveEnd(newList, movedItem, oldIndex, newIndex) {
-        dispatchTransformation(setCurrentDragged(''));
-        const indexOfOldItemAtNewIndex =
-            oldIndex < newIndex ? newIndex - 1 : newIndex + 1;
-        const newHash = canDrop[newList[indexOfOldItemAtNewIndex].hash] || '';
+        dispatchTransformation(setTransformationDropIndices(null));
 
-        if (newHash.length > 0) {
-            setShownRecursion([]);
+        if (transformationDropIndices.lower_bound <= newIndex && newIndex <= transformationDropIndices.upper_bound) {
             setHighlightedSymbol([]);
-            dispatchTransformation(reorderTransformation(oldIndex, newIndex));
-            postCurrentSort(backendUrlRef.current, newHash)
-                .catch((error) => {
-                    messageDispatchRef.current(
-                        showError(`Failed to set new current graph: ${error}`)
-                    );
-                })
-                .then((r) => {
-                    dispatchTransformation(setCurrentSort(newHash));
-                });
+            setSortAndFetchGraph(oldIndex,newIndex)
             return;
         }
     }
@@ -110,7 +77,7 @@ function GraphContainer(props) {
     const graphContainerRef = React.useRef(null);
     return (
         <div className="graph_container" ref={graphContainerRef}>
-            <Facts />
+            <Facts transform={transform}/>
             <Suspense fallback={<div>Loading...</div>}>
                 <Settings />
             </Suspense>
@@ -167,20 +134,17 @@ function MainWindow(props) {
         scale: 1,
     });
     const contentDivRef = React.useRef(null);
-    const translationRef = React.useRef('translation')
-
-    useDebouncedAnimateResize(contentDivRef, translationRef);
 
 
-    React.useEffect(() => {
-        fetch(backendURLRef.current('graph/sorts')).catch(() => {
-            dispatchRef.current(
-                showError(
-                    `Couldn't connect to server at ${backendURLRef.current('')}`
-                )
-            );
-        });
-    }, []);
+    // React.useEffect(() => {
+    //     fetch(backendURLRef.current('graph/sorts')).catch(() => {
+    //         dispatchRef.current(
+    //             showError(
+    //                 `Couldn't connect to server at ${backendURLRef.current('')}`
+    //             )
+    //         );
+    //     });
+    // }, []);
 
     React.useEffect(() => {
         const setAnimationState = setAnimationStateRef.current;
@@ -342,7 +306,7 @@ function MainWindow(props) {
         handleMapChangeOnDetailChange();
     }, [shownDetail, handleMapChangeOnDetailChange]);
 
-    const animateResize = React.useCallback(() => {
+    const shiftZoomOnResize = React.useCallback(() => {
         setMapShiftValue((oldShiftValue) => {
             const contentWidth = contentDivRef.current.clientWidth;
             const detailWidth = shownDetail === null
@@ -368,11 +332,11 @@ function MainWindow(props) {
         });
     }, [shownDetail, translationBounds]);
 
-    // const debouncedAnimateResize = React.useMemo(
-    //     () => debounce(animateResize, Constants.DEBOUNCETIMEOUT),
-    //     [animateResize]
-    // );
-    // useResizeObserver(contentDivRef, debouncedAnimateResize);
+    const debouncedShiftZoomOnResize = React.useMemo(
+        () => debounce(shiftZoomOnResize, Constants.SMALLERDEBOUNCETIMEOUT),
+        [shiftZoomOnResize]
+    );
+    useResizeObserver(contentDivRef, debouncedShiftZoomOnResize);
 
     // observe scroll position
     // Add a state for the scroll position
@@ -412,7 +376,6 @@ function MainWindow(props) {
 
     return (
         <>
-            <Detail />
             <div className="content" id="content" ref={contentDivRef}>
                 <Search />
                 <div
@@ -455,6 +418,7 @@ function MainWindow(props) {
                     transform={mapShiftValue}
                 />
             </div>
+            <Detail />
         </>
     );
 }
@@ -481,32 +445,28 @@ export default function ViaspDash(props) {
             <ColorPaletteProvider colorPalette={colorPalette}>
                 <SettingsProvider backendURL={backendURL}>
                     <HighlightedNodeProvider>
-                        <ShownRecursionProvider>
-                            <ShownDetailProvider>
-                                <FilterProvider>
-                                    <AnimationUpdaterProvider>
-                                        <UserMessagesProvider>
-                                            <ShownNodesProvider>
-                                                <TransformationProvider>
-                                                    <HighlightedSymbolProvider>
-                                                        <EdgeProvider>
-                                                            <div>
-                                                                <UserMessages />
-                                                                <MainWindow
-                                                                    notifyDash={
-                                                                        notifyDash
-                                                                    }
-                                                                />
-                                                            </div>
-                                                        </EdgeProvider>
-                                                    </HighlightedSymbolProvider>
-                                                </TransformationProvider>
-                                            </ShownNodesProvider>
-                                        </UserMessagesProvider>
-                                    </AnimationUpdaterProvider>
-                                </FilterProvider>
-                            </ShownDetailProvider>
-                        </ShownRecursionProvider>
+                        <ShownDetailProvider>
+                            <FilterProvider>
+                                <AnimationUpdaterProvider>
+                                    <UserMessagesProvider>
+                                        <ShownNodesProvider>
+                                            <TransformationProvider>
+                                                <HighlightedSymbolProvider>
+                                                    <div>
+                                                        <UserMessages />
+                                                        <MainWindow
+                                                            notifyDash={
+                                                                notifyDash
+                                                            }
+                                                        />
+                                                    </div>
+                                                </HighlightedSymbolProvider>
+                                            </TransformationProvider>
+                                        </ShownNodesProvider>
+                                    </UserMessagesProvider>
+                                </AnimationUpdaterProvider>
+                            </FilterProvider>
+                        </ShownDetailProvider>
                     </HighlightedNodeProvider>
                 </SettingsProvider>
             </ColorPaletteProvider>

@@ -25,17 +25,6 @@ export function make_rules_string(rule) {
     return rule.join(' ');
 }
 
-export async function computeSortHash(hashes) {
-    const hash_str = hashes.join('');
-    const hash_len = 16;
-    const hash = await crypto.subtle.digest(
-        'SHA-1',
-        new TextEncoder().encode(hash_str)
-    );
-    return Array.from(new Uint8Array(hash))
-        .map((b) => b.toString(hash_len).padStart(2, '0'))
-        .join('');
-}
 
 export function make_default_nodes(oldNodes = []) {
     if (oldNodes.length > 0) {
