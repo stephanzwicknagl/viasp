@@ -3,7 +3,7 @@ from typing import Dict, List, Tuple, Iterable, Set, Collection, Any, Union, Seq
 
 import clingo
 import networkx as nx
-from clingo import ast, Symbol
+from clingo import ast, Symbol, Number
 from clingo.ast import (
     Transformer,
     parse_string,
@@ -826,14 +826,14 @@ class ProgramReifierForRecursions(ProgramReifier):
             conditions = [wrapper.visit(c) for c in conditions]
 
             # Append dependant (wrapped, negated)
-            dep_fun = ast.Function(loc, f"{self.model_str}", [dependant], 0)
+            dep_fun = ast.Function(loc, self.model_str, [dependant], 0)
             dep_atm = ast.SymbolicAtom(dep_fun)
             conditions.append(ast.Literal(loc, ast.Sign.Negation, dep_atm))
 
             # # Append dependant wrapped in derivable
-            # derivable_fun = ast.Function(loc, self.derivable_str, [dependant], 0)
-            # derivable_atm = ast.SymbolicAtom(derivable_fun)
-            # conditions.append(ast.Literal(loc, ast.Sign.NoSign, derivable_atm))
+            derivable_fun = ast.Function(loc, self.derivable_str, [dependant], 1)
+            derivable_comp = ast.Comparison(derivable_fun, [ast.Guard(5, ast.SymbolicTerm(loc, Number(1)))])
+            conditions.append(ast.Literal(loc, ast.Sign.NoSign, derivable_comp))
 
             new_rules.extend([
                 ast.Rule(rule.location, new_head, conditions)

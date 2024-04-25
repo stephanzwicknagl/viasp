@@ -6,6 +6,7 @@ class RecursionReasoner:
     def __init__(self, **kwargs):
         self.atoms = []
         self.init = kwargs.pop("init", [])
+        self.derivables = kwargs.pop("derivables", [])
         self.program = kwargs.pop("program", "")
         self.register_h_symbols = kwargs.pop("callback", None)
         self.conflict_free_h = kwargs.pop("conflict_free_h", "h")
@@ -13,6 +14,9 @@ class RecursionReasoner:
 
     def new(self):
         return self.atoms
+    
+    def derivable(self, atom):
+        return Number(1) if atom in self.derivables else Number(0)
 
     def main(self):
         control = Control()

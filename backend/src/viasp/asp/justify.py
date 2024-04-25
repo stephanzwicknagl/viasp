@@ -242,6 +242,7 @@ def get_recursion_subgraph(
 
     try:
         RecursionReasoner(init=init,
+                          derivables=supernode_symbols,
                           program=justification_program,
                           callback=h_syms.add,
                           conflict_free_h=conflict_free_h,
