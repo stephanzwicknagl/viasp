@@ -24,7 +24,6 @@ import {
     useMessages,
     UserMessagesProvider,
 } from '../contexts/UserMessages';
-import {EdgeProvider} from '../contexts/Edges';
 import {useShownDetail, ShownDetailProvider} from '../contexts/ShownDetail';
 import {Settings} from '../LazyLoader';
 import {UserMessages} from '../components/messages';
@@ -39,10 +38,6 @@ import {
     useHighlightedSymbol,
 } from '../contexts/HighlightedSymbol';
 import {
-    ShownRecursionProvider,
-    useShownRecursion,
-} from '../contexts/ShownRecursion';
-import {
     useAnimationUpdater,
     AnimationUpdaterProvider,
 } from '../contexts/AnimationUpdater';
@@ -53,36 +48,18 @@ import * as Constants from '../constants';
 import debounce from 'lodash.debounce';
 
 
-function postCurrentSort(backendURL, oldIndex, newIndex) {
-    return fetch(`${backendURL('graph/sorts')}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({moved_transformation: {
-            old_index: oldIndex,
-            new_index: newIndex}
-        }),
-    }).then((r) => {
-        if (r.ok) {
-            return r.json();
-        }
-        throw new Error(r.statusText);
-    });
-}
+
 
 function GraphContainer(props) {
     const {notifyDash, scrollContainer, transform} = props;
     const {
         state: {transformations, clingraphGraphics, transformationDropIndices},
         dispatch: dispatchTransformation,
+        setSortAndFetchGraph,
     } = useTransformations();
     const {highlightedSymbol} = useHighlightedSymbol();
     const [, message_dispatch] = useMessages();
     const {backendURL} = useSettings();
-    const [, , setShownRecursion] = useShownRecursion();
-    const backendUrlRef = React.useRef(backendURL);
-    const messageDispatchRef = React.useRef(message_dispatch);
     const draggableListRef = React.useRef(null);
     const {setHighlightedSymbol} = useHighlightedSymbol();
     const clingraphUsed = clingraphGraphics.length > 0;
@@ -91,25 +68,11 @@ function GraphContainer(props) {
         dispatchTransformation(setTransformationDropIndices(null));
 
         if (transformationDropIndices.lower_bound <= newIndex && newIndex <= transformationDropIndices.upper_bound) {
-            setShownRecursion([]);
             setHighlightedSymbol([]);
-            dispatchTransformation(reorderTransformation(oldIndex, newIndex));
-            postCurrentSort(backendUrlRef.current, oldIndex, newIndex)
-                .catch((error) => {
-                    messageDispatchRef.current(
-                        showError(`Failed to set new current graph: ${error}`)
-                    );
-                })
-                .then((r) => {
-                    dispatchTransformation(setCurrentSort(r.hash));
-                });
+            setSortAndFetchGraph(oldIndex,newIndex)
             return;
         }
     }
-
-    React.useEffect(() => {
-        console.log("transformations changed", transformations)
-    }, [transformations])
 
     const graphContainerRef = React.useRef(null);
     return (
@@ -482,32 +445,28 @@ export default function ViaspDash(props) {
             <ColorPaletteProvider colorPalette={colorPalette}>
                 <SettingsProvider backendURL={backendURL}>
                     <HighlightedNodeProvider>
-                        <ShownRecursionProvider>
-                            <ShownDetailProvider>
-                                <FilterProvider>
-                                    <AnimationUpdaterProvider>
-                                        <UserMessagesProvider>
-                                            <ShownNodesProvider>
-                                                <TransformationProvider>
-                                                    <HighlightedSymbolProvider>
-                                                        <EdgeProvider>
-                                                            <div>
-                                                                <UserMessages />
-                                                                <MainWindow
-                                                                    notifyDash={
-                                                                        notifyDash
-                                                                    }
-                                                                />
-                                                            </div>
-                                                        </EdgeProvider>
-                                                    </HighlightedSymbolProvider>
-                                                </TransformationProvider>
-                                            </ShownNodesProvider>
-                                        </UserMessagesProvider>
-                                    </AnimationUpdaterProvider>
-                                </FilterProvider>
-                            </ShownDetailProvider>
-                        </ShownRecursionProvider>
+                        <ShownDetailProvider>
+                            <FilterProvider>
+                                <AnimationUpdaterProvider>
+                                    <UserMessagesProvider>
+                                        <ShownNodesProvider>
+                                            <TransformationProvider>
+                                                <HighlightedSymbolProvider>
+                                                    <div>
+                                                        <UserMessages />
+                                                        <MainWindow
+                                                            notifyDash={
+                                                                notifyDash
+                                                            }
+                                                        />
+                                                    </div>
+                                                </HighlightedSymbolProvider>
+                                            </TransformationProvider>
+                                        </ShownNodesProvider>
+                                    </UserMessagesProvider>
+                                </AnimationUpdaterProvider>
+                            </FilterProvider>
+                        </ShownDetailProvider>
                     </HighlightedNodeProvider>
                 </SettingsProvider>
             </ColorPaletteProvider>

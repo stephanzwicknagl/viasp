@@ -52,7 +52,8 @@ export const NODE = PropTypes.exact({
     recursive: PropTypes.oneOfType([PropTypes.bool, GRAPH]),
     space_multiplier: PropTypes.number,
     uuid: PropTypes.string,
-    loading: PropTypes.bool
+    loading: PropTypes.bool,
+    shownRecursion: PropTypes.bool,
 })
 export const CLINGRAPHNODE = PropTypes.exact({
     _type: PropTypes.oneOf(['ClingraphNode']),

@@ -167,8 +167,9 @@ def show_selected_models():
     marked_models = wrap_marked_models(marked_models,
                                        analyzer.get_conflict_free_showTerm())
     if analyzer.will_work():
-        save_analyzer_values(analyzer)
+        save_recursive_transformations_hashes(analyzer.check_positive_recursion())
         set_primary_sort(analyzer)
+        save_analyzer_values(analyzer)
 
     return "ok", 200
 

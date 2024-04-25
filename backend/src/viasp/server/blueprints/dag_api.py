@@ -105,7 +105,10 @@ def get_src_tgt_mapping_from_graph(shown_recursive_ids=[],
 
     for recursive_uuid in shown_recursive_ids:
         # get node from graph where node attribute uuid is uuid
-        node = next(n for n in graph.nodes if n.uuid == recursive_uuid)
+        try:
+            node = next(n for n in graph.nodes if n.uuid == recursive_uuid)
+        except StopIteration:
+            continue
         _, _, edge = next(e for e in graph.in_edges(node, data=True))
         for source, target in node.recursive.edges:
             to_be_added.append({

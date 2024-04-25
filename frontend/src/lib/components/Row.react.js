@@ -11,7 +11,6 @@ import {
 } from '../contexts/transformations';
 import {MAPZOOMSTATE, TRANSFORMATION, TRANSFORMATIONWRAPPER} from '../types/propTypes';
 import {ColorPaletteContext} from '../contexts/ColorPalette';
-import {useShownRecursion} from '../contexts/ShownRecursion';
 import {make_default_nodes} from '../utils';
 import {AnimationUpdater} from '../contexts/AnimationUpdater';
 import {DragHandle} from './DragHandle.react';
@@ -195,13 +194,12 @@ RowTemplate.propTypes = {
 export function Row(props) {
     const {transformation, dragHandleProps, transform} = props;
     const {
-        state: {transformations, transformationNodesMap, isSortable, transformationDropIndices},
+        state: {transformations, transformationNodesMap, isSortable},
     } = useTransformations();
     const [nodes, setNodes] = React.useState(make_default_nodes());
     const rowbodyRef = React.useRef(null);
     const headerRef = React.useRef(null);
     const handleRef = React.useRef(null);
-    const [shownRecursion, ,] = useShownRecursion();
     const transformationIdRef = React.useRef(transformation.id);
 
     useDebouncedAnimateResize(rowbodyRef, transformationIdRef);
@@ -263,7 +261,7 @@ export function Row(props) {
                         const space_multiplier = child.space_multiplier * 100;
                         if (
                             child.recursive &&
-                            shownRecursion.indexOf(child.uuid) !== -1
+                            child.shownRecursion
                         ) {
                             return (
                                 <div

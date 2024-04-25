@@ -1,36 +1,53 @@
-import React from "react";
-import {showError, useMessages} from "./UserMessages";
-import {useSettings} from "./Settings";
-import PropTypes from "prop-types";
-import { make_default_nodes, make_default_clingraph_nodes } from "../utils/index";
+import React from 'react';
+import {showError, useMessages} from './UserMessages';
+import {useSettings} from './Settings';
+import PropTypes from 'prop-types';
+import {make_default_nodes, make_default_clingraph_nodes} from '../utils/index';
 
-function fetchTransformations(backendURL) {
-    return fetch(`${backendURL("graph/transformations")}`).then(r => {
+function postCurrentSort(backendURL, oldIndex, newIndex) {
+    return fetch(`${backendURL('graph/sorts')}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            moved_transformation: {
+                old_index: oldIndex,
+                new_index: newIndex,
+            },
+        }),
+    }).then((r) => {
         if (r.ok) {
-            return r.json()
+            return r.json();
         }
         throw new Error(r.statusText);
+    });
+}
 
+function fetchTransformations(backendURL) {
+    return fetch(`${backendURL('graph/transformations')}`).then((r) => {
+        if (r.ok) {
+            return r.json();
+        }
+        throw new Error(r.statusText);
     });
 }
 
 function fetchSortHash(backendURL) {
-    return fetch(`${backendURL("graph/sorts")}`).then(r => {
+    return fetch(`${backendURL('graph/sorts')}`).then((r) => {
         if (r.ok) {
-            return r.json()
+            return r.json();
         }
         throw new Error(r.statusText);
-
     });
 }
 
 function fetchSortable(backendURL) {
-    return fetch(`${backendURL("graph/sortable")}`).then(r => {
+    return fetch(`${backendURL('graph/sortable')}`).then((r) => {
         if (r.ok) {
-            return r.json()
+            return r.json();
         }
         throw new Error(r.statusText);
-
     });
 }
 
@@ -43,7 +60,6 @@ function loadFacts(backendURL) {
     });
 }
 
-
 function loadNodeData(hash, backendURL) {
     return fetch(`${backendURL('graph/children')}/${hash}`).then((r) => {
         if (!r.ok) {
@@ -52,7 +68,6 @@ function loadNodeData(hash, backendURL) {
         return r.json();
     });
 }
-
 
 function loadClingraphChildren(backendURL) {
     return fetch(`${backendURL('clingraph/children')}`).then((r) => {
@@ -63,14 +78,33 @@ function loadClingraphChildren(backendURL) {
     });
 }
 
+function loadEdges(shownRecursion, usingClingraph, backendURL) {
+    return fetch(`${backendURL('graph/edges')}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            shownRecursion: shownRecursion,
+            usingClingraph: usingClingraph,
+        }),
+    }).then((r) => {
+        if (!r.ok) {
+            throw new Error(`${r.status} ${r.statusText}`);
+        }
+        return r.json();
+    });
+}
 
 const initialState = {
     transformations: [],
+    edges: [],
     transformationDropIndices: null,
     currentSort: '',
     transformationNodesMap: null,
     clingraphGraphics: [],
     isSortable: true,
+    shownRecursion: [],
 };
 
 const HIDE_TRANSFORMATION = 'APP/TRANSFORMATIONS/HIDE';
@@ -78,7 +112,7 @@ const SHOW_TRANSFORMATION = 'APP/TRANSFORMATIONS/SHOW';
 const TOGGLE_TRANSFORMATION = 'APP/TRANSFORMATIONS/TOGGLE';
 const SHOW_ONLY_TRANSFORMATION = 'APP/TRANSFORMATIONS/ONLY';
 const ADD_TRANSFORMATION = 'APP/TRANSFORMATIONS/ADD';
-const ADD_TRANSFORMATION_SET = 'APP/TRANSFORMATIONS/ADDSET'
+const ADD_TRANSFORMATION_SET = 'APP/TRANSFORMATIONS/ADDSET';
 const CLEAR_TRANSFORMATIONS = 'APP/TRANSFORMATIONS/CLEAR';
 const ADD_SORT = 'APP/TRANSFORMATIONS/ADDSORT';
 const SET_CURRENT_SORT = 'APP/TRANSFORMATIONS/SETCURRENTSORT';
@@ -88,107 +122,157 @@ const SET_NODES = 'APP/NODES/SET';
 const CLEAR_NODES = 'APP/NODES/CLEAR';
 const SET_CLINGRAPH_GRAPHICS = 'APP/CLINGRAPH/SETGRAPHICS';
 const CLEAR_CLINGRAPH_GRAHICS = 'APP/CLINGRAPH/CLEAR';
-const SET_TRANSFORMATION_DROP_INDICES = 'APP/TRANSFORMATIONS/SETTRANSFORMATIONDROPINDICES';
-const hideTransformation = (t) => ({type: HIDE_TRANSFORMATION, t})
-const showTransformation = (t) => ({type: SHOW_TRANSFORMATION, t})
-const toggleTransformation = (t) => ({type: TOGGLE_TRANSFORMATION, t})
-const showOnlyTransformation = (t) => ({type: SHOW_ONLY_TRANSFORMATION, t})
-const addTransformation = (t) => ({type: ADD_TRANSFORMATION, t})
-const addTransformationSet = (ts) => ({type: ADD_TRANSFORMATION_SET, ts})
+const SET_TRANSFORMATION_DROP_INDICES =
+    'APP/TRANSFORMATIONS/SETTRANSFORMATIONDROPINDICES';
+const SET_EDGES = 'APP/EDGES/SET';
+const TOGGLE_SHOWN_RECURSION = 'APP/TRANSFORMATIONS/RECURSION/TOGGLE';
+const CLEAR_SHOWN_RECURSION = 'APP/TRANSFORMATIONS/RECURSION/CLEAR';
+const hideTransformation = (t) => ({type: HIDE_TRANSFORMATION, t});
+const showTransformation = (t) => ({type: SHOW_TRANSFORMATION, t});
+const toggleTransformation = (t) => ({type: TOGGLE_TRANSFORMATION, t});
+const showOnlyTransformation = (t) => ({type: SHOW_ONLY_TRANSFORMATION, t});
+const addTransformation = (t) => ({type: ADD_TRANSFORMATION, t});
+const addTransformationSet = (ts) => ({type: ADD_TRANSFORMATION_SET, ts});
 const clearTransformations = (t) => ({type: CLEAR_TRANSFORMATIONS});
-const addSort = (s) => ({ type: ADD_SORT, s })
-const setCurrentSort = (s) => ({ type: SET_CURRENT_SORT, s})
+const addSort = (s) => ({type: ADD_SORT, s});
+const setCurrentSort = (s) => ({type: SET_CURRENT_SORT, s});
 const setSortable = (s) => ({type: SET_SORTABLE, s});
-const reorderTransformation = (oldIndex, newIndex) => ({type: REORDER_TRANSFORMATION, oldIndex, newIndex})
+const reorderTransformation = (oldIndex, newIndex) => ({
+    type: REORDER_TRANSFORMATION,
+    oldIndex,
+    newIndex,
+});
 const setNodes = (t) => ({type: SET_NODES, t});
 const clearNodes = () => ({type: CLEAR_NODES});
 const setClingraphGraphics = (g) => ({type: SET_CLINGRAPH_GRAPHICS, g});
 const clearClingraphGraphics = () => ({type: CLEAR_CLINGRAPH_GRAHICS});
-const setTransformationDropIndices = (t) => ({type: SET_TRANSFORMATION_DROP_INDICES, t});
+const setTransformationDropIndices = (t) => ({
+    type: SET_TRANSFORMATION_DROP_INDICES,
+    t,
+});
+const setEdges = (e) => ({type: SET_EDGES, e});
+const toggleShownRecursion = (n) => ({type: TOGGLE_SHOWN_RECURSION, n});
+const clearShownRecursion = () => ({type: CLEAR_SHOWN_RECURSION});
 const TransformationContext = React.createContext();
 
 const transformationReducer = (state = initialState, action) => {
     if (action.type === ADD_TRANSFORMATION) {
         return {
             ...state,
-            transformations: state.transformations.concat({transformation: action.t, shown: true, hash: action.t.hash})
-        }
+            transformations: state.transformations.concat({
+                transformation: action.t,
+                shown: true,
+                hash: action.t.hash,
+            }),
+        };
     }
     if (action.type === ADD_TRANSFORMATION_SET) {
-        console.log("Adding Transformation Set", action.ts)
         return {
             ...state,
-            transformations: action.ts.map(t => ({transformation: t, shown: true, hash: t.hash}))
+            transformations: action.ts.map((t) => ({
+                transformation: t,
+                shown: true,
+                hash: t.hash,
+            })),
         };
     }
     if (action.type === CLEAR_TRANSFORMATIONS) {
         return {
             ...state,
-            transformations: []
-        }
+            transformations: [],
+        };
     }
     if (action.type === SHOW_ONLY_TRANSFORMATION) {
         return {
             ...state,
-            transformations: state.transformations.map(container => container.transformation.id !== action.t.id ? {
-                transformation: container.transformation,
-                shown: false
-            } : {
-                transformation: container.transformation,
-                shown: true
-            })
-        }
+            transformations: state.transformations.map((container) =>
+                container.transformation.id !== action.t.id
+                    ? {
+                          transformation: container.transformation,
+                          shown: false,
+                      }
+                    : {
+                          transformation: container.transformation,
+                          shown: true,
+                      }
+            ),
+        };
     }
     if (action.type === SHOW_TRANSFORMATION) {
         return {
             ...state,
-            transformations: state.transformations.map(container => container.transformation === action.t ? {
-                transformation: container.transformation,
-                shown: true
-            } : container)
-        }
+            transformations: state.transformations.map((container) =>
+                container.transformation === action.t
+                    ? {
+                          transformation: container.transformation,
+                          shown: true,
+                      }
+                    : container
+            ),
+        };
     }
     if (action.type === HIDE_TRANSFORMATION) {
         return {
             ...state,
-            transformations: state.transformations.map(container => container.transformation === action.t ? {
-                transformation: container.transformation,
-                shown: false
-            } : container)
-        }
+            transformations: state.transformations.map((container) =>
+                container.transformation === action.t
+                    ? {
+                          transformation: container.transformation,
+                          shown: false,
+                      }
+                    : container
+            ),
+        };
     }
     if (action.type === TOGGLE_TRANSFORMATION) {
         return {
             ...state,
-            transformations: state.transformations.map(container => container.transformation === action.t ? {
-                transformation: container.transformation,
-                shown: !container.shown
-            } : container)
-        }
+            transformations: state.transformations.map((container) =>
+                container.transformation === action.t
+                    ? {
+                          transformation: container.transformation,
+                          shown: !container.shown,
+                      }
+                    : container
+            ),
+        };
     }
     if (action.type === REORDER_TRANSFORMATION) {
         let transformations = [...state.transformations];
         const [removed] = transformations.splice(action.oldIndex, 1);
         transformations.splice(action.newIndex, 0, removed);
-        transformations = transformations.map((t,i) => {
-            return {transformation: {...t.transformation, id: i}, shown: t.shown, hash: t.hash}
-        })
+        transformations = transformations.map((t, i) => {
+            return {
+                transformation: {...t.transformation, id: i},
+                shown: t.shown,
+                hash: t.hash,
+            };
+        });
+
+        let nodesMap = Object.values(state.transformationNodesMap);
+        const [removedNodes] = nodesMap.splice(action.oldIndex, 1);
+        nodesMap.splice(action.newIndex, 0, removedNodes);
+        nodesMap = nodesMap.reduce((obj, key, i) => {
+            obj[key] = Object.values(nodesMap)[i];
+            return obj;
+        }, {});
         return {
             ...state,
-            transformations
-        }
+            transformations: transformations,
+            transformationNodesMap: nodesMap,
+        };
     }
     if (action.type === ADD_SORT) {
         return {
             ...state,
             currentSort: action.s,
-        }
+        };
     }
     if (action.type === SET_CURRENT_SORT) {
         return {
             ...state,
-            currentSort: action.s
-        }
+            currentSort: action.s,
+        };
     }
     if (action.type === SET_NODES) {
         return {
@@ -203,14 +287,13 @@ const transformationReducer = (state = initialState, action) => {
                 transformationNodesMap: state.transformations.map((n) => {
                     return make_default_nodes();
                 }),
-            }
+            };
         }
         return {
             ...state,
-            transformationNodesMap:  Object.keys(
+            transformationNodesMap: Object.keys(
                 state.transformationNodesMap
-            )
-            .reduce((obj, key) => {
+            ).reduce((obj, key) => {
                 obj[key] = make_default_nodes(
                     state.transformationNodesMap[key]
                 );
@@ -247,109 +330,204 @@ const transformationReducer = (state = initialState, action) => {
         };
     }
     if (action.type === SET_TRANSFORMATION_DROP_INDICES) {
-        console.log("New Transformation Drop Indices", action.t)
         return {
             ...state,
             transformationDropIndices: action.t,
         };
     }
-    return {...state}
-}
+    if (action.type === SET_EDGES) {
+        return {
+            ...state,
+            edges: action.e,
+        };
+    }
+    if (action.type === TOGGLE_SHOWN_RECURSION) {
+        let shownRecursion = [...state.shownRecursion];
+        if (shownRecursion.includes(action.n)) {
+            shownRecursion = shownRecursion.filter((n) => n !== action.n);
+        } else {
+            shownRecursion.push(action.n);
+        }
+
+        const transformationNodesMap = Object.keys(state.transformationNodesMap)
+            .reduce((obj, key) => {
+            obj[key] = state.transformationNodesMap[key].map((node) => {
+                if (node.uuid === action.n) {
+                    return {
+                        ...node,
+                        shownRecursion: !node.shownRecursion,
+                    };
+                }
+                return node;
+            });
+            return obj;
+        }, {});
+        return {
+            ...state,
+            transformationNodesMap: transformationNodesMap,
+            shownRecursion: shownRecursion,
+        };
+    }
+    if (action.type === CLEAR_SHOWN_RECURSION) {
+        return {
+            ...state,
+            shownRecursion: [],
+        };
+    }
+    return {...state};
+};
 
 const TransformationProvider = ({children}) => {
-    const [, message_dispatch] = useMessages()
-    const { backendURL} = useSettings();
-    const [state, dispatch] = React.useReducer(transformationReducer, initialState);
+    const [, message_dispatch] = useMessages();
+    const {backendURL} = useSettings();
+    const [state, dispatch] = React.useReducer(
+        transformationReducer,
+        initialState
+    );
     const backendUrlRef = React.useRef(backendURL);
     const messageDispatchRef = React.useRef(message_dispatch);
 
-    React.useEffect(() => {
-        let mounted = true;
-        fetchSortHash(backendUrlRef.current).catch(error => {
-            messageDispatchRef.current(showError(`Failed to get dependency sorts: ${error}`))
-        })
-            .then(hash => {
-                if (mounted) {
-                    dispatch(addSort(hash))
-                }
-            })
-        fetchSortable(backendUrlRef.current).catch(error => {
-            messageDispatchRef.current(showError(`Failed to get sortable: ${error}`))
-        })
-            .then((answer) => {
-                if (mounted) {
-                    dispatch(setSortable(answer))
-                }
-            })
-            return () => { mounted = false };
-        }, []);
-        
-    const loadtransformationNodesMap = React.useCallback((items) => {
+    const loadTransformationNodesMap = (items) => {
         dispatch(clearNodes());
         dispatch(clearClingraphGraphics());
         const transformations = items.map((t) => ({id: t.id, hash: t.hash}));
-        const promises = transformations.map(t =>
-            loadNodeData(t.hash, backendUrlRef.current));
+        const promises = transformations.map((t) =>
+            loadNodeData(t.hash, backendUrlRef.current)
+        );
 
         // load facts
         promises.push(loadFacts(backendUrlRef.current));
         transformations.push({id: -1});
         // load clingraph
         promises.push(loadClingraphChildren(backendUrlRef.current));
-            
+
         // Wait for all promises to resolve
-        Promise.all(promises)
-            .then((allItems) => {
-                const nodesRes = allItems.slice(0, allItems.length -1)
-                const clingraphNodes = allItems[allItems.length - 1]
+        return Promise.all(promises);
+    };
 
-                const transformationNodesMap = nodesRes.reduce(
-                    (map, items, i) => {
-                        map[transformations[i].id] = items.map((node) => {
-                            return {
-                                ...node,
-                                loading: false,
-                            };
-                        });
-                        return map;
-                    },
-                    {}
-                );
-                dispatch(setNodes(transformationNodesMap));
-                dispatch(setClingraphGraphics(clingraphNodes));
-            })
-            .catch((error) => {
-                messageDispatchRef.current(
-                    showError(`Failed to get node data ${error}`)
-                );
-            });
-    }, [])
-
-    React.useEffect(() => {
-        let mounted = true;
-        if (state.currentSort !== '') {
-            fetchTransformations(backendUrlRef.current)
+    const reloadEdges = (shownRecursion, usingClingraph) => {
+        console.log("reload with shownRecursion", state.shownRecursion);
+        loadEdges(
+                shownRecursion,
+                usingClingraph,
+                backendUrlRef.current
+            )
                 .catch((error) => {
                     messageDispatchRef.current(
-                        showError(`Failed to get transformations: ${error}`)
+                        showError(`Failed to get edges: ${error}`)
                     );
                 })
                 .then((items) => {
-                    if (mounted) {
-                        dispatch(clearTransformations());
-                        dispatch(addTransformationSet(items));
-                        loadtransformationNodesMap(items);
-                    }
+                    dispatch(setEdges(items));
+                });
+    }
+
+
+    const fetchGraph = (shownRecursion) => {
+        fetchTransformations(backendUrlRef.current)
+            .catch((error) => {
+                messageDispatchRef.current(
+                    showError(`Failed to get transformations: ${error}`)
+                );
+            })
+            .then((items) => {
+                dispatch(clearTransformations());
+                dispatch(addTransformationSet(items));
+                loadTransformationNodesMap(items)
+                    .catch((error) => {
+                        messageDispatchRef.current(
+                            showError(`Failed to get nodes: ${error}`)
+                        );
+                    })
+                    .then((allItems) => {
+                        const nodesRes = allItems.slice(0, allItems.length - 1);
+                        const clingraphNodes = allItems[allItems.length - 1];
+
+                        const transformations = [
+                            ...items.map((t) => ({id: t.id})),
+                            {id: -1},
+                        ];
+                        const transformationNodesMap = nodesRes.reduce(
+                            (map, itemss, i) => {
+                                map[transformations[i].id] = itemss.map(
+                                    (node) => {
+                                        return {
+                                            ...node,
+                                            loading: false,
+                                            shownRecursion: false,
+                                        };
+                                    }
+                                );
+                                return map;
+                            },
+                            {}
+                        );
+                        dispatch(setNodes(transformationNodesMap));
+                        dispatch(setClingraphGraphics(clingraphNodes));
+                        reloadEdges(shownRecursion, clingraphNodes.length > 0);
+                   });
             });
-        }
+    };
+    const fetchGraphRef = React.useRef(fetchGraph);
+
+    const setSortAndFetchGraph = (oldIndex, newIndex) => {
+        dispatch(reorderTransformation(oldIndex, newIndex));
+        dispatch(clearShownRecursion());
+        postCurrentSort(backendUrlRef.current, oldIndex, newIndex)
+            .catch((error) => {
+                messageDispatchRef.current(
+                    showError(`Failed to set new current graph: ${error}`)
+                );
+            })
+            .then((r) => {
+                if (r && r.hash) {
+                    dispatch(setCurrentSort(r.hash));
+                }
+                fetchGraph(
+                    state.shownRecursion,
+                    state.clingraphGraphics.length > 0
+                );
+            });
+    };
+
+    React.useEffect(() => {
+        let mounted = true;
+        fetchSortHash(backendUrlRef.current)
+            .catch((error) => {
+                messageDispatchRef.current(
+                    showError(`Failed to get dependency sorts: ${error}`)
+                );
+            })
+            .then((hash) => {
+                if (mounted) {
+                    dispatch(addSort(hash));
+                }
+            });
+        fetchSortable(backendUrlRef.current)
+            .catch((error) => {
+                messageDispatchRef.current(
+                    showError(`Failed to get sortable: ${error}`)
+                );
+            })
+            .then((answer) => {
+                if (mounted) {
+                    dispatch(setSortable(answer));
+                }
+            });
+        fetchGraphRef.current([]);
         return () => {
             mounted = false;
         };
-    }, [state.currentSort, loadtransformationNodesMap]);
+    }, []);
 
-    
-    return <TransformationContext.Provider value={{state, dispatch}}>{children}</TransformationContext.Provider>
-}
+    return (
+        <TransformationContext.Provider
+            value={{state, dispatch, setSortAndFetchGraph, reloadEdges}}
+        >
+            {children}
+        </TransformationContext.Provider>
+    );
+};
 
 const useTransformations = () => React.useContext(TransformationContext);
 
@@ -358,7 +536,7 @@ TransformationProvider.propTypes = {
      * The subtree that requires access to this context.
      */
     children: PropTypes.element,
-}
+};
 export {
     TransformationProvider,
     TransformationContext,
@@ -368,4 +546,5 @@ export {
     reorderTransformation,
     setCurrentSort,
     setTransformationDropIndices,
+    toggleShownRecursion,
 };

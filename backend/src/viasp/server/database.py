@@ -370,6 +370,7 @@ class GraphAccessor:
             INSERT OR REPLACE INTO dependency_graph (data, encoding_id) VALUES (?, ?)
         """, (current_app.json.dumps(nx.node_link_data(data)), encoding_id))
         self.conn.commit()
+        print(f"Saved dependency graph {data}", flush=True)
 
     def load_dependency_graph(self, encoding_id: str) -> nx.DiGraph:
         self.cursor.execute(
