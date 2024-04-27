@@ -99,7 +99,8 @@ function loadEdges(shownRecursion, usingClingraph, backendURL) {
 const initialState = {
     transformations: [],
     edges: [],
-    transformationDropIndices: null,
+    /** an object mapping transformation ids to a List of Nodes */
+    transformationDropIndices: null, 
     currentSort: '',
     transformationNodesMap: null,
     clingraphGraphics: [],
@@ -107,52 +108,90 @@ const initialState = {
     shownRecursion: [],
 };
 
-const HIDE_TRANSFORMATION = 'APP/TRANSFORMATIONS/HIDE';
-const SHOW_TRANSFORMATION = 'APP/TRANSFORMATIONS/SHOW';
-const TOGGLE_TRANSFORMATION = 'APP/TRANSFORMATIONS/TOGGLE';
-const SHOW_ONLY_TRANSFORMATION = 'APP/TRANSFORMATIONS/ONLY';
+/**
+ * Manage Transformation Set
+ * */
 const ADD_TRANSFORMATION = 'APP/TRANSFORMATIONS/ADD';
 const ADD_TRANSFORMATION_SET = 'APP/TRANSFORMATIONS/ADDSET';
 const CLEAR_TRANSFORMATIONS = 'APP/TRANSFORMATIONS/CLEAR';
-const ADD_SORT = 'APP/TRANSFORMATIONS/ADDSORT';
-const SET_CURRENT_SORT = 'APP/TRANSFORMATIONS/SETCURRENTSORT';
-const SET_SORTABLE = 'APP/TRANSFORMATIONS/SETSORTABLE';
 const REORDER_TRANSFORMATION = 'APP/TRANSFORMATIONS/REORDER';
-const SET_NODES = 'APP/NODES/SET';
-const CLEAR_NODES = 'APP/NODES/CLEAR';
-const SET_CLINGRAPH_GRAPHICS = 'APP/CLINGRAPH/SETGRAPHICS';
-const CLEAR_CLINGRAPH_GRAHICS = 'APP/CLINGRAPH/CLEAR';
 const SET_TRANSFORMATION_DROP_INDICES =
     'APP/TRANSFORMATIONS/SETTRANSFORMATIONDROPINDICES';
-const SET_EDGES = 'APP/EDGES/SET';
-const TOGGLE_SHOWN_RECURSION = 'APP/TRANSFORMATIONS/RECURSION/TOGGLE';
-const CLEAR_SHOWN_RECURSION = 'APP/TRANSFORMATIONS/RECURSION/CLEAR';
-const hideTransformation = (t) => ({type: HIDE_TRANSFORMATION, t});
-const showTransformation = (t) => ({type: SHOW_TRANSFORMATION, t});
-const toggleTransformation = (t) => ({type: TOGGLE_TRANSFORMATION, t});
-const showOnlyTransformation = (t) => ({type: SHOW_ONLY_TRANSFORMATION, t});
+const CHECK_TRANSFORMATION_EXPANDABLE_COLLAPSIBLE = 'APP/TRANSFORMATIONS/CHECKTRANSFORMATIONEXPANDABLECOLLAPSIBLE';
 const addTransformation = (t) => ({type: ADD_TRANSFORMATION, t});
 const addTransformationSet = (ts) => ({type: ADD_TRANSFORMATION_SET, ts});
 const clearTransformations = (t) => ({type: CLEAR_TRANSFORMATIONS});
-const addSort = (s) => ({type: ADD_SORT, s});
-const setCurrentSort = (s) => ({type: SET_CURRENT_SORT, s});
-const setSortable = (s) => ({type: SET_SORTABLE, s});
 const reorderTransformation = (oldIndex, newIndex) => ({
     type: REORDER_TRANSFORMATION,
     oldIndex,
     newIndex,
 });
-const setNodes = (t) => ({type: SET_NODES, t});
-const clearNodes = () => ({type: CLEAR_NODES});
-const setClingraphGraphics = (g) => ({type: SET_CLINGRAPH_GRAPHICS, g});
-const clearClingraphGraphics = () => ({type: CLEAR_CLINGRAPH_GRAHICS});
 const setTransformationDropIndices = (t) => ({
     type: SET_TRANSFORMATION_DROP_INDICES,
     t,
 });
+const checkTransformationExpandableCollapsible = (tid) => ({type: CHECK_TRANSFORMATION_EXPANDABLE_COLLAPSIBLE, tid});
+/**
+ * Manage Sorts 
+ * */
+const ADD_SORT = 'APP/SORT/ADD';
+const SET_CURRENT_SORT = 'APP/TRANSFORMATIONS/SETCURRENTSORT';
+const SET_SORTABLE = 'APP/TRANSFORMATIONS/SETSORTABLE';
+const addSort = (s) => ({type: ADD_SORT, s});
+const setCurrentSort = (s) => ({type: SET_CURRENT_SORT, s});
+const setSortable = (s) => ({type: SET_SORTABLE, s});
+/**
+ * Manage Nodes
+*/
+const SET_NODES = 'APP/NODES/SET';
+const CLEAR_NODES = 'APP/NODES/CLEAR';
+const setNodes = (nodesRes, t) => ({type: SET_NODES, nodesRes, t});
+const clearNodes = () => ({type: CLEAR_NODES});
+/**
+ * Manage Edges
+*/
+const SET_EDGES = 'APP/EDGES/SET';
 const setEdges = (e) => ({type: SET_EDGES, e});
+/**
+ * Manage Shown Transformations
+ * */
+const HIDE_TRANSFORMATION = 'APP/TRANSFORMATIONS/HIDE';
+const SHOW_TRANSFORMATION = 'APP/TRANSFORMATIONS/SHOW';
+const TOGGLE_TRANSFORMATION = 'APP/TRANSFORMATIONS/TOGGLE';
+const SHOW_ONLY_TRANSFORMATION = 'APP/TRANSFORMATIONS/ONLY';
+const hideTransformation = (t) => ({type: HIDE_TRANSFORMATION, t});
+const showTransformation = (t) => ({type: SHOW_TRANSFORMATION, t});
+const toggleTransformation = (t) => ({type: TOGGLE_TRANSFORMATION, t});
+const showOnlyTransformation = (t) => ({type: SHOW_ONLY_TRANSFORMATION, t});
+/**
+ * Manage Shown Recursion
+ */
+const TOGGLE_SHOWN_RECURSION = 'APP/TRANSFORMATIONS/RECURSION/TOGGLE';
+const CLEAR_SHOWN_RECURSION = 'APP/TRANSFORMATIONS/RECURSION/CLEAR';
 const toggleShownRecursion = (n) => ({type: TOGGLE_SHOWN_RECURSION, n});
 const clearShownRecursion = () => ({type: CLEAR_SHOWN_RECURSION});
+/**
+ * Manage Node Expansion (vertical overflow)
+ * */
+const SET_NODE_IS_EXPANDABLE_V = 'APP/NODE/OVERFLOWV/SETEXPANDABLE';
+const SET_NODE_IS_COLLAPSIBLE_V = 'APP/NODE/OVERFLOWV/SETCOLLAPSIBLE';
+const SET_NODE_IS_EXPAND_ALL_THE_WAY = 'APP/NODE/OVERFLOWV/SETEXPANDALLTHEWAY';
+const setNodeIsExpandableV = (uuid, v) => ({type: SET_NODE_IS_EXPANDABLE_V, uuid, v});
+const setNodeIsCollapsibleV = (uuid, v) => ({type: SET_NODE_IS_COLLAPSIBLE_V, uuid, v});
+const setNodeIsExpandAllTheWay = (uuid, v) => ({type: SET_NODE_IS_EXPAND_ALL_THE_WAY, uuid, v});
+/**
+ * Manage Node Overflow Horizontal
+ */
+const SET_NODE_SHOW_MINI = 'APP/NODE/OVERFLOWH/SETSHOWMINI';
+const setNodeShowMini = (uuid, v) => ({type: SET_NODE_SHOW_MINI, uuid, v});
+/**
+ * Manage Clingraph
+ */
+const SET_CLINGRAPH_GRAPHICS = 'APP/CLINGRAPH/SETGRAPHICS';
+const CLEAR_CLINGRAPH_GRAHICS = 'APP/CLINGRAPH/CLEAR';
+const setClingraphGraphics = (g) => ({type: SET_CLINGRAPH_GRAPHICS, g});
+const clearClingraphGraphics = () => ({type: CLEAR_CLINGRAPH_GRAHICS});
+
 const TransformationContext = React.createContext();
 
 const transformationReducer = (state = initialState, action) => {
@@ -163,6 +202,9 @@ const transformationReducer = (state = initialState, action) => {
                 transformation: action.t,
                 shown: true,
                 hash: action.t.hash,
+                isExpandableV: false,
+                isCollapsibleV: false,
+                allNodesShowMini: false,
             }),
         };
     }
@@ -173,8 +215,83 @@ const transformationReducer = (state = initialState, action) => {
                 transformation: t,
                 shown: true,
                 hash: t.hash,
+                isExpandableV: false,
+                isCollapsibleV: false,
+                allNodesShowMini: false,
             })),
         };
+    }
+    if (action.type === SET_NODE_IS_EXPANDABLE_V) {
+        return state.transformationNodesMap !== null ? {
+            ...state,
+            transformationNodesMap: Object.keys(state.transformationNodesMap)
+                .reduce((obj, key) => {
+                    obj[key] = state.transformationNodesMap[key].map((node) => {
+                        if (node.uuid === action.uuid) {
+                            return {
+                                ...node,
+                                isExpandableV: action.v,
+                            };
+                        }
+                        return node;
+                    });
+                    return obj;
+            }, {}),
+        } : state;
+    }
+    if (action.type === SET_NODE_IS_COLLAPSIBLE_V) {
+        return state.transformationNodesMap ? {
+            ...state,
+            transformationNodesMap: Object.keys(state.transformationNodesMap)
+                .reduce((obj, key) => {
+                    obj[key] = state.transformationNodesMap[key].map((node) => {
+                        if (node.uuid === action.uuid) {
+                            return {
+                                ...node,
+                                isCollapsibleV: action.v,
+                            };
+                        }
+                        return node;
+                    });
+                return obj;
+            }, {}),
+        } : state;
+    }
+    if (action.type === SET_NODE_IS_EXPAND_ALL_THE_WAY) {
+        return state.transformationNodesMap ? {
+            ...state,
+            transformationNodesMap: Object.keys(state.transformationNodesMap)
+                .reduce((obj, key) => {
+                    obj[key] = state.transformationNodesMap[key].map((node) => {
+                        if (node.uuid === action.uuid) {
+                            return {
+                                ...node,
+                                isExpandVAllTheWay: action.v,
+                            };
+                        }
+                        return node;
+                    });
+                return obj;
+            }, {}),
+        } : state;
+    }
+    if (action.type === SET_NODE_SHOW_MINI) {
+        return state.transformationNodesMap ? {
+            ...state,
+            transformationNodesMap: Object.keys(state.transformationNodesMap)
+                .reduce((obj, key) => {
+                    obj[key] = state.transformationNodesMap[key].map((node) => {
+                        if (node.uuid === action.uuid) {
+                            return {
+                                ...node,
+                                showMini: action.v,
+                            };
+                        }
+                        return node;
+                    });
+                return obj;
+            }, {}),
+        } : state;
     }
     if (action.type === CLEAR_TRANSFORMATIONS) {
         return {
@@ -188,11 +305,11 @@ const transformationReducer = (state = initialState, action) => {
             transformations: state.transformations.map((container) =>
                 container.transformation.id !== action.t.id
                     ? {
-                          transformation: container.transformation,
+                          ...container,
                           shown: false,
                       }
                     : {
-                          transformation: container.transformation,
+                          ...container,
                           shown: true,
                       }
             ),
@@ -204,7 +321,7 @@ const transformationReducer = (state = initialState, action) => {
             transformations: state.transformations.map((container) =>
                 container.transformation === action.t
                     ? {
-                          transformation: container.transformation,
+                          ...container,
                           shown: true,
                       }
                     : container
@@ -217,7 +334,7 @@ const transformationReducer = (state = initialState, action) => {
             transformations: state.transformations.map((container) =>
                 container.transformation === action.t
                     ? {
-                          transformation: container.transformation,
+                          ...container,
                           shown: false,
                       }
                     : container
@@ -241,11 +358,10 @@ const transformationReducer = (state = initialState, action) => {
         let transformations = [...state.transformations];
         const [removed] = transformations.splice(action.oldIndex, 1);
         transformations.splice(action.newIndex, 0, removed);
-        transformations = transformations.map((t, i) => {
+        transformations = transformations.map((container, i) => {
             return {
-                transformation: {...t.transformation, id: i},
-                shown: t.shown,
-                hash: t.hash,
+                ...container,
+                transformation: {...container.transformation, id: i},
             };
         });
 
@@ -277,7 +393,25 @@ const transformationReducer = (state = initialState, action) => {
     if (action.type === SET_NODES) {
         return {
             ...state,
-            transformationNodesMap: action.t,
+            transformationNodesMap: action.nodesRes.reduce(
+                (map, items, i) => {
+                    map[action.t[i].id] = items.map(
+                        (node) => {
+                            return {
+                                ...node,
+                                    loading: false,
+                                    shownRecursion: false,
+                                    isExpandableV: false,
+                                    isCollapsibleV: false,
+                                    isExpandVAllTheWay: false,
+                                    showMini: false,
+                                };
+                            }
+                        );
+                        return map;
+                    },
+                    {}
+                ),
         };
     }
     if (action.type === CLEAR_NODES) {
@@ -333,6 +467,19 @@ const transformationReducer = (state = initialState, action) => {
         return {
             ...state,
             transformationDropIndices: action.t,
+        };
+    }
+    if (action.type === CHECK_TRANSFORMATION_EXPANDABLE_COLLAPSIBLE) {
+        return {
+            ...state,
+            transformations: state.transformations.map((container) => {
+                if (container.transformation.id === action.tid) {
+                    container.isExpandableV = state.transformationNodesMap[action.tid].some((node) => node.isExpandableV);
+                    container.isCollapsibleV = state.transformationNodesMap[action.tid].some((node) => node.isCollapsibleV);
+                    container.allNodesShowMini = state.transformationNodesMap[action.tid].every((node) => node.showMini);
+                }
+                return container;
+            }),
         };
     }
     if (action.type === SET_EDGES) {
@@ -406,7 +553,6 @@ const TransformationProvider = ({children}) => {
     };
 
     const reloadEdges = (shownRecursion, usingClingraph) => {
-        console.log("reload with shownRecursion", state.shownRecursion);
         loadEdges(
                 shownRecursion,
                 usingClingraph,
@@ -447,22 +593,8 @@ const TransformationProvider = ({children}) => {
                             ...items.map((t) => ({id: t.id})),
                             {id: -1},
                         ];
-                        const transformationNodesMap = nodesRes.reduce(
-                            (map, itemss, i) => {
-                                map[transformations[i].id] = itemss.map(
-                                    (node) => {
-                                        return {
-                                            ...node,
-                                            loading: false,
-                                            shownRecursion: false,
-                                        };
-                                    }
-                                );
-                                return map;
-                            },
-                            {}
-                        );
-                        dispatch(setNodes(transformationNodesMap));
+
+                        dispatch(setNodes(nodesRes, transformations));
                         dispatch(setClingraphGraphics(clingraphNodes));
                         reloadEdges(shownRecursion, clingraphNodes.length > 0);
                    });
@@ -547,4 +679,9 @@ export {
     setCurrentSort,
     setTransformationDropIndices,
     toggleShownRecursion,
+    setNodeIsExpandableV,
+    setNodeIsCollapsibleV,
+    setNodeIsExpandAllTheWay,
+    setNodeShowMini,
+    checkTransformationExpandableCollapsible,
 };

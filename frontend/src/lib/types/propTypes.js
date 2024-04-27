@@ -37,6 +37,9 @@ export const TRANSFORMATION = PropTypes.exact({
 export const TRANSFORMATIONWRAPPER = PropTypes.exact({
     transformation: TRANSFORMATION,
     shown: PropTypes.bool,
+    isExpandableV: PropTypes.bool,
+    isCollapsibleV: PropTypes.bool,
+    allNodesShowMini: PropTypes.bool,
     hash: PropTypes.string,
 })
 export const GRAPH = PropTypes.exact({
@@ -54,6 +57,10 @@ export const NODE = PropTypes.exact({
     uuid: PropTypes.string,
     loading: PropTypes.bool,
     shownRecursion: PropTypes.bool,
+    isExpandableV: PropTypes.bool,
+    isCollapsibleV: PropTypes.bool,
+    isExpandVAllTheWay: PropTypes.bool,
+    showMini: PropTypes.bool,
 })
 export const CLINGRAPHNODE = PropTypes.exact({
     _type: PropTypes.oneOf(['ClingraphNode']),

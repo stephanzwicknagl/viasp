@@ -1,7 +1,7 @@
 {
     "primary": "#879ee7",
     "light": "#F4F5FA",
-    "dark": "#444",
+    "dark": "#444444",
     "warn": "#FFC107",
     "error": "#F44336",
     "infoBackground": "#B3BAC5",

@@ -6,7 +6,7 @@ import {hideNode, showNode, useShownNodes} from '../contexts/ShownNodes';
 import {useColorPalette} from '../contexts/ColorPalette';
 import {useHighlightedNode} from '../contexts/HighlightedNode';
 import {useHighlightedSymbol} from '../contexts/HighlightedSymbol';
-import {toggleShownRecursion, useTransformations} from '../contexts/transformations';
+import {toggleShownRecursion, useTransformations, setNodeIsCollapsibleV, setNodeShowMini, setNodeIsExpandableV, checkTransformationExpandableCollapsible} from '../contexts/transformations';
 import {useSettings} from '../contexts/Settings';
 import {useShownDetail} from '../contexts/ShownDetail';
 import {NODE} from '../types/propTypes';
@@ -14,7 +14,6 @@ import {useFilters} from '../contexts/Filters';
 import AnimateHeight from 'react-animate-height';
 import {useAnimationUpdater} from '../contexts/AnimationUpdater';
 import clockwiseVerticalArrows from '@iconify/icons-emojione-monotone/clockwise-vertical-arrows';
-import arrowDownDoubleFill from '@iconify/icons-ri/arrow-down-double-fill';
 import {IconWrapper} from '../LazyLoader';
 import useResizeObserver from '@react-hook/resize-observer';
 import {findChildByClass} from '../utils';
@@ -33,11 +32,12 @@ function any(iterable) {
 
 function NodeContent(props) {
     const {state} = useSettings();
-    const {node, setHeight, parentID, setIsExpandableV, expandVAllTheWay, isSubnode} =
+    const {node, setHeight, parentID, isSubnode, transformationId} =
         props;
     const colorPalette = useColorPalette();
     const [{activeFilters}] = useFilters();
     const {highlightedSymbol, toggleReasonOf} = useHighlightedSymbol();
+    const {dispatch: dispatchTransformation} = useTransformations();
 
     let contentToShow;
     if (state.show_all) {
@@ -109,6 +109,9 @@ function NodeContent(props) {
     }, [isSubnode, parentID]);
     
     const visibilityManager = React.useCallback(() => {
+        if (!node || !transformationId) {
+            return 
+        }
 
         var allHeights = contentToShow
             .filter((symbol) => symbolShouldBeShown(symbol))
@@ -127,12 +130,12 @@ function NodeContent(props) {
 
         if (node.loading === true) {
             setHeight(Math.min(Constants.standardNodeHeight, maxSymbolHeight));
-            setIsExpandableV(false);
+            dispatchTransformation(setNodeIsExpandableV(node.uuid, false));
             return;
         }
-        if (expandVAllTheWay) {
+        if (node.isExpandVAllTheWay) {
             setHeight(maxSymbolHeight);
-            setIsExpandableV(false);
+            dispatchTransformation(setNodeIsExpandableV(node.uuid, false));
         } else {
             // marked node is under the standard height fold
             if (
@@ -147,24 +150,27 @@ function NodeContent(props) {
                     const newHeight = Math.max(
                         ...markedItems.map((item) => item.fittingHeight)
                     );
-                    setIsExpandableV(maxSymbolHeight > oldHeight);
+                    dispatchTransformation(setNodeIsExpandableV(node.uuid, maxSymbolHeight > oldHeight));
                     return newHeight;
                 });
             } else {
                 // marked node is not under the standard height fold
                 setHeight(Math.min(Constants.standardNodeHeight, maxSymbolHeight));
-                setIsExpandableV(maxSymbolHeight > Constants.standardNodeHeight);
+                dispatchTransformation(setNodeIsExpandableV(node.uuid, maxSymbolHeight > Constants.standardNodeHeight));
             }
         }
+        dispatchTransformation(checkTransformationExpandableCollapsible(transformationId));
     }, [
         contentToShow,
         highlightedSymbol,
         setHeight,
-        setIsExpandableV,
-        expandVAllTheWay,
         symbolShouldBeShown,
         symbolVisibilityManager,
         node.loading,
+        dispatchTransformation,
+        node.uuid,
+        node.isExpandVAllTheWay,
+        transformationId
     ]);
 
     React.useEffect(() => {
@@ -178,7 +184,7 @@ function NodeContent(props) {
         visibilityManager,
         highlightedSymbol,
         state,
-        expandVAllTheWay,
+        node.isExpandVAllTheWay,
         activeFilters,
     ]);
 
@@ -261,17 +267,13 @@ NodeContent.propTypes = {
      */
     parentID: PropTypes.string,
     /**
-     * Set the vertical overflow state of the Node
-     */
-    setIsExpandableV: PropTypes.func,
-    /**
-     * If the node is expanded
-     */
-    expandVAllTheWay: PropTypes.bool,
-    /**
      * If the node is a subnode
      */
     isSubnode: PropTypes.bool,
+    /**
+     * The id of the transformation the node belongs to
+     */
+    transformationId: PropTypes.oneOf(PropTypes.number, PropTypes.string),
 };
 
 function RecursionButton(props) {
@@ -325,50 +327,21 @@ RecursionButton.propTypes = {
 };
 
 function OverflowButton(props) {
-    const {setExpandVAllTheWay, isOverflowV} = props;
-    const colorPalette = useColorPalette();
+    const {node} = props;
+    const {dispatch} = useTransformations();
+    const dispatchRef = React.useRef(dispatch);
+    const nodeuuidRef = React.useRef(node.uuid);
 
-    function handleClick(e) {
-        e.stopPropagation();
-        setExpandVAllTheWay(isOverflowV);
-    }
+    // React.useEffect(() => {
+    //     dispatchRef.current(setNodeIsExpandableV(nodeuuidRef.current, true));
+    // }, [])
     
 
-    return (
-        <div
-        className={'bauchbinde'}
-        onClick={handleClick}
-        >
-            <div 
-                className={'bauchbinde_text'}
-                style={{
-                    backgroundColor: `${colorPalette.primary}a1`,
-                    background: `linear-gradient(to top, ${colorPalette.primary}a1, transparent)`,
-                    color: colorPalette.dark,
-                }}
-                >
-                <Suspense fallback={<div>...</div>}>
-                    <IconWrapper
-                        icon={arrowDownDoubleFill}
-                            width="0.4em"
-                            // height="0.4em"
-                        className={!isOverflowV ? 'rotate_icon' : ''}
-                    />
-                </Suspense>
-            </div>
-        </div>
-    );
+    return null;
 }
 
 OverflowButton.propTypes = {
-    /**
-     * The function to be called to set the node height
-     *  */
-    setExpandVAllTheWay: PropTypes.func,
-    /**
-     * If the node is overflowed
-     */
-    isOverflowV: PropTypes.bool,
+    node: NODE,
 };
 
 function useHighlightedNodeToCreateClassName(node) {
@@ -431,15 +404,12 @@ function checkForOverflowE(
 }
 
 export function Node(props) {
-    const {node, isSubnode, branchSpace} = props;
-    const [showMini, setShowMini] = React.useState(false);
-    const [isExpandableV, setIsExpandableV] = React.useState(false);
-    const [isCollapsibleV, setIsCollapsibleV] = React.useState(false);
-    const [expandVAllTheWay, setExpandVAllTheWay] = React.useState(false);
+    const {node, isSubnode, branchSpace, transformationId} = props;
     const [overflowBreakingPoint, setOverflowBreakingPoint] =
         React.useState(null);
     const colorPalette = useColorPalette();
     const {dispatch: dispatchShownNodes} = useShownNodes();
+    const {dispatch: dispatchTransformation} = useTransformations();
     const classNames = useHighlightedNodeToCreateClassName(node);
     const [height, setHeight] = React.useState(Constants.minimumNodeHeight);
     const {animationState} = useAnimationUpdater();
@@ -466,19 +436,19 @@ export function Node(props) {
 
 
     React.useEffect(() => {
-        setIsCollapsibleV(height > Constants.standardNodeHeight);
-    }, [height])
+        dispatchTransformation(setNodeIsCollapsibleV(node.uuid, height > Constants.standardNodeHeight));
+    }, [height, dispatchTransformation, node.uuid])
 
     const checkForOverflow = React.useCallback(() => {
         checkForOverflowE(
             branchSpace,
-            showMini,
+            node.showMini,
             overflowBreakingPoint,
             setOverflowBreakingPoint,
-            setShowMini
+            (showMini) => dispatchTransformation(setNodeShowMini(node.uuid, showMini))
         );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [branchSpace, showMini, overflowBreakingPoint, animationState.graph_zoom]);
+    }, [branchSpace, overflowBreakingPoint, animationState.graph_zoom, node.showMini]);
     
     const debouncedCheckForOverflow = React.useMemo(() => {
         return debounce(checkForOverflow, Constants.DEBOUNCETIMEOUT);
@@ -486,8 +456,9 @@ export function Node(props) {
 
     React.useEffect(() => {
         checkForOverflow();
-    }, [checkForOverflow, node]);
-
+    }, [checkForOverflow, node.showMini]);   
+    // correct ??
+    
     useResizeObserver(
         document.getElementById('content'),
         debouncedCheckForOverflow
@@ -508,7 +479,7 @@ export function Node(props) {
                 notifyClick(node);
             }}
         >
-            {showMini ? (
+            {node.showMini ? (
                 <div
                     style={{
                         backgroundColor: colorPalette.primary,
@@ -530,19 +501,12 @@ export function Node(props) {
                         node={node}
                         setHeight={setHeight}
                         parentID={divID}
-                        setIsExpandableV={setIsExpandableV}
-                        expandVAllTheWay={expandVAllTheWay}
                         isSubnode={isSubnode}
+                        transformationId={transformationId}
                     />
                     <RecursionButton node={node} />
                 </AnimateHeight>
             )}
-            {!showMini && (isExpandableV || isCollapsibleV) ? (
-                <OverflowButton
-                    setExpandVAllTheWay={setExpandVAllTheWay}
-                    isOverflowV={isExpandableV}
-                />
-            ) : null}
         </div>
     );
 }
@@ -560,6 +524,10 @@ Node.propTypes = {
      * The ref to the branch space the node sits in 
      */
     branchSpace: PropTypes.object,
+    /**
+     * The id of the transformation the node belongs to
+     */
+    transformationId: PropTypes.oneOf(PropTypes.number, PropTypes.string),
 };
 
 export function RecursiveSuperNode(props) {
