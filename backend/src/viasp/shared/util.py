@@ -63,7 +63,7 @@ def is_recursive(node, graph):
         return False
     else:
         for n in nn:
-            if n.recursive != False and node in set(n.recursive.nodes):
+            if len(n.recursive) > 0 and node in n.recursive:
                 return True
 
 

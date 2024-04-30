@@ -95,18 +95,17 @@ def identify_reasons(g: nx.DiGraph) -> None:
                 for r in rr:
                     tmp_reason.append(get_identifiable_reason(g, v, r))
                 v.reason[str(new)] = tmp_reason
-            if v.recursive:
-                for node in v.recursive.nodes:
-                    for new, rr in node.reason.items():
-                        tmp_reason = []
-                        for r in rr:
-                            tmp_reason.append(
-                                get_identifiable_reason(v.recursive,
-                                                        node,
-                                                        r,
-                                                        super_graph=g,
-                                                        super_node=v))
-                        node.reason[str(new)] = tmp_reason
+            for node in v.recursive:
+                for new, rr in node.reason.items():
+                    tmp_reason = []
+                    for r in rr:
+                        tmp_reason.append(
+                            get_identifiable_reason_of_recursive_subnode(v.recursive,
+                                                    node,
+                                                    r,
+                                                    g,
+                                                    v))
+                    node.reason[str(new)] = tmp_reason
             for s in v.diff:
                 if str(s.symbol) in v.reason.keys() and len(v.reason[str(
                         s.symbol)]) > 0:
@@ -147,6 +146,24 @@ def get_identifiable_reason(g: nx.DiGraph,
     warn(f"An explanation could not be made")
     return None
 
+def get_identifiable_reason_of_recursive_subnode(recursive_subgraph: List[Node],
+                                                 v: Node,
+                                                 r: Symbol,
+                                                 super_graph,
+                                                 super_node) -> Optional[SymbolIdentifier]:
+    if (r in v.diff): return next(s for s in v.atoms if s == r)
+    if (recursive_subgraph.index(v) != 0):
+        return get_identifiable_reason_of_recursive_subnode(recursive_subgraph, 
+                                                            recursive_subgraph[recursive_subgraph.index(v)-1],
+                                                            r,
+                                                            super_graph,
+                                                            super_node)
+    if (super_graph != None and super_node != None):
+        return get_identifiable_reason(super_graph, super_node, r)
+    
+    # stop criterion: v is the root node and there is no super_graph
+    warn(f"An explanation could not be made")
+    return None
 
 def calculate_spacing_factor(g: nx.DiGraph) -> None:
     """

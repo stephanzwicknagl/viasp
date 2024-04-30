@@ -1,3 +1,4 @@
+from itertools import pairwise
 import os
 from collections import defaultdict
 from typing import Union, Collection, Dict, List, Iterable
@@ -104,13 +105,13 @@ def get_src_tgt_mapping_from_graph(shown_recursive_ids=[],
         })
 
     for recursive_uuid in shown_recursive_ids:
-        # get node from graph where node attribute uuid is uuid
+        # get recursion super-node from graph
         try:
             node = next(n for n in graph.nodes if n.uuid == recursive_uuid)
         except StopIteration:
             continue
         _, _, edge = next(e for e in graph.in_edges(node, data=True))
-        for source, target in node.recursive.edges:
+        for source, target in pairwise(node.recursive):
             to_be_added.append({
                 "src": source.uuid,
                 "tgt": target.uuid,
@@ -118,29 +119,22 @@ def get_src_tgt_mapping_from_graph(shown_recursive_ids=[],
                 "style": "solid"
             })
         # add connections to outer node
-        first_nodes = [
-            n for n in node.recursive.nodes if node.recursive.in_degree(n) == 0
-        ]
-        last_nodes = [
-            n for n in node.recursive.nodes
-            if node.recursive.out_degree(n) == 0
-        ]
-        to_be_added.extend([{
+        to_be_added.append({
             "src": node.uuid,
-            "tgt": first_node.uuid,
+            "tgt": node.recursive[0].uuid,
             "transformation": edge["transformation"].hash,
             "recursion": "in",
             "style": "solid"
-        } for first_node in first_nodes])
+        })
         if graph.out_degree(node) > 0:
             # only add connection out if there are more nodes / clingraph
-            to_be_added.extend([{
-                "src": last_node.uuid,
+            to_be_added.append({
+                "src": node.recursive[-1].uuid,
                 "tgt": node.uuid,
                 "transformation": edge["transformation"].hash,
                 "recursion": "out",
                 "style": "solid"
-            } for last_node in last_nodes])
+            })
 
     if shown_clingraph:
         clingraph = load_clingraph_names()
@@ -283,9 +277,9 @@ def find_node_by_uuid(uuid: str) -> Node:
 
     if len(matching_nodes) != 1:
         for node in graph.nodes():
-            if node.recursive is not False:
+            if len(node.recursive) > 0:
                 matching_nodes = [
-                    x for x, _ in node.recursive.nodes(data=True)
+                    x for x in node.recursive
                     if x.uuid == uuid
                 ]
                 if len(matching_nodes) == 1:

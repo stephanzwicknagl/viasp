@@ -52,7 +52,7 @@ export const NODE = PropTypes.exact({
     diff: PropTypes.array,
     rule_nr: PropTypes.number,
     reason: PropTypes.object, 
-    recursive: PropTypes.oneOfType([PropTypes.bool, GRAPH]),
+    recursive: PropTypes.oneOfType([PropTypes.bool, PropTypes.array]),
     space_multiplier: PropTypes.number,
     uuid: PropTypes.string,
     loading: PropTypes.bool,

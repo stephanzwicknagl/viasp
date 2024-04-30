@@ -1,5 +1,6 @@
 """This module is concerned with finding reasons for why a stable model is found."""
 from collections import defaultdict
+from logging import warn
 from typing import List, Collection, Dict, Iterable, Union, Set
 
 import networkx as nx
@@ -207,7 +208,7 @@ def filter_body_aggregates(element: AST):
 def get_recursion_subgraph(
         facts: frozenset, supernode_symbols: frozenset,
         transformation: Transformation, conflict_free_h: str,
-        analyzer: ProgramAnalyzer) -> Union[bool, nx.DiGraph]:
+        analyzer: ProgramAnalyzer) -> List[Node]:
     """
     Get a recursion explanation for the given facts and the recursive transformation.
     Generate graph from explanation, sorted by the iteration step number.
@@ -248,7 +249,8 @@ def get_recursion_subgraph(
                           conflict_free_h=conflict_free_h,
                           conflict_free_n=n_str).main()
     except RuntimeError:
-        return False
+        warn(f"Could not analyze recursion for {transformation.rules}")
+        return []
 
     h_syms = collect_h_symbols_and_create_nodes(
         h_syms,
@@ -256,10 +258,10 @@ def get_recursion_subgraph(
         pad=False,
         supernode_symbols=supernode_symbols)
     h_syms.sort(key=lambda node: node.rule_nr)
-    h_syms.insert(0, Node(frozenset(facts), -1))
+    # h_syms.insert(0, Node(frozenset(facts), -1))
     insert_atoms_into_nodes(h_syms)
 
-    reasoning_subgraph = nx.DiGraph()
-    for a, b in pairwise(h_syms[1:]):
-        reasoning_subgraph.add_edge(a, b)
-    return reasoning_subgraph if reasoning_subgraph.size() != 0 else False
+    # reasoning_subgraph = nx.DiGraph()
+    # for a, b in pairwise(h_syms[1:]):
+    #     reasoning_subgraph.add_edge(a, b)
+    return h_syms

@@ -56,7 +56,7 @@ export function make_default_nodes(oldNodes = []) {
         });
         nodes.push({
             _type: 'Node',
-            recursive: false,
+            recursive: [],
             uuid: `${uuidv4()}-loading-${i}`,
             atoms: diff,
             diff: diff,

@@ -176,14 +176,14 @@ const clearShownRecursion = () => ({type: CLEAR_SHOWN_RECURSION});
 const SET_NODE_IS_EXPANDABLE_V = 'APP/NODE/OVERFLOWV/SETEXPANDABLE';
 const SET_NODE_IS_COLLAPSIBLE_V = 'APP/NODE/OVERFLOWV/SETCOLLAPSIBLE';
 const SET_NODE_IS_EXPAND_ALL_THE_WAY = 'APP/NODE/OVERFLOWV/SETEXPANDALLTHEWAY';
-const setNodeIsExpandableV = (uuid, v) => ({type: SET_NODE_IS_EXPANDABLE_V, uuid, v});
-const setNodeIsCollapsibleV = (uuid, v) => ({type: SET_NODE_IS_COLLAPSIBLE_V, uuid, v});
-const setNodeIsExpandAllTheWay = (uuid, v) => ({type: SET_NODE_IS_EXPAND_ALL_THE_WAY, uuid, v});
+const setNodeIsExpandableV = (tid, uuid, v) => ({type: SET_NODE_IS_EXPANDABLE_V, tid, uuid, v});
+const setNodeIsCollapsibleV = (tid, uuid, v) => ({type: SET_NODE_IS_COLLAPSIBLE_V, tid, uuid, v});
+const setNodeIsExpandAllTheWay = (tid, uuid, v) => ({type: SET_NODE_IS_EXPAND_ALL_THE_WAY, tid, uuid, v});
 /**
  * Manage Node Overflow Horizontal
  */
 const SET_NODE_SHOW_MINI = 'APP/NODE/OVERFLOWH/SETSHOWMINI';
-const setNodeShowMini = (uuid, v) => ({type: SET_NODE_SHOW_MINI, uuid, v});
+const setNodeShowMini = (tid, uuid, v) => ({type: SET_NODE_SHOW_MINI, tid, uuid, v});
 /**
  * Manage Clingraph
  */
@@ -222,77 +222,129 @@ const transformationReducer = (state = initialState, action) => {
         };
     }
     if (action.type === SET_NODE_IS_EXPANDABLE_V) {
-        return state.transformationNodesMap !== null ? {
+        return state.transformationNodesMap && action.tid ? {
             ...state,
-            transformationNodesMap: Object.keys(state.transformationNodesMap)
-                .reduce((obj, key) => {
-                    obj[key] = state.transformationNodesMap[key].map((node) => {
+            transformationNodesMap: {
+                ...state.transformationNodesMap, 
+                [action.tid]: state.transformationNodesMap[action.tid]?.map((node) => {
                         if (node.uuid === action.uuid) {
                             return {
                                 ...node,
                                 isExpandableV: action.v,
                             };
                         }
+                        if (node.recursive) {
+                            return {
+                                ...node,
+                                recursive: node.recursive.map((subnode) => {
+                                    if (subnode.uuid === action.uuid) {
+                                        return {
+                                            ...subnode,
+                                            isExpandableV: action.v,
+                                        }
+                                    }
+                                    return subnode
+                                }),
+                            }
+                        }
                         return node;
-                    });
-                    return obj;
-            }, {}),
-        } : state;
+                    })
+                }
+            } : state
     }
     if (action.type === SET_NODE_IS_COLLAPSIBLE_V) {
-        return state.transformationNodesMap ? {
+        return state.transformationNodesMap && action.tid ? {
             ...state,
-            transformationNodesMap: Object.keys(state.transformationNodesMap)
-                .reduce((obj, key) => {
-                    obj[key] = state.transformationNodesMap[key].map((node) => {
+            transformationNodesMap: {
+                ...state.transformationNodesMap, 
+                [action.tid]: state.transformationNodesMap[action.tid]?.map((node) => {
                         if (node.uuid === action.uuid) {
                             return {
                                 ...node,
                                 isCollapsibleV: action.v,
                             };
                         }
+                        if (node.recursive) {
+                            return {
+                                ...node,
+                                recursive: node.recursive.map((subnode) => {
+                                    if (subnode.uuid === action.uuid) {
+                                        return {
+                                            ...subnode,
+                                            isCollapsibleV: action.v,
+                                        }
+                                    }
+                                    return subnode
+                                }),
+                            }
+                        }
                         return node;
-                    });
-                return obj;
-            }, {}),
-        } : state;
+                    })
+                }
+            } : state
     }
     if (action.type === SET_NODE_IS_EXPAND_ALL_THE_WAY) {
-        return state.transformationNodesMap ? {
+        return state.transformationNodesMap && action.tid ? {
             ...state,
-            transformationNodesMap: Object.keys(state.transformationNodesMap)
-                .reduce((obj, key) => {
-                    obj[key] = state.transformationNodesMap[key].map((node) => {
+            transformationNodesMap: {
+                ...state.transformationNodesMap, 
+                [action.tid]: state.transformationNodesMap[action.tid]?.map((node) => {
                         if (node.uuid === action.uuid) {
                             return {
                                 ...node,
                                 isExpandVAllTheWay: action.v,
                             };
                         }
+                        if (node.recursive) {
+                            return {
+                                ...node,
+                                recursive: node.recursive.map((subnode) => {
+                                    if (subnode.uuid === action.uuid) {
+                                        return {
+                                            ...subnode,
+                                            isExpandVAllTheWay: action.v,
+                                        }
+                                    }
+                                    return subnode
+                                }),
+                            }
+                        }
                         return node;
-                    });
-                return obj;
-            }, {}),
-        } : state;
+                    })
+                }
+            } : state
     }
     if (action.type === SET_NODE_SHOW_MINI) {
-        return state.transformationNodesMap ? {
+        return state.transformationNodesMap && action.tid ? {
             ...state,
-            transformationNodesMap: Object.keys(state.transformationNodesMap)
-                .reduce((obj, key) => {
-                    obj[key] = state.transformationNodesMap[key].map((node) => {
+            transformationNodesMap: {
+                ...state.transformationNodesMap, 
+                [action.tid]: state.transformationNodesMap[action.tid]?.map((node) => {
                         if (node.uuid === action.uuid) {
                             return {
                                 ...node,
                                 showMini: action.v,
                             };
                         }
+                        if (node.recursive) {
+                            return {
+                                ...node,
+                                recursive: node.recursive.map((subnode) => {
+                                    if (subnode.uuid === action.uuid) {
+                                        return {
+                                            ...subnode,
+                                            showMini: action.v,
+                                        }
+                                    }
+                                    return subnode
+                                }),
+                            }
+                        }
                         return node;
-                    });
-                return obj;
-            }, {}),
-        } : state;
-    }
+                    })
+                }
+            } : state
+    }       
     if (action.type === CLEAR_TRANSFORMATIONS) {
         return {
             ...state,
@@ -399,12 +451,21 @@ const transformationReducer = (state = initialState, action) => {
                         (node) => {
                             return {
                                 ...node,
+                                recursive: node.recursive.map((n) => ({
+                                    ...n,
                                     loading: false,
                                     shownRecursion: false,
                                     isExpandableV: false,
                                     isCollapsibleV: false,
-                                    isExpandVAllTheWay: false,
+                                    isExpandVAllTheWay: false,  
                                     showMini: false,
+                                })),
+                                loading: false,
+                                shownRecursion: false,
+                                isExpandableV: false,
+                                isCollapsibleV: false,
+                                isExpandVAllTheWay: false,
+                                showMini: false,
                                 };
                             }
                         );

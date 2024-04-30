@@ -40,7 +40,7 @@ class Node:
         Dict[str, List[Symbol]],
         MappingProxyType[str, List[SymbolIdentifier]]] \
         = field(default_factory=DefaultMappingProxyType, hash=True)
-    recursive: Union[bool, nx.DiGraph] = field(default=False, hash=False)
+    recursive: List = field(default_factory=list, hash=False)
     space_multiplier: float = field(default=1.0, hash=False)
     uuid: UUID = field(default_factory=uuid4, hash=False)
 

@@ -1,5 +1,6 @@
-import React, {Suspense} from 'react';
+import React from 'react';
 import {Node, RecursiveSuperNode} from './Node.react';
+import {OverflowButton} from './OverflowButton.react';
 import * as Constants from '../constants';
 import './row.css';
 import PropTypes from 'prop-types';
@@ -8,17 +9,14 @@ import {
     useTransformations,
     setTransformationDropIndices,
     TransformationContext,
-    setNodeIsExpandAllTheWay,
 } from '../contexts/transformations';
-import {MAPZOOMSTATE, TRANSFORMATION, TRANSFORMATIONWRAPPER, NODE} from '../types/propTypes';
-import {ColorPaletteContext, useColorPalette} from '../contexts/ColorPalette';
+import {MAPZOOMSTATE, TRANSFORMATION, TRANSFORMATIONWRAPPER} from '../types/propTypes';
+import {ColorPaletteContext} from '../contexts/ColorPalette';
 import {make_default_nodes} from '../utils';
 import {AnimationUpdater} from '../contexts/AnimationUpdater';
 import {DragHandle} from './DragHandle.react';
 import {useDebouncedAnimateResize} from '../hooks/useDebouncedAnimateResize';
 
-import arrowDownDoubleFill from '@iconify/icons-ri/arrow-down-double-fill';
-import {IconWrapper} from '../LazyLoader';
 
 export class RowTemplate extends React.Component {
     static contextType = TransformationContext;
@@ -239,21 +237,6 @@ export function Row(props) {
     }, [nodes]);
 
 
-    const [showOverflowButton, setShowOverflowButton] = React.useState(false);
-    const showMiniValues = nodes.map(node => node.showMini).join(',');
-    const isExpandableVValues = nodes.map(node => node.isExpandableV).join(',');
-    const isCollapsibleVValues = nodes.map(node => node.isCollapsibleV).join(',');
-    React.useEffect(() => {
-        const allNodesShowMini = !showMiniValues.includes('false');
-        const anyNodeExpandable = isExpandableVValues.includes('true');
-        const anyNodeCollapsible = isCollapsibleVValues.includes('true');
-        if (!allNodesShowMini && (anyNodeExpandable || anyNodeCollapsible)) {
-            setShowOverflowButton(true);
-        } else {
-            setShowOverflowButton(false);
-        }
-    }, [showMiniValues, isExpandableVValues, isCollapsibleVValues])
-
     return (
         <div
             className={`row_container ${transformation.hash}`}
@@ -280,7 +263,7 @@ export function Row(props) {
                     {nodes.map((child, index) => {
                         const space_multiplier = child.space_multiplier * 100;
                         if (
-                            child.recursive &&
+                            child.recursive.length > 0 &&
                             child.shownRecursion
                         ) {
                             return (
@@ -296,6 +279,7 @@ export function Row(props) {
                                         branchSpace={
                                             branchSpaceRefs.current[index]
                                         }
+                                        transformationId={transformation.id}
                                     />
                                 </div>
                             );
@@ -353,70 +337,3 @@ Row.propTypes = {
      */
     transformationWrapper: TRANSFORMATIONWRAPPER,
 };
-
-function OverflowButton(props) {
-    const {transformationId, nodes} = props;
-    const [isIconRotated, setIsIconRotated] = React.useState(false);
-    const colorPalette = useColorPalette();
-    const {dispatch} = useTransformations();
-
-    function handleClick(e) {
-        e.stopPropagation();
-        nodes.forEach(node => {
-            console.log('changing value for node', node.uuid, node.isExpandableV)
-            dispatch(setNodeIsExpandAllTheWay(node.uuid, node.isExpandableV));
-        });
-    }
-    
-    const expandableValues = nodes.map(node => node.isExpandableV).join(',');
-    React.useEffect(() => {
-        console.log(expandableValues)
-        setIsIconRotated(!expandableValues.includes('true'));
-    }, [expandableValues]);
-
-    const gradientColor1 = `${colorPalette.dark}41`
-        // transformationId === -1
-        //     ? 'white'
-        //     : colorPalette.rowShading[
-        //             (transformationId+1) % colorPalette.rowShading.length
-        //         ];
-    const gradientColor2 = `transparent`;
-
-    return (
-        <div
-            style={{
-                background: `linear-gradient(to top, ${gradientColor1}, ${gradientColor2})`,
-                height: '1em',
-            }}
-            className={'bauchbinde'}
-            onClick={handleClick}
-        >
-            <div
-                className={'bauchbinde_text'}
-                >
-                <Suspense fallback={<div>...</div>}>
-                    <IconWrapper
-                        icon={arrowDownDoubleFill}
-                        className={isIconRotated ? 'rotate_icon' : ''}
-                    />
-                </Suspense>
-         
-
-                </div>
-        </div>
-    );
-}
-
-OverflowButton.propTypes = {
-    /**
-     * The id of the transformation
-     */
-    transformationId: PropTypes.number,
-    /**
-     * The nodes object of the transformation
-     */
-    nodes: PropTypes.arrayOf(NODE),
-};
-
-
-
