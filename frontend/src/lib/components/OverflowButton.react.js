@@ -30,7 +30,12 @@ export function OverflowButton(props) {
         });
     }
     
-    const expandableValues = nodes.map(node => node.isExpandableV).join(',');
+    const expandableValues = nodes.map(node => {
+            if (shownRecursion.indexOf(node.uuid) === -1) {
+                return node.isExpandableV;
+            }
+            return node.recursive.map(sn => sn.isExpandableV).join(',');
+    }).join(',');
     React.useEffect(() => {
         setIsIconRotated(!expandableValues.includes('true'));
     }, [expandableValues]);

@@ -222,7 +222,7 @@ const transformationReducer = (state = initialState, action) => {
         };
     }
     if (action.type === SET_NODE_IS_EXPANDABLE_V) {
-        return state.transformationNodesMap && action.tid ? {
+        return state.transformationNodesMap && action.tid !== null ? {
             ...state,
             transformationNodesMap: {
                 ...state.transformationNodesMap, 
@@ -253,7 +253,7 @@ const transformationReducer = (state = initialState, action) => {
             } : state
     }
     if (action.type === SET_NODE_IS_COLLAPSIBLE_V) {
-        return state.transformationNodesMap && action.tid ? {
+        return state.transformationNodesMap && action.tid !== null ? {
             ...state,
             transformationNodesMap: {
                 ...state.transformationNodesMap, 
@@ -284,7 +284,7 @@ const transformationReducer = (state = initialState, action) => {
             } : state
     }
     if (action.type === SET_NODE_IS_EXPAND_ALL_THE_WAY) {
-        return state.transformationNodesMap && action.tid ? {
+        return state.transformationNodesMap && action.tid !== null ? {
             ...state,
             transformationNodesMap: {
                 ...state.transformationNodesMap, 
@@ -315,7 +315,7 @@ const transformationReducer = (state = initialState, action) => {
             } : state
     }
     if (action.type === SET_NODE_SHOW_MINI) {
-        return state.transformationNodesMap && action.tid ? {
+        return state.transformationNodesMap && action.tid !== null ? {
             ...state,
             transformationNodesMap: {
                 ...state.transformationNodesMap, 

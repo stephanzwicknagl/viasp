@@ -142,13 +142,11 @@ function NodeContent(props) {
                     )
                 )
             ) {
-                setHeight((oldHeight) => {
-                    const newHeight = Math.max(
-                        ...markedItems.map((item) => item.fittingHeight)
-                    );
-                    dispatchTransformation(setNodeIsExpandableV(transformationId, node.uuid, maxSymbolHeight > oldHeight));
-                    return newHeight;
-                });
+                const newHeight = Math.max(
+                    ...markedItems.map((item) => item.fittingHeight)
+                );
+                setHeight(newHeight);
+                dispatchTransformation(setNodeIsExpandableV(transformationId, node.uuid, maxSymbolHeight > newHeight));
             } else {
                 // marked node is not under the standard height fold
                 setHeight(Math.min(Constants.standardNodeHeight, maxSymbolHeight));
@@ -423,7 +421,10 @@ export function Node(props) {
             node.showMini,
             overflowBreakingPoint,
             setOverflowBreakingPoint,
-            (showMini) => dispatchTransformation(setNodeShowMini(transformationId, node.uuid, showMini))
+            (showMini) => {
+                dispatchTransformation(setNodeShowMini(transformationId, node.uuid, showMini))
+                dispatchTransformation(checkTransformationExpandableCollapsible(transformationId));
+            }
         );
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [branchSpace, overflowBreakingPoint, animationState.graph_zoom, node.showMini]);
