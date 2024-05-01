@@ -34,9 +34,7 @@ body {
     margin: 10px;
     border-radius: 5px 5px 5px 5px;
     font-family: sans-serif;
-    -moz-box-shadow: 3px 3px 5px 6px #ccc;
-    -webkit-box-shadow: 3px 3px 5px 6px #ccc;
-    box-shadow: 2px 2px 4px 2px #ccc;
+    filter: drop-shadow(.1em .1em .14em #3333338c);
 }
 
 .user_message_list {
