@@ -398,14 +398,18 @@ def get_is_sortable():
 
 def wrap_marked_models(
         marked_models: Iterable[StableModel],
-        conflict_free_showTerm: str = "showTerm") -> List[List[str]]:
+        conflict_free_showTerm: str = "showTerm",
+        clingraph: bool = False) -> List[List[str]]:
     result = []
     for model in marked_models:
         wrapped = []
         for part in model.atoms:
             wrapped.append(f"{part}.")
         for part in model.terms:
-            wrapped.append(f"{conflict_free_showTerm}({part}).")
+            if clingraph:
+                wrapped.append(f"{part}.")
+            else:
+                wrapped.append(f"{conflict_free_showTerm}({part}).")
         result.append(wrapped)
     return result
 

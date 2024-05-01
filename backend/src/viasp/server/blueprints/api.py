@@ -189,7 +189,7 @@ def transform_relax():
 def clingraph_generate():
     if request.method == "POST":
         marked_models = load_models()
-        marked_models = wrap_marked_models(marked_models)
+        marked_models = wrap_marked_models(marked_models, clingraph=True)
         if request.json is None:
             return "Invalid request", 400
         viz_encoding = request.json[
