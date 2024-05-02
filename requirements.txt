@@ -1,4 +1,4 @@
-clingo==5.6.1
+clingo>=5.6.0
 flask>=2.2.0
 networkx>=2.6
 pytest>=6.2.4

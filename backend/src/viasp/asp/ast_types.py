@@ -1,4 +1,6 @@
+import clingo
 from clingo.ast import ASTType
+from pkg_resources import parse_version
 
 SUPPORTED_TYPES = {
     ASTType.Comparison, ASTType.Aggregate, ASTType.Rule, ASTType.Program,
@@ -11,8 +13,13 @@ SUPPORTED_TYPES = {
     ASTType.Interval, ASTType.UnaryOperation, ASTType.BinaryOperation,
     ASTType.Defined, ASTType.External, ASTType.ProjectAtom,
     ASTType.ProjectSignature, ASTType.ShowTerm, ASTType.Minimize,
-    ASTType.Script, ASTType.Comment
+    ASTType.Script
 }
+
+if parse_version(clingo.__version__) >= parse_version("5.7.0"):
+    SUPPORTED_TYPES.update({
+        ASTType.Comment
+    })
 
 UNSUPPORTED_TYPES = {
     ASTType.Disjunction,

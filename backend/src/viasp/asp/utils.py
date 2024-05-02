@@ -62,6 +62,8 @@ def remove_loops(g: nx.DiGraph) -> Tuple[nx.DiGraph, FrozenSet[RuleContainer]]:
 
 
 def insert_atoms_into_nodes(path: List[Node]) -> None:
+    if not path:
+        return
     facts = path[0]
     state = set(facts.diff)
     facts.atoms = frozenset(state)

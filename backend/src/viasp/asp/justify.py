@@ -258,10 +258,6 @@ def get_recursion_subgraph(
         pad=False,
         supernode_symbols=supernode_symbols)
     h_syms.sort(key=lambda node: node.rule_nr)
-    # h_syms.insert(0, Node(frozenset(facts), -1))
     insert_atoms_into_nodes(h_syms)
 
-    # reasoning_subgraph = nx.DiGraph()
-    # for a, b in pairwise(h_syms[1:]):
-    #     reasoning_subgraph.add_edge(a, b)
     return h_syms
