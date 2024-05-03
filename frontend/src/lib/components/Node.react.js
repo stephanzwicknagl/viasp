@@ -436,7 +436,6 @@ export function Node(props) {
     React.useEffect(() => {
         checkForOverflow();
     }, [checkForOverflow, node.showMini]);   
-    // correct ??
     
     useResizeObserver(
         document.getElementById('content'),

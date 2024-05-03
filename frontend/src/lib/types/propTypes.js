@@ -65,7 +65,9 @@ export const NODE = PropTypes.exact({
 export const CLINGRAPHNODE = PropTypes.exact({
     _type: PropTypes.oneOf(['ClingraphNode']),
     uuid: PropTypes.string,
-    loading: PropTypes.bool
+    loading: PropTypes.bool,
+    space_multiplier: PropTypes.number,
+    showMini: PropTypes.bool,
 });
 export const BOX = PropTypes.exact({
     _type: PropTypes.oneOf(['Box']),

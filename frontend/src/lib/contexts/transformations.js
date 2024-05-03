@@ -186,11 +186,13 @@ const SET_NODE_SHOW_MINI = 'APP/NODE/OVERFLOWH/SETSHOWMINI';
 const setNodeShowMini = (tid, uuid, v) => ({type: SET_NODE_SHOW_MINI, tid, uuid, v});
 /**
  * Manage Clingraph
- */
+*/
 const SET_CLINGRAPH_GRAPHICS = 'APP/CLINGRAPH/SETGRAPHICS';
 const CLEAR_CLINGRAPH_GRAHICS = 'APP/CLINGRAPH/CLEAR';
+const SET_CLINGRAPH_SHOW_MINI = 'APP/CLINGRAPH/OVERFLOWH/SETSHOWMINI';
 const setClingraphGraphics = (g) => ({type: SET_CLINGRAPH_GRAPHICS, g});
 const clearClingraphGraphics = () => ({type: CLEAR_CLINGRAPH_GRAHICS});
+const setClingraphShowMini = (uuid, v) => ({type: SET_CLINGRAPH_SHOW_MINI, uuid, v});
 
 const TransformationContext = React.createContext();
 
@@ -499,8 +501,11 @@ const transformationReducer = (state = initialState, action) => {
     if (action.type === SET_CLINGRAPH_GRAPHICS) {
         return {
             ...state,
-            clingraphGraphics: action.g.map((n) => {
+            clingraphGraphics: action.g.map((n,i) => {
                 n.loading = false;
+                n.showMini = false;
+                const last_transformation_index = Math.max(...Object.keys(state.transformationNodesMap).map(k => parseInt(k, 10)))
+                n.space_multiplier = state.transformationNodesMap[last_transformation_index][i].space_multiplier;
                 return n;
             }),
         };
@@ -516,6 +521,20 @@ const transformationReducer = (state = initialState, action) => {
             clingraphGraphics: make_default_clingraph_nodes(
                 state.clingraphGraphics
             ),
+        };
+    }
+    if (action.type === SET_CLINGRAPH_SHOW_MINI) {
+        return {
+            ...state,
+            clingraphGraphics: state.clingraphGraphics.map((node) => {
+                if (node.uuid === action.uuid) {
+                    return {
+                        ...node,
+                        showMini: action.v,
+                    };
+                }
+                return node;
+            }),
         };
     }
     if (action.type === SET_SORTABLE) {
@@ -744,5 +763,6 @@ export {
     setNodeIsCollapsibleV,
     setNodeIsExpandAllTheWay,
     setNodeShowMini,
+    setClingraphShowMini,
     checkTransformationExpandableCollapsible,
 };
