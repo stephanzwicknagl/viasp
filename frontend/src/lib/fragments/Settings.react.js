@@ -6,7 +6,7 @@ import { darken } from 'polished';
 
 
 function makeClassNameFromMarkedSymbol(highlightedSymbol) {
-    let className = `noselect toggle_part unselected ${highlightedSymbol.length === 0 ? "fadeOut" : "fadeIn"}`;
+    const className = `noselect toggle_part unselected ${highlightedSymbol.length === 0 ? "fadeOut" : "fadeIn"}`;
     return className;
 }
 

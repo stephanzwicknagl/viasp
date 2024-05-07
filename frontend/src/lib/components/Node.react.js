@@ -13,7 +13,6 @@ import {NODE} from '../types/propTypes';
 import {useFilters} from '../contexts/Filters';
 import AnimateHeight from 'react-animate-height';
 import {useAnimationUpdater} from '../contexts/AnimationUpdater';
-import clockwiseVerticalArrows from '@iconify/icons-emojione-monotone/clockwise-vertical-arrows';
 import {IconWrapper} from '../LazyLoader';
 import useResizeObserver from '@react-hook/resize-observer';
 import {findChildByClass} from '../utils';
@@ -302,7 +301,7 @@ function RecursionButton(props) {
                 >
                     <Suspense fallback={<div>R</div>}>
                         <IconWrapper
-                            icon={clockwiseVerticalArrows}
+                            icon={"clockwiseVerticalArrows"}
                             width="9"
                             height="9"
                         />

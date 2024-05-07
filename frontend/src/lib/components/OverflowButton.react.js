@@ -4,7 +4,6 @@ import {useColorPalette} from '../contexts/ColorPalette';
 import {useTransformations, setNodeIsExpandAllTheWay} from '../contexts/transformations';
 import {NODE} from '../types/propTypes';
 import {IconWrapper} from '../LazyLoader';
-import arrowDownDoubleFill from '@iconify/icons-ri/arrow-down-double-fill';
 
 export function OverflowButton(props) {
     const {transformationId, nodes} = props;
@@ -57,7 +56,7 @@ export function OverflowButton(props) {
                 >
                 <Suspense fallback={<div>...</div>}>
                     <IconWrapper
-                        icon={arrowDownDoubleFill}
+                        icon={"arrowDownDoubleFill"}
                         className={isIconRotated ? 'rotate_icon' : ''}
                     />
                 </Suspense>

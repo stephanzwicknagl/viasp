@@ -1,7 +1,6 @@
 import React from 'react';
 import './draghandle.css';
 import PropTypes from 'prop-types';
-import dragHandleRounded from '@iconify/icons-material-symbols/drag-handle-rounded';
 import {IconWrapper} from '../LazyLoader';
 
 export class DragHandle extends React.Component {
@@ -17,7 +16,7 @@ export class DragHandle extends React.Component {
                 {...dragHandleProps}
             >
                 <React.Suspense fallback={<div>=</div>}>
-                    <IconWrapper icon={dragHandleRounded} width="24" />
+                    <IconWrapper icon={"dragHandleRounded"} width="24" />
                 </React.Suspense>
             </div>
         );
