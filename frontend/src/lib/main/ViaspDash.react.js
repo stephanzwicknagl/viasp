@@ -89,7 +89,7 @@ function GraphContainer(props) {
                 unsetZIndex={true}
                 commonProps={{transform}}
             />
-            {clingraphUsed ? <Boxrow /> : null}
+            {clingraphUsed ? <Boxrow transform={transform}/> : null}
             {highlightedSymbol.length === 0 ? null : <Arrows />}
             {transformations.length === 0 ? null : <Edges />}
         </div>

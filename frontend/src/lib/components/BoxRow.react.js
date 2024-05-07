@@ -1,4 +1,6 @@
 import React, {useCallback} from 'react';
+import PropTypes from 'prop-types';
+import {MAPZOOMSTATE} from '../types/propTypes';
 import * as Constants from '../constants';
 import {Box} from './Box.react';
 import './boxrow.css';
@@ -7,7 +9,8 @@ import debounce from 'lodash/debounce';
 import useResizeObserver from '@react-hook/resize-observer';
 import {useColorPalette} from '../contexts/ColorPalette';
 
-export function Boxrow() {
+export function Boxrow(props) {
+    const {transform} = props;
     const [isOverflowH, setIsOverflowH] = React.useState(false);
     const [overflowBreakingPoint, setOverflowBreakingPoint] =
         React.useState(null);
@@ -15,7 +18,9 @@ export function Boxrow() {
     const {
         state: {transformationDropIndices, clingraphGraphics},
     } = useTransformations();
-    const [style, setStyle] = React.useState({opacity: 1.0});
+    const [style, setStyle] = React.useState({
+        opacity: 1.0,
+        });
 
     React.useEffect(() => {
         if (transformationDropIndices !== null) {
@@ -28,40 +33,6 @@ export function Boxrow() {
         }
     }, [transformationDropIndices]);
 
-    // const checkForOverflow = useCallback(() => {
-    //     if (boxrowRef !== null && boxrowRef.current) {
-    //         const e = boxrowRef.current;
-    //         const wouldOverflowNow = e.offsetWidth < e.scrollWidth;
-    //         // We overflowed previously but not anymore
-    //         if (overflowBreakingPoint <= e.offsetWidth) {
-    //             setIsOverflowH(false);
-    //         }
-    //         if (!isOverflowH && wouldOverflowNow) {
-    //             // We have to react to overflow now but want to remember when we'll not overflow anymore
-    //             // on a resize
-    //             setOverflowBreakingPoint(e.offsetWidth);
-    //             setIsOverflowH(true);
-    //         }
-    //         // We never overflowed and also don't now
-    //         if (overflowBreakingPoint === null && !wouldOverflowNow) {
-    //             setIsOverflowH(false);
-    //         }
-    //     }
-    // }, [boxrowRef, isOverflowH, overflowBreakingPoint]);
-
-    // const debouncedCheckForOverflow = React.useMemo(() => {
-    //     return debounce(checkForOverflow, Constants.DEBOUNCETIMEOUT);
-    // }, [checkForOverflow]);
-
-    // React.useEffect(() => {
-    //     checkForOverflow();
-    // }, [checkForOverflow, clingraphGraphics]);
-
-    // useResizeObserver(
-    //     document.getElementById('content'),
-    //     debouncedCheckForOverflow
-    // );
-
     const branchSpaceRefs = React.useRef([]);
     React.useEffect(() => {
         branchSpaceRefs.current = clingraphGraphics.map(
@@ -71,7 +42,11 @@ export function Boxrow() {
 
     return (
         <div className="row_container boxrow_container" style={style}>
-            <div ref={boxrowRef} className="boxrow_row">
+            <div ref={boxrowRef} className="boxrow_row"
+                style={{
+                    width: `${clingraphGraphics.length === 1 ? 100 : transform.scale * 100}%`,
+                    transform: `translateX(${clingraphGraphics.length === 1 ? 0 : transform.translation.x}px)`,
+                }}>
                 {clingraphGraphics.map((child, index) => {
                     const space_multiplier = child.space_multiplier * 100;
 
@@ -95,4 +70,6 @@ export function Boxrow() {
     );
 }
 
-Boxrow.propTypes = {};
+Boxrow.propTypes = {
+    transform: MAPZOOMSTATE
+};
