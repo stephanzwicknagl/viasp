@@ -58,20 +58,16 @@ function GraphContainer(props) {
         setSortAndFetchGraph,
     } = useTransformations();
     const {highlightedSymbol} = useHighlightedSymbol();
-    const [, message_dispatch] = useMessages();
-    const {backendURL} = useSettings();
     const draggableListRef = React.useRef(null);
     const {setHighlightedSymbol} = useHighlightedSymbol();
     const clingraphUsed = clingraphGraphics.length > 0;
 
     function onMoveEnd(newList, movedItem, oldIndex, newIndex) {
-        dispatchTransformation(setTransformationDropIndices(null));
-
         if (transformationDropIndices.lower_bound <= newIndex && newIndex <= transformationDropIndices.upper_bound) {
             setHighlightedSymbol([]);
-            setSortAndFetchGraph(oldIndex,newIndex)
-            return;
+            setSortAndFetchGraph(oldIndex, newIndex)
         }
+        dispatchTransformation(setTransformationDropIndices(null));
     }
 
     const graphContainerRef = React.useRef(null);

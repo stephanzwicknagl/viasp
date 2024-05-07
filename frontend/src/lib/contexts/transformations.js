@@ -550,17 +550,17 @@ const transformationReducer = (state = initialState, action) => {
         };
     }
     if (action.type === CHECK_TRANSFORMATION_EXPANDABLE_COLLAPSIBLE) {
-        return {
+        return action.tid !== null ? {
             ...state,
             transformations: state.transformations.map((container) => {
                 if (container.transformation.id === action.tid) {
-                    container.isExpandableV = state.transformationNodesMap[action.tid].some((node) => node.isExpandableV);
-                    container.isCollapsibleV = state.transformationNodesMap[action.tid].some((node) => node.isCollapsibleV);
-                    container.allNodesShowMini = state.transformationNodesMap[action.tid].every((node) => node.showMini);
+                    container.isExpandableV = state.transformationNodesMap[action.tid]?.some((node) => node.isExpandableV);
+                    container.isCollapsibleV = state.transformationNodesMap[action.tid]?.some((node) => node.isCollapsibleV);
+                    container.allNodesShowMini = state.transformationNodesMap[action.tid]?.every((node) => node.showMini);
                 }
                 return container;
             }),
-        };
+        } : state;
     }
     if (action.type === SET_EDGES) {
         return {

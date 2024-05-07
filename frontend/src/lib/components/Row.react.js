@@ -81,6 +81,12 @@ export class RowTemplate extends React.Component {
         }
     }
 
+    componentWillUnmount() {
+        if (this.intervalId !== null) {
+            clearInterval(this.intervalId);
+        }
+    }
+
     render() {
         const {item, itemSelected, anySelected, dragHandleProps, commonProps} = this.props;
         const transformation = item.transformation;
