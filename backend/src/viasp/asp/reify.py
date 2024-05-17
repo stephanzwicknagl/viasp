@@ -18,10 +18,9 @@ from viasp.asp.ast_types import (
     SUPPORTED_TYPES,
     ARITH_TYPES,
     UNSUPPORTED_TYPES,
-    UNKNOWN_TYPES,
 )
 from ..shared.model import Transformation, TransformationError, FailedReason, RuleContainer
-from ..shared.simple_logging import warn, error
+from ..shared.simple_logging import error
 
 
 def is_fact(rule, dependencies):
@@ -62,11 +61,8 @@ class FilteredTransformer(Transformer):
             accepted = SUPPORTED_TYPES
         if forbidden is None:
             forbidden = UNSUPPORTED_TYPES
-        if warning is None:
-            warning = UNKNOWN_TYPES
         self._accepted: Collection[ASTType] = accepted
         self._forbidden: Collection[ASTType] = forbidden
-        self._warnings: Collection[ASTType] = warning
         self._filtered: List[TransformationError] = []
 
     def will_work(self):
@@ -87,12 +83,6 @@ class FilteredTransformer(Transformer):
             self._filtered.append(
                 TransformationError(ast, FailedReason.FAILURE))
             return
-        if ast.ast_type in self._warnings:
-            warn(
-                f"Found unsupported part of clingo language {ast} ({ast.ast_type})\nThis may lead to faulty visualizations!"
-            )
-            self._filtered.append(
-                TransformationError(ast, FailedReason.WARNING))
         attr = "visit_" + str(ast.ast_type).replace("ASTType.", "")
         if hasattr(self, attr):
             return getattr(self, attr)(ast, *args, **kwargs)

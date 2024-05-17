@@ -1,35 +1,16 @@
-import clingo
 from clingo.ast import ASTType
-from pkg_resources import parse_version
-
-SUPPORTED_TYPES = {
-    ASTType.Comparison, ASTType.Aggregate, ASTType.Rule, ASTType.Program,
-    ASTType.ShowSignature, ASTType.Definition, ASTType.Literal,
-    ASTType.HeadAggregate, ASTType.HeadAggregateElement, ASTType.BodyAggregate,
-    ASTType.Aggregate, ASTType.ConditionalLiteral, ASTType.Guard,
-    ASTType.Comparison, ASTType.SymbolicAtom, ASTType.Function,
-    ASTType.BodyAggregateElement, ASTType.BooleanConstant,
-    ASTType.SymbolicAtom, ASTType.Variable, ASTType.SymbolicTerm,
-    ASTType.Interval, ASTType.UnaryOperation, ASTType.BinaryOperation,
-    ASTType.Defined, ASTType.External, ASTType.ProjectAtom,
-    ASTType.ProjectSignature, ASTType.ShowTerm, ASTType.Minimize,
-    ASTType.Script
-}
-
-if parse_version(clingo.__version__) >= parse_version("5.7.0"):
-    SUPPORTED_TYPES.update({
-        ASTType.Comment
-    })
 
 UNSUPPORTED_TYPES = {
     ASTType.Disjunction,
 }
 
+def make_supported_AST_enum_types():
+    unsupported = UNSUPPORTED_TYPES
+    return set([e for e in ASTType if e not in unsupported])
 
-def make_unknown_AST_enum_types():
-    known = UNSUPPORTED_TYPES.union(SUPPORTED_TYPES)
-    return set([e for e in ASTType if e not in known])
 
+SUPPORTED_TYPES = make_supported_AST_enum_types()
 
-UNKNOWN_TYPES = make_unknown_AST_enum_types()
-ARITH_TYPES = [ASTType.Comparison, ASTType.Aggregate]
+ARITH_TYPES = {
+    ASTType.Comparison, ASTType.Aggregate
+}
