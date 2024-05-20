@@ -18,6 +18,7 @@ from viasp.server import startup
 from viasp.shared.defaults import DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT, DEFAULT_FRONTEND_PORT, DEFAULT_BACKEND_PROTOCOL
 from viasp.shared.io import clingo_model_to_stable_model
 
+
 try:
     VERSION = importlib.metadata.version("viasp")
 except importlib.metadata.PackageNotFoundError:
@@ -182,6 +183,11 @@ class SmartFormatter(argparse.RawDescriptionHelpFormatter):
         return argparse.RawDescriptionHelpFormatter._split_lines(
             self, text, width)
 
+class NegatedBooleanOptionalAction(argparse.BooleanOptionalAction):
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if option_string in self.option_strings:
+            setattr(namespace, self.dest, not option_string.startswith('--no-no'))
 
 #
 # class viaspArgumentParser
@@ -194,7 +200,7 @@ Clingo Options:
 
     """
 
-    usage = "viasp [number] [options] [files]"
+    usage = "viasp [options] [files]"
 
     epilog = """
 Default command-line:
@@ -209,15 +215,8 @@ Copyright (C) Stephan Zwicknagl, Luis Glaser
 License: The MIT License <https://opensource.org/licenses/MIT>"""
 
     def __init__(self):
-        self.underscores = 0
         self.__first_file: str = ""
         self.__file_warnings = []
-
-    def __update_underscores(self, new):
-        i = 0
-        while len(new) > i and new[i] == "_":
-            i += 1
-        if i > self.underscores: self.underscores = i
 
     def __add_file(self, files, file):
         abs_file = os.path.abspath(file) if file != "-" else "-"
@@ -233,7 +232,6 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
             constants = dict()
             for i in alist:
                 old, sep, new = i.partition("=")
-                self.__update_underscores(new)
                 if new == "":
                     raise Exception(
                         "no definition for constant {}".format(old))
@@ -287,6 +285,20 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
             dest='version',
             action='store_true',
             help=': Print version information and exit')
+        basic.add_argument('--host',
+            type=str,
+            help=': The host for the backend and frontend',
+            default=DEFAULT_BACKEND_HOST)
+        basic.add_argument('-p',
+            '--port',
+            type=int,
+            help=': The port for the backend',
+            default=DEFAULT_BACKEND_PORT)
+        basic.add_argument('-f',
+            '--frontend-port',
+            type=int,
+            help=': The port for the frontend',
+            default=DEFAULT_FRONTEND_PORT)
         #basic.add_argument('--minimize', dest='minimize',
         #                   help=argparse.SUPPRESS,
         #                   action='store_true')
@@ -299,15 +311,9 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
             action="append",
             help=argparse.SUPPRESS,
             default=[])
-        solving.add_argument('--const-nb',
-            dest='constants_nb',
-            action="append",
-            metavar="<id>=<t>",
-            help=HELP_CONST_NONBASE,
-            default=[])
         solving.add_argument('--opt-mode',
             type=self.__do_opt_mode,
-            help=HELP_OPT_MODE)
+            help=argparse.SUPPRESS)
         solving.add_argument('--models',
             '-n',
             help=": Compute at most <n> models (0 for all)",
@@ -315,26 +321,11 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
             dest='max_models',
             metavar='<n>',
             default=1)
-        solving.add_argument('--project',
-            dest='project',
-            help=HELP_PROJECT,
-            action='store_true')
+        # solving.add_argument('--project',
+        #     dest='project',
+        #     help=HELP_PROJECT,
+        #     action='store_true')
 
-        viasp_options = cmd_parser.add_argument_group('viasp Options')
-        viasp_options.add_argument('--host',
-            type=str,
-            help=': The host for the backend and frontend',
-            default=DEFAULT_BACKEND_HOST)
-        viasp_options.add_argument('-p',
-            '--port',
-            type=int,
-            help=': The port for the backend',
-            default=DEFAULT_BACKEND_PORT)
-        viasp_options.add_argument('-f',
-            '--frontend-port',
-            type=int,
-            help=': The port for the frontend',
-            default=DEFAULT_FRONTEND_PORT)
 
         clingraph_group = cmd_parser.add_argument_group(
             'Clingraph', 'If included, a clingraph visualization will be made.')
@@ -358,7 +349,7 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
         )
         relaxer_group.add_argument('-r',
             '--no-relaxer',
-            action=argparse.BooleanOptionalAction,
+            action=NegatedBooleanOptionalAction,
             help=': Do not use the relaxer')
         relaxer_group.add_argument('--head-name',
             type=str,
@@ -366,10 +357,9 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
             default="unsat")
         relaxer_group.add_argument(
             '--no-collect-variables',
-            action=argparse.BooleanOptionalAction,
+            action=NegatedBooleanOptionalAction,
             help=
             ': Do not collect variables from body as a tuple in the head literal.')
-
 
 
         options, unknown = cmd_parser.parse_known_args(args=args)
@@ -403,9 +393,6 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
 
         # handle constants
         options['constants'] = self.__do_constants(options['constants'])
-        options['constants_nb'] = self.__do_constants(options['constants_nb'])
-        # clingo_options['constants'] = options['constants']
-        # clingo_options['constants_nb'] = options['constants_nb']
 
         # handle clingraph
         options['clingraph_files'] = []
@@ -413,7 +400,7 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
             self.__add_file(options['clingraph_files'], options.pop('viz_encoding'))
 
         # return
-        return options, clingo_options, self.underscores, prologue, \
+        return options, clingo_options, prologue, \
                self.__file_warnings
 
 
@@ -421,23 +408,26 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
 class Viasp():
 
     def run(self, args):
+        try:
+            self.run_wild(args)
+        except Exception as e:
+            print(ERROR.format(e))
+            print(ERROR_INFO)
+            sys.exit(1)
+
+    def run_wild(self, args):
         vap = ViaspArgumentParser()
-        options, clingo_options, underscores, prologue, file_warnings = vap.run(args)
+        options, clingo_options, prologue, file_warnings = vap.run(args)
 
         if options['clingo_help'] > 0:
             subprocess.Popen(["clingo", "--help=" + str(options['clingo_help'])]).wait()
             sys.exit(0)
 
         print(prologue)
-
-        # print(F"options: {options}")
-        # print(F"clingo_options: {clingo_options}")
-        # print(F"underscores: {underscores}")
-        # print(F"prologue: {prologue}")
-        # print(F"file_warnings: {file_warnings}")
+        for i in file_warnings:
+            print(WARNING_INCLUDED_FILE.format(i))
 
         constants = options.get('constants', {})
-        constants_nb = options.get('constants_nb', {})
         opt_mode, bounds = options.get("opt_mode") or ('opt', [])
         opt_mode_str = f"--opt-mode={opt_mode}" + (f",{','.join(bounds)}"
             if len(bounds) > 0 else "")
@@ -446,20 +436,16 @@ class Viasp():
         port = options.get("port", DEFAULT_BACKEND_PORT)
         frontend_port = options.get("frontend_port", DEFAULT_FRONTEND_PORT)
 
-        viz_encoding = options.get("viz_encoding", None)
-        engine = options.get("engine", "dot")
-        graphviz_type = options.get("graphviz_type", "graph")
         head_name = options.get("head_name", "unsat")
         no_collect_variables = options.get("no_collect_variables", False)
         paths = options.get("files", [])
 
-        app = startup.run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT)
+        app = startup.run(host=host, port=port)
 
         ctl_options = ['--models', str(options['max_models']), opt_mode_str]
         for k,v in constants.items():
             ctl_options.extend(["--const", f"{k}={v}"])
-        for k,v in constants_nb.items():
-            ctl_options.extend(["--constants-nb", f"{k}={v}"])
+        ctl_options.extend(clingo_options)
         backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
         enable_python()
         ctl = viaspControl(ctl_options, viasp_backend_url=backend_url)
@@ -487,10 +473,11 @@ class Viasp():
                     head_name=head_name,
                     collect_variables=not no_collect_variables)
         ctl.viasp.show()
-        if viz_encoding:
-            ctl.viasp.clingraph(viz_encoding=viz_encoding,
-                                engine=engine,
-                                graphviz_type=graphviz_type)
+        if len(options['clingraph_files']) > 0:
+            for v in options['clingraph_files']:
+                ctl.viasp.clingraph(viz_encoding=v[-1],
+                                    engine=options['engine'],  
+                                    graphviz_type=options['graphviz_type'])
 
         if not _is_running_in_notebook():
             webbrowser.open(f"http://{host}:{frontend_port}")
@@ -521,11 +508,12 @@ def _is_running_in_notebook():
 
 #
 UNKNOWN = "UNKNOWN"
-ERROR = "*** ERROR: (asprin): {}"
-ERROR_INFO = "*** Info : (asprin): Try '--help' for usage information"
+ERROR = "*** ERROR: (viasp): {}"
+ERROR_INFO = "*** Info : (viasp): Try '--help' for usage information"
 ERROR_OPEN = "<cmd>: error: file could not be opened:\n  {}\n"
 ERROR_FATAL = "Fatal error, this should not happen.\n"
 ERROR_PARSING = "parsing failed"
+WARNING_INCLUDED_FILE = "<cmd>: warning: already included file:\n  {}\n"
 #ERROR_IMPROVE_1 = "options --stats and --improve-limit cannot be used together"
 ERROR_IMPROVE_2 = """incorrect value for option --improve-limit, \
 options reprint and nocheck cannot be used together"""
@@ -572,7 +560,7 @@ HELP_NO_META = """R|: Do not use meta-programming solving methods
 HELP_META = """R|: Apply or disable meta-programming solving methods, where <m> can be:
   * simple: translate to a disjunctive logic program
   * query: compute optimal models that contain atom 'query' using simple
-  * combine: combine normal iterative asprin mode (to improve a model)
+  * combine: combine normal iterative viasp mode (to improve a model)
              with simple (to check that a model is not worse than previous optimal models)
   * no: disable explicitly meta-programming solving methods
         this may be incorrect for computing many models using nonstratified preference programs

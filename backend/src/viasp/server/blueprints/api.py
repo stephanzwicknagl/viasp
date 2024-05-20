@@ -159,18 +159,20 @@ def save_analyzer_values(analyzer: ProgramAnalyzer):
 
 @bp.route("/control/show", methods=["POST"])
 def show_selected_models():
-    analyzer = ProgramAnalyzer()
-    analyzer.add_program(load_program(), load_transformer())
-    save_warnings(analyzer.get_filtered())
+    try:
+        analyzer = ProgramAnalyzer()
+        analyzer.add_program(load_program(), load_transformer())
+        save_warnings(analyzer.get_filtered())
 
-    marked_models = load_models()
-    marked_models = wrap_marked_models(marked_models,
-                                       analyzer.get_conflict_free_showTerm())
-    if analyzer.will_work():
-        save_recursive_transformations_hashes(analyzer.check_positive_recursion())
-        set_primary_sort(analyzer)
-        save_analyzer_values(analyzer)
-
+        marked_models = load_models()
+        marked_models = wrap_marked_models(marked_models,
+                                        analyzer.get_conflict_free_showTerm())
+        if analyzer.will_work():
+            save_recursive_transformations_hashes(analyzer.check_positive_recursion())
+            set_primary_sort(analyzer)
+            save_analyzer_values(analyzer)
+    except Exception as e:
+        return str(e), 500
     return "ok", 200
 
 
@@ -178,18 +180,45 @@ def show_selected_models():
 def transform_relax():
     if request.json is None:
         return "Invalid request", 400
-    args = request.json["args"] if "args" in request.json else []
-    kwargs = request.json["kwargs"] if "kwargs" in request.json else {}
-    relaxer = ProgramRelaxer(*args, **kwargs)
-    relaxed = relax_constraints(relaxer, load_program())
-    return jsonify(relaxed)
+    try:
+        args = request.json["args"] if "args" in request.json else []
+        kwargs = request.json["kwargs"] if "kwargs" in request.json else {}
+        relaxer = ProgramRelaxer(*args, **kwargs)
+        relaxed = relax_constraints(relaxer, load_program())
+        return jsonify(relaxed)
+    except Exception as e:
+        print(f"Error transforming constraints: {e}", flush=True)
+        return str(e), 500
+
+
+def generate_clingraph(viz_encoding: str, engine: str, graphviz_type: str):
+    marked_models = load_models()
+    marked_models = wrap_marked_models(marked_models, clingraph=True)
+    # for every model that was maked
+    for model in marked_models:
+        # use clingraph to generate a graph
+        control = Control()
+        control.add("base", [], ''.join(model))
+        control.add("base", [], viz_encoding)
+        control.ground([("base", [])])
+        with control.solve(yield_=True) as handle:  # type: ignore
+            for m in handle:
+                fb = Factbase.from_model(m, default_graph="base")
+                graphs = compute_graphs(fb, graphviz_type)
+
+                filename = uuid4().hex
+                if len(graphs) > 0:
+                    render(graphs,
+                           format="png",
+                           directory=CLINGRAPH_PATH,
+                           name_format=filename,
+                           engine=engine)
+                    save_clingraph(filename)
 
 
 @bp.route("/control/clingraph", methods=["POST", "GET", "DELETE"])
 def clingraph_generate():
     if request.method == "POST":
-        marked_models = load_models()
-        marked_models = wrap_marked_models(marked_models, clingraph=True)
         if request.json is None:
             return "Invalid request", 400
         viz_encoding = request.json[
@@ -197,27 +226,11 @@ def clingraph_generate():
         engine = request.json["engine"] if "engine" in request.json else "dot"
         graphviz_type = request.json[
             "graphviz-type"] if "graphviz-type" in request.json else "digraph"
-
-        # for every model that was maked
-        for model in marked_models:
-            # use clingraph to generate a graph
-            control = Control()
-            control.add("base", [], ''.join(model))
-            control.add("base", [], viz_encoding)
-            control.ground([("base", [])])
-            with control.solve(yield_=True) as handle:  # type: ignore
-                for m in handle:
-                    fb = Factbase.from_model(m, default_graph="base")
-                    graphs = compute_graphs(fb, graphviz_type)
-
-                    filename = uuid4().hex
-                    if len(graphs) > 0:
-                        render(graphs,
-                               format="png",
-                               directory=CLINGRAPH_PATH,
-                               name_format=filename,
-                               engine=engine)
-                        save_clingraph(filename)
+        try:
+            generate_clingraph(viz_encoding, engine, graphviz_type)
+        except Exception as e:
+            print(f"Error generating clingraph: {e}", flush=True)
+            return str(e), 500
     if request.method == "GET":
         if len(load_clingraph_names()) > 0:
             return jsonify({"using_clingraph": True}), 200
