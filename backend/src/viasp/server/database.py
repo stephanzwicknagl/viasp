@@ -370,7 +370,6 @@ class GraphAccessor:
             INSERT OR REPLACE INTO dependency_graph (data, encoding_id) VALUES (?, ?)
         """, (current_app.json.dumps(nx.node_link_data(data)), encoding_id))
         self.conn.commit()
-        print(f"Saved dependency graph {data}", flush=True)
 
     def load_dependency_graph(self, encoding_id: str) -> nx.DiGraph:
         self.cursor.execute(
@@ -635,7 +634,6 @@ def set_current_graph(hash: str) -> str:
 
 def save_recursive_transformations_hashes(transformation_hashes: Set[str]):
     encoding_id = get_or_create_encoding_id()
-    print(f"Saving recursive, {transformation_hashes}", flush=True)
     get_database().save_recursive_transformations_hashes(
         transformation_hashes, encoding_id)
 

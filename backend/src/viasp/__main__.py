@@ -1,6 +1,4 @@
 import argparse
-from asyncio import constants
-import cmd
 import textwrap
 import sys
 import re
@@ -9,122 +7,31 @@ import webbrowser
 import subprocess
 
 import importlib.metadata
-from typing import Union, Tuple
 from clingo.script import enable_python
 
-import clingraph
-from viasp import Control as viaspControl, viasp
+from viasp import Control as viaspControl
 from viasp.server import startup
 from viasp.shared.defaults import DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT, DEFAULT_FRONTEND_PORT, DEFAULT_BACKEND_PROTOCOL
 from viasp.shared.io import clingo_model_to_stable_model
+from viasp.shared.simple_logging import error, warn, plain
 
+#
+# DEFINES
+#
+
+#
+UNKNOWN = "UNKNOWN"
+ERROR = "(viasp) {}"
+ERROR_INFO = "(viasp) Try '--help' for usage information"
+ERROR_OPEN = "<cmd>: error: file could not be opened:\n  {}\n"
+ERROR_PARSING = "parsing failed"
+WARNING_INCLUDED_FILE = "<cmd>: already included file:\n  {}\n"
+HELP_CLINGO_HELP = ": Print {1=basic|2=more|3=full} clingo help and exit"
 
 try:
     VERSION = importlib.metadata.version("viasp")
 except importlib.metadata.PackageNotFoundError:
     VERSION = '0.0.0'
-
-
-def _parse_opt_mode(arg):
-    parts = arg.split(',')
-    mode = parts[0]
-    if mode not in ['opt', 'enum', 'optN', 'ignore']:
-        raise argparse.ArgumentTypeError(f"Invalid opt-mode: {mode}")
-    bounds = parts[1:]
-    return (mode, bounds)
-
-
-def _get_parser():
-    parser = argparse.ArgumentParser(
-        prog='viasp',
-        description=textwrap.dedent(r"""
-           _        _____ _____  
-          (_)  /\  / ____|  __ \ 
-    __   ___  /  \| (___ | |__) |
-    \ \ / / |/ /\ \\___ \|  ___/ 
-     \ V /| / ____ \___) | |     
-      \_/ |/_/    \_\___/|_|     
-                    
-    viASP is a package to generate interactive 
-    visualizations of ASP programs and 
-    their stable models. 
-    """),
-        formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument(
-        'paths',
-        nargs='+',
-        help='Runs viASP with the paths to programs to be loaded')
-    parser.add_argument('-n',
-                        '--models',
-                        type=int,
-                        help='Compute at most <n> models (0 for all)',
-                        default=0)
-    parser.add_argument('--host',
-                        type=str,
-                        help='The host for the backend and frontend',
-                        default=DEFAULT_BACKEND_HOST)
-    parser.add_argument('-p',
-                        '--port',
-                        type=int,
-                        help='The port for the backend',
-                        default=DEFAULT_BACKEND_PORT)
-    parser.add_argument('-f',
-                        '--frontend-port',
-                        type=int,
-                        help='The port for the frontend',
-                        default=DEFAULT_FRONTEND_PORT)
-    parser.add_argument('--version',
-                        '-v',
-                        action='version',
-                        version=f'%(prog)s {VERSION}')
-    parser.add_argument('--opt-mode',
-                        type=_parse_opt_mode,
-                        help=textwrap.dedent("""
-    Configure optimization algorithm
-    <mode {opt|enum|optN|ignore}>[,<bound>...]
-    opt   : Find optimal model
-    enum  : Enumerate models with costs less than or equal to some fixed bound
-    optN  : Find optimum, then enumerate optimal models
-    ignore: Ignore optimize statements
-    """))
-
-    clingraph_group = parser.add_argument_group(
-        'Clingraph', 'If included, a clingraph visualization will be made.')
-    clingraph_group.add_argument(
-        '--viz_encoding',
-        type=str,
-        help='The path to the visualization encoding.',
-        default=None)
-    clingraph_group.add_argument('--engine',
-        type=str,
-        help='The visualization engine.',
-        default="dot")
-    clingraph_group.add_argument('--graphviz_type',
-        type=str,
-        help='The graph type.',
-        default="graph")
-
-    relaxer_group = parser.add_argument_group(
-        'Relaxer',
-        'Options for the relaxation of integrity constraints in unsatisfiable programs.')
-    relaxer_group.add_argument('-r',
-                               '--no-relaxer',
-                               action=argparse.BooleanOptionalAction,
-                               help='Do not use the relaxer')
-    relaxer_group.add_argument('--head_name',
-                               type=str,
-                               help='The name of the head predicate.',
-                               default="unsat")
-    relaxer_group.add_argument(
-        '--no-collect-variables',
-        action=argparse.BooleanOptionalAction,
-        help=
-        'Do not collect variables from body as a tuple in the head literal.')
-
-    # TODO: transformer
-
-    return parser
-
 
 def backend():
     from viasp.server.factory import create_app
@@ -147,33 +54,53 @@ def backend():
     print(f"Starting viASP backend at {host}:{port}")
     app.run(host=host, port=port, use_reloader=use_reloader, debug=debug)
 
-
 def start():
-    # parser = _get_parser()
-    # args = parser.parse_args()
-    # viasp(**vars(args))
-    main()
+    ViaspRunner().run(sys.argv[1:])
 
-def main():
-    Viasp().run(sys.argv[1:])
-
+def _is_running_in_notebook():
+    try:
+        shell = get_ipython().__class__.__name__  # type: ignore
+        if shell == 'ZMQInteractiveShell':
+            return True  # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False  # Probably standard Python interpreter
 
 #
 # MyArgumentParser
 #
-
 
 class MyArgumentParser(argparse.ArgumentParser):
 
     def print_help(self, file=None):
         if file is None:
             file = sys.stdout
+        file.write(textwrap.dedent(r"""
+               _        _____ _____  
+              (_)  /\  / ____|  __ \ 
+        __   ___  /  \| (___ | |__) |
+        \ \ / / |/ /\ \\___ \|  ___/ 
+         \ V /| / ____ \___) | |     
+          \_/ |/_/    \_\___/|_|     
+                    
+        viASP is a package to generate interactive 
+        visualizations of ASP programs and 
+        their stable models.
+
+        """))
         file.write("viasp version {}\n".format(VERSION))
         argparse.ArgumentParser.print_help(self, file)
 
     def error(self, message):
         raise argparse.ArgumentError(None, "In context <viasp>: " + message)
 
+
+#
+# SmartFormatter
+#
 
 class SmartFormatter(argparse.RawDescriptionHelpFormatter):
 
@@ -186,12 +113,13 @@ class SmartFormatter(argparse.RawDescriptionHelpFormatter):
 class NegatedBooleanOptionalAction(argparse.BooleanOptionalAction):
 
     def __call__(self, parser, namespace, values, option_string=None):
-        if option_string in self.option_strings:
+        if option_string != None and option_string in self.option_strings:
             setattr(namespace, self.dest, not option_string.startswith('--no-no'))
 
 #
-# class viaspArgumentParser
+# class ViaspArgumentParser
 #
+
 class ViaspArgumentParser:
 
     clingo_help = """
@@ -248,11 +176,13 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
             parts = opt_mode.split(',')
             mode = parts[0]
             if mode not in ['opt', 'enum', 'optN', 'ignore']:
-                raise argparse.ArgumentTypeError(f"Invalid opt-mode: {mode}")
+                raise argparse.ArgumentTypeError(f"Invalid value for opt-mode: {mode}")
             bounds = parts[1:]
             return (mode, bounds)
         except Exception as e:
-            self.__cmd_parser.error(str(e))
+            error(ERROR.format(e))
+            error(ERROR_INFO)
+            sys.exit(1)
 
     def run(self, args):
 
@@ -367,7 +297,7 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
 
         # print version
         if options['version']:
-            print(self.version_string)
+            plain(self.version_string)
             sys.exit(0)
 
         # separate files, number of models and clingo options
@@ -399,20 +329,28 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
         if options['viz_encoding']:
             self.__add_file(options['clingraph_files'], options.pop('viz_encoding'))
 
+        # handle opt mode
+        opt_mode, bounds = options.get("opt_mode") or ('opt', [])
+        options['opt_mode_str'] = f"--opt-mode={opt_mode}" + (f",{','.join(bounds)}"
+                                                   if len(bounds) > 0 else "")
+
         # return
         return options, clingo_options, prologue, \
                self.__file_warnings
 
 
+#
+# class ViaspRunner
+#
 
-class Viasp():
+class ViaspRunner():
 
     def run(self, args):
         try:
             self.run_wild(args)
         except Exception as e:
-            print(ERROR.format(e))
-            print(ERROR_INFO)
+            error(ERROR.format(e))
+            error(ERROR_INFO)
             sys.exit(1)
 
     def run_wild(self, args):
@@ -423,14 +361,10 @@ class Viasp():
             subprocess.Popen(["clingo", "--help=" + str(options['clingo_help'])]).wait()
             sys.exit(0)
 
-        print(prologue)
+        plain(prologue)
         for i in file_warnings:
-            print(WARNING_INCLUDED_FILE.format(i))
+            warn(WARNING_INCLUDED_FILE.format(i))
 
-        constants = options.get('constants', {})
-        opt_mode, bounds = options.get("opt_mode") or ('opt', [])
-        opt_mode_str = f"--opt-mode={opt_mode}" + (f",{','.join(bounds)}"
-            if len(bounds) > 0 else "")
         no_relaxer = options.get("no_relaxer", False)
         host = options.get("host", DEFAULT_BACKEND_HOST)
         port = options.get("port", DEFAULT_BACKEND_PORT)
@@ -438,36 +372,35 @@ class Viasp():
 
         head_name = options.get("head_name", "unsat")
         no_collect_variables = options.get("no_collect_variables", False)
-        paths = options.get("files", [])
 
         app = startup.run(host=host, port=port)
 
-        ctl_options = ['--models', str(options['max_models']), opt_mode_str]
-        for k,v in constants.items():
+        ctl_options = ['--models', str(options['max_models']), options['opt_mode_str']]
+        for k,v in options['constants'].items():
             ctl_options.extend(["--const", f"{k}={v}"])
         ctl_options.extend(clingo_options)
         backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
         enable_python()
         ctl = viaspControl(ctl_options, viasp_backend_url=backend_url)
-        for path in paths:
+        for path in options['files']:
             ctl.load(path[-1])
-        if len(paths) == 0:
+        if len(options['files']) == 0:
             ctl.load("-")
         ctl.ground([("base", [])])
 
         with ctl.solve(yield_=True) as handle:
             models = {}
             for m in handle:
-                print(f"Answer: {m.number}\n{m}")
+                plain(f"Answer: {m.number}\n{m}")
                 if len(m.cost) > 0:
-                    print(f"Optimization: {m.cost}")
+                    plain(f"Optimization: {m.cost}")
                 c = m.cost[0] if len(m.cost) > 0 else 0
                 models[clingo_model_to_stable_model(m)] = c
             for m in list(
                     filter(lambda i: models.get(i) == min(models.values()),
                         models.keys())):
                 ctl.viasp.mark(m)
-            print(handle.get())
+            plain(handle.get())
             if handle.get().unsatisfiable and not no_relaxer:
                 ctl = ctl.viasp.relax_constraints(
                     head_name=head_name,
@@ -476,7 +409,7 @@ class Viasp():
         if len(options['clingraph_files']) > 0:
             for v in options['clingraph_files']:
                 ctl.viasp.clingraph(viz_encoding=v[-1],
-                                    engine=options['engine'],  
+                                    engine=options['engine'],
                                     graphviz_type=options['graphviz_type'])
 
         if not _is_running_in_notebook():
@@ -486,94 +419,3 @@ class Viasp():
                 use_reloader=False,
                 debug=False,
                 dev_tools_silence_routes_logging=True)
-
-
-
-
-def _is_running_in_notebook():
-    try:
-        shell = get_ipython().__class__.__name__  # type: ignore
-        if shell == 'ZMQInteractiveShell':
-            return True  # Jupyter notebook or qtconsole
-        elif shell == 'TerminalInteractiveShell':
-            return False  # Terminal running IPython
-        else:
-            return False  # Other type (?)
-    except NameError:
-        return False  # Probably standard Python interpreter
-
-#
-# DEFINES
-#
-
-#
-UNKNOWN = "UNKNOWN"
-ERROR = "*** ERROR: (viasp): {}"
-ERROR_INFO = "*** Info : (viasp): Try '--help' for usage information"
-ERROR_OPEN = "<cmd>: error: file could not be opened:\n  {}\n"
-ERROR_FATAL = "Fatal error, this should not happen.\n"
-ERROR_PARSING = "parsing failed"
-WARNING_INCLUDED_FILE = "<cmd>: warning: already included file:\n  {}\n"
-#ERROR_IMPROVE_1 = "options --stats and --improve-limit cannot be used together"
-ERROR_IMPROVE_2 = """incorrect value for option --improve-limit, \
-options reprint and nocheck cannot be used together"""
-DEBUG = "--debug"
-TEST = "--test"
-ALL_CONFIGS = ["tweety", "trendy", "frumpy", "crafty", "jumpy", "handy"]
-HELP_PROJECT = """R|: Enable projective solution enumeration,
-  projecting on the formulas of the specification"""
-HELP_HEURISTIC = """R|: Apply domain heuristics with value <v> and modifier <m>
-  on formulas of the preference specification"""
-HELP_ON_OPT_HEURISTIC = """R|: Apply domain heuristics depending on the last optimal model
-  <t> has the form [+|-],[s|p],<v>,<m> and applies value <v> and modifier <m>
-  to the atoms that are either true (+) or false (-) in the last optimal model 
-  and that either are shown (s) or appear in the preference specification (p)"""
-HELP_DELETE_BETTER = """R|: After computing an optimal model,
-  add a program to delete models better than that one"""
-HELP_TOTAL_ORDER = """R|: Do not add programs for optimal models after the \
-first one
-  Use only if the preference specification represents a total order"""
-HELP_GROUND_ONCE = """R|: Ground preference program only once \
-(for improving a model)"""
-HELP_CLINGO_HELP = ": Print {1=basic|2=more|3=full} clingo help and exit"
-HELP_RELEASE_LAST = """R|: Improving a model, release the preference program \
-for the last model
-  as soon as possible"""
-HELP_NO_OPT_IMPROVING = """R|: Improving a model, do not use optimal models"""
-HELP_VOLATILE_IMPROVING = """R|: Use volatile preference programs \
-for improving a model"""
-HELP_VOLATILE_OPTIMAL = """R|: Use volatile preference programs \
-for optimal models"""
-HELP_TRANS_EXT = """R|: Configure handling of extended rules \
-for non base programs
-  (<m> should be as in clingo --trans-ext option)"""
-HELP_CONST_NONBASE = """R|: Replace term occurrences of <id> in non-base
-  programs with <t>"""
-# quick projects and is complete, but does not reprint the unknown models
-# at the end, while nocheck projects and never checks if the unknown models are
-# optimal,  hence it is not complete
-HELP_CONFIGS = """R|: Run clingo configurations c1, ..., cn iteratively
-  (use 'all' for running all configurations)"""
-HELP_NO_META = """R|: Do not use meta-programming solving methods
-  Note: This may be incorrect for computing many models when the preference program
-        is not stratified"""
-HELP_META = """R|: Apply or disable meta-programming solving methods, where <m> can be:
-  * simple: translate to a disjunctive logic program
-  * query: compute optimal models that contain atom 'query' using simple
-  * combine: combine normal iterative viasp mode (to improve a model)
-             with simple (to check that a model is not worse than previous optimal models)
-  * no: disable explicitly meta-programming solving methods
-        this may be incorrect for computing many models using nonstratified preference programs
-  Add ',bin' to use a clingo binary for reification
-  Add ',sat' to use a clingo binary and systems lp2normal2 and lp2sat for reification"""
-
-HELP_OPT_MODE = """R|: Configure optimization algorithm
-  <mode {opt|enum|optN|ignore}>[,<bound>...]
-  opt   : Find optimal model
-  enum  : Enumerate models with costs less than or equal to some fixed bound
-  optN  : Find optimum, then enumerate optimal models
-  ignore: Ignore optimize statements"""
-
-#
-# VERSION
-#
