@@ -39,13 +39,15 @@ class ClingoClient(ViaspClient):
         self._register_function_call(serializable_call)
 
     def _register_function_call(self, call: ClingoMethodCall):
-        if backend_is_running():
+        if backend_is_running(self.backend_url):
             serialized = json.dumps(call, cls=DataclassJSONEncoder)
             r = requests.post(f"{self.backend_url}/control/add_call",
                               data=serialized,
                               headers={'Content-Type': 'application/json'})
             if not r.ok:
                 error(f"{r.status_code} {r.reason}")
+        else:
+            error(f"Backend is unavailable at ({self.backend_url})")
 
     def set_target_stable_model(self, stable_models: Collection[StableModel]):
         serialized = json.dumps(stable_models, cls=DataclassJSONEncoder)
@@ -63,14 +65,14 @@ class ClingoClient(ViaspClient):
         if r.ok:
             log(f"Drawing in progress.")
         else:
-            error(f"Drawing failed [{r.status_code}] ({r.reason})")
+            error(f"Drawing failed [{r.status_code}] ({r.text})")
 
     def _reconstruct(self):
         r = requests.get(f"{self.backend_url}/control/reconstruct")
         if r.ok:
             log(f"Reconstructing in progress.")
         else:
-            error(f"Reconstructing failed [{r.status_code}] ({r.reason})")
+            error(f"Reconstructing failed [{r.status_code}] ({r.text})")
 
     def relax_constraints(self, *args, **kwargs):
         serialized = json.dumps({
@@ -86,7 +88,7 @@ class ClingoClient(ViaspClient):
             return '\n'.join(r.json())
         else:
             error(
-                f"Transforming constraints failed [{r.status_code}] ({r.reason})"
+                f"Transforming constraints failed [{r.status_code}] ({r.text})"
             )
             return None
 
@@ -110,7 +112,7 @@ class ClingoClient(ViaspClient):
             log(f"Clingraph visualization in progress.")
         else:
             error(
-                f"Clingraph visualization failed [{r.status_code}] ({r.reason})"
+                f"Clingraph visualization failed [{r.status_code}] ({r.text})"
             )
 
     def _register_transformer(self, transformer, imports, path):
@@ -125,5 +127,5 @@ class ClingoClient(ViaspClient):
             log(f"Transformer registered.")
         else:
             error(
-                f"Registering transformer failed [{r.status_code}] ({r.reason})"
+                f"Registering transformer failed [{r.status_code}] ({r.text})"
             )

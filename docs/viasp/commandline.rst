@@ -112,13 +112,13 @@ viASP can include clingraph visualizations in the frontend. To do so, pass the p
 
 .. code-block:: bash
 
-    $ viasp encoding.lp --viz_encoding viz_encoding.lp
+    $ viasp encoding.lp --viz-encoding viz_encoding.lp
 
-To pass additional arguments to clingraph, use the ``--engine`` and ``--graphviz_type`` options.
+To pass additional arguments to clingraph, use the ``--engine`` and ``--graphviz-type`` options.
 
 .. code-block:: bash
 
-    $ viasp encoding.lp --viz_encoding viz_encoding.lp --engine clingraph --graphviz_type dot
+    $ viasp encoding.lp --viz-encoding viz_encoding.lp --engine clingraph --graphviz-type dot
 
 
 *******
@@ -129,11 +129,11 @@ By default, viASP supports the visualization of unsatisfiable programs using the
 
 By default, variables in the body of integrity constraints are collected in the heads of constraints. To turn off this behavior, use the ``--no-collect-variables`` option.
 
-To specify the head name of the weak constraint, use the ``--head_name`` option. By default, the head name is ``unsat``, but a different name should be specified, if the program already contains the predicate.
+To specify the head name of the weak constraint, use the ``--head-name`` option. By default, the head name is ``unsat``, but a different name should be specified, if the program already contains the predicate.
 
 .. code-block:: bash
 
-    $ viasp encoding.lp --head_name _unsat
+    $ viasp encoding.lp --head-name _unsat
 
 
 To turn off the relaxer, use the ``--no-relaxer`` or ``-r`` option.
