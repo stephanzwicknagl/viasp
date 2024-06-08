@@ -768,6 +768,8 @@ class LiteralWrapper(Transformer):
 
     def visit_Literal(self,
                       literal: ast.Literal) -> ast.Literal:  # type: ignore
+        if literal.sign != ast.Sign.NoSign:
+            return None
         if literal.atom.ast_type in self.no_wrap_types:
             return literal.update(**self.visit_children(literal))
         wrap_fun = ast.Function(literal.location, self.wrap_str, [literal], 0)
@@ -814,6 +816,7 @@ class ProgramReifierForRecursions(ProgramReifier):
             # Wrap in model function
             wrapper = LiteralWrapper(wrap_str=self.model_str)
             conditions = [wrapper.visit(c) for c in conditions]
+            conditions = [c for c in conditions if c is not None]
 
             # Append dependant (wrapped, negated)
             dep_fun = ast.Function(loc, self.model_str, [dependant], 0)
