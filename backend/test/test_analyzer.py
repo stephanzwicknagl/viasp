@@ -155,7 +155,7 @@ def test_edge_statement_analyzed_correctly(app_context):
     program = transformer.sort_program(program)
     filtered = transformer.get_filtered()
     will_work = transformer.will_work()
-    assert len(filtered) == 1, "Edge Statement should be filtered out."
+    assert len(filtered) == 0, "Edge Statement should not be filtered out."
     assert will_work == True, "Program with EdgeTerm should work."
 
 
@@ -166,7 +166,7 @@ def test_heuristic_statement_analyzed_correctly(app_context):
     filtered = transformer.get_filtered()
     will_work = transformer.will_work()
     assert len(
-        filtered) == 1, "Heuristic Statement should not be filtered out."
+        filtered) == 0, "Heuristic Statement should not be filtered out."
     assert will_work == True, "Program with HeuristicTerm should work."
 
 
@@ -211,7 +211,7 @@ def test_theory_definition_statement_analyzed_correctly(app_context):
     will_work = transformer.will_work()
     assert len(
         filtered
-    ) == 16, "Theory Definition Statement should not be filtered out."
+    ) == 0, "Theory Definition Statement should not be filtered out."
     assert will_work == True, "Program with TheoryDefinitionTerm should work."
 
 
