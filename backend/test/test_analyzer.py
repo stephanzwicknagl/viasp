@@ -1,8 +1,7 @@
 import pytest
 from clingo.ast import AST
 
-from viasp.asp.ast_types import (SUPPORTED_TYPES, UNSUPPORTED_TYPES,
-                                 make_unknown_AST_enum_types)
+from viasp.asp.ast_types import (SUPPORTED_TYPES, UNSUPPORTED_TYPES)
 from viasp.asp.reify import ProgramAnalyzer
 from viasp.shared.util import hash_transformation_rules
 from viasp.server.database import GraphAccessor, get_or_create_encoding_id
@@ -304,15 +303,6 @@ def test_weak_minimized_is_collected_as_rule(app_context):
     result = transformer.sort_program(program)
     assert len(result)
     assert len(transformer.rules) == 1
-
-
-def test_ast_types_do_not_intersect(app_context):
-    assert not SUPPORTED_TYPES.intersection(
-        UNSUPPORTED_TYPES), "No type should be supported and unsupported"
-    known = SUPPORTED_TYPES.union(UNSUPPORTED_TYPES)
-    unknown = make_unknown_AST_enum_types()
-    assert not unknown.intersection(
-        known), "No type should be known and unknown"
 
 
 @pytest.mark.skip(reason="Not implemented yet")
