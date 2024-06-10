@@ -4,10 +4,10 @@
     "dark": "#444444",
     "warn": "#FFC107",
     "error": "#F44336",
-    "infoBackground": "#B3BAC5",
+    "infoBackground": "#d6a985",
     "rowShading": [
-        "#c9c9c99f",
-        "#ffffff9f"
+        "#dde851bf",
+        "#c9c9c9bf"
     ],
     "explanationSuccess": "#e2b38a", 
     "explanationHighlights": [

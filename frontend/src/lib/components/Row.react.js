@@ -126,7 +126,7 @@ export class RowTemplate extends React.Component {
                                                 }px 0px`,
                                                 background:
                                                     background[
-                                                        transformation.id %
+                                                        (transformation.id + 1) %
                                                             background.length
                                                     ],
                                                 opacity:

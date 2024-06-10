@@ -3,17 +3,23 @@ import React from 'react';
 import * as Constants from '../constants';
 import {MAPZOOMSTATE} from '../types/propTypes';
 import {Node} from './Node.react';
+import { useColorPalette} from '../contexts/ColorPalette';
 import {OverflowButton} from './OverflowButton.react';
 import {useTransformations} from '../contexts/transformations';
 import {make_default_nodes} from '../utils';
 import {useDebouncedAnimateResize} from '../hooks/useDebouncedAnimateResize';
+
 export function Facts(props) {
     const {transform} = props;
     const {
         state: {transformationDropIndices, transformationNodesMap},
     } = useTransformations();
+    const colorPalette = useColorPalette();
     const [fact, setFact] = React.useState(make_default_nodes()[0]);
-    const [style, setStyle] = React.useState({opacity: 1.0});
+    const [style, setStyle] = React.useState({
+        background: colorPalette.rowShading[0],
+        opacity: 1.0,
+    });
     const branchSpaceRef = React.useRef(null);
     const rowbodyRef = React.useRef(null);
     const transformationIdRef = React.useRef('-1');
@@ -55,7 +61,7 @@ export function Facts(props) {
         return <div className="row_container"></div>;
     }
     return (
-        <div className="row_container">
+        <div className="row_container facts_banner" >
             <div className="row_row" style={style} ref={rowbodyRef}>
                 <div
                     className="branch_space"

@@ -19,7 +19,7 @@ function ClearMarked() {
 
     const hoverFactor = 0.08;
     const style = {
-        background: colorPalette.explanationSuccess,
+        background: colorPalette.infoBackground,
         color: colorPalette.dark,
         border: `1px solid ${colorPalette.dark}`,
     };
