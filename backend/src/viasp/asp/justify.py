@@ -257,6 +257,8 @@ def get_recursion_subgraph(
         relevant_indices=[],
         pad=False,
         supernode_symbols=supernode_symbols)
+    if len(h_syms) == 1:
+        return []
     h_syms.sort(key=lambda node: node.rule_nr)
     insert_atoms_into_nodes(h_syms)
 

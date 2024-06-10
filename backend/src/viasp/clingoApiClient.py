@@ -75,6 +75,7 @@ class ClingoClient(ViaspClient):
             error(f"Reconstructing failed [{r.status_code}] ({r.text})")
 
     def relax_constraints(self, *args, **kwargs):
+        log("No answer sets found. Switching to transformed visualization.")
         serialized = json.dumps({
             "args": args,
             "kwargs": kwargs
@@ -84,7 +85,7 @@ class ClingoClient(ViaspClient):
                           data=serialized,
                           headers={'Content-Type': 'application/json'})
         if r.ok:
-            log(f"Program constraints transformed.")
+            log(f"Successfully transformed program constraints.")
             return '\n'.join(r.json())
         else:
             error(

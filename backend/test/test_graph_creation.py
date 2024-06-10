@@ -143,6 +143,22 @@ def test_negative_recursion_gets_treated_correctly(get_sort_program_and_get_grap
     assert len(g.nodes) == 3
     assert len(g.edges) == 2
 
+def test_recursion_subgraph_suppressed_when_only_one_subnode(get_sort_program_and_get_graph):
+    program = "j(X, X+1) :- X = 1..2. j(X, Y) :- j(X, Z), j(Z, Y)."
+    graph_info, _ = get_sort_program_and_get_graph(program)
+    g = graph_info[0]
+    assert len(g.nodes) == 3
+    last_node = get_end_node_from_path(g)
+    assert len(get_end_node_from_path(g).recursive) == 0
+
+
+def test_recursion_subgraph_shown(get_sort_program_and_get_graph):
+    program = "j(X, X+1) :- X = 1..3. j(X, Y) :- j(X, Z), j(Z, Y)."
+    graph_info, _ = get_sort_program_and_get_graph(program)
+    g = graph_info[0]
+    assert len(g.nodes) == 3
+    assert len(get_end_node_from_path(g).recursive) == 2
+
 
 def test_path_creation(app_context):
     program = "fact(1). result(X) :- fact(X). next(X) :- fact(X)."
@@ -192,4 +208,3 @@ def test_multiple_sortings_yield_primary_sort(load_analyzer):
     # assert first sorting is closest to the original program
     assert sorted_program[1] == Transformation(1, RuleContainer(str_=("c :- b.",)))
     assert sorted_program[2] == Transformation(2, RuleContainer(str_=("c :- a.",)))
-
