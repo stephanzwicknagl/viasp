@@ -88,7 +88,16 @@ class ShowConnector:
         ctl.add("base", [], relaxed_prg)
         ctl.ground([("base", [])])
         with ctl.solve(yield_=True) as handle:
+            models = {}
             for m in handle:
+                print(f"Answer: {m.number}\n{m}")
+                if len(m.cost) > 0:
+                    print(f"Optimization: {m.cost}")
+                c = m.cost[0] if len(m.cost) > 0 else 0
+                models[clingo_model_to_stable_model(m)] = c
+            for m in list(
+                    filter(lambda i: models.get(i) == min(models.values()),
+                            models.keys())):
                 ctl.viasp.mark(m)
         return ctl
 
@@ -101,7 +110,7 @@ class ShowConnector:
 
 
 class Control:
-    
+
     def __init__(self, *args, **kwargs):
         if 'files' in kwargs:
             # files is only passed to call InnerControl with only the options
