@@ -10,9 +10,11 @@ import importlib.metadata
 from clingo.script import enable_python
 
 from viasp import Control as viaspControl
+from viasp.api import parse_fact_string
 from viasp.server import startup
 from viasp.shared.defaults import DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT, DEFAULT_FRONTEND_PORT, DEFAULT_BACKEND_PROTOCOL
-from viasp.shared.io import clingo_model_to_stable_model
+from viasp.shared.io import clingo_model_to_stable_model, clingo_symbols_to_stable_model
+from viasp.shared.util import get_json, get_lp_files, SolveHandle
 from viasp.shared.simple_logging import error, warn, plain
 
 #
@@ -98,18 +100,6 @@ class MyArgumentParser(argparse.ArgumentParser):
         raise argparse.ArgumentError(None, "In context <viasp>: " + message)
 
 
-#
-# SmartFormatter
-#
-
-class SmartFormatter(argparse.RawDescriptionHelpFormatter):
-
-    def _split_lines(self, text, width):
-        if text.startswith('R|'):
-            return text[2:].splitlines()
-        return argparse.RawDescriptionHelpFormatter._split_lines(
-            self, text, width)
-
 class NegatedBooleanOptionalAction(argparse.BooleanOptionalAction):
 
     def __call__(self, parser, namespace, values, option_string=None):
@@ -122,25 +112,25 @@ class NegatedBooleanOptionalAction(argparse.BooleanOptionalAction):
 
 class ViaspArgumentParser:
 
-    clingo_help = """
-Clingo Options:
-  --<option>[=<value>]\t: Set clingo <option> [to <value>]
+    clingo_help = textwrap.dedent("""
+    Clingo Options:
+      --<option>[=<value>]\t: Set clingo <option> [to <value>]
 
-    """
+    """)
 
     usage = "viasp [options] [files]"
 
-    epilog = """
-Default command-line:
-viasp --models 0 [files]
+    epilog = textwrap.dedent("""
+    Default command-line:
+    viasp --models 0 [files]
 
-viasp is part of Potassco: https://potassco.org/
-Get help/report bugs via : https://potassco.org/support
-    """
+    viasp is part of Potassco: https://potassco.org/
+    Get help/report bugs via : https://potassco.org/support
+    """)
 
-    version_string = "viasp " + VERSION + """
-Copyright (C) Stephan Zwicknagl, Luis Glaser
-License: The MIT License <https://opensource.org/licenses/MIT>"""
+    version_string = "viasp " + VERSION + textwrap.dedent("""
+    Copyright (C) Stephan Zwicknagl, Luis Glaser
+    License: The MIT License <https://opensource.org/licenses/MIT>""")
 
     def __init__(self):
         self.__first_file: str = ""
@@ -148,10 +138,11 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
 
     def __add_file(self, files, file):
         abs_file = os.path.abspath(file) if file != "-" else "-"
+        contents = open(abs_file, "r")
         if abs_file in [i[1] for i in files]:
             self.__file_warnings.append(file)
         else:
-            files.append((file, abs_file))
+            files.append((file, abs_file, contents))
         if not self.__first_file:
             self.__first_file = file
 
@@ -192,11 +183,26 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
             usage=self.usage,
             epilog=_epilog,
             formatter_class=
-            SmartFormatter,  #argparse.RawDescriptionHelpFormatter,
+            argparse.RawTextHelpFormatter,
             add_help=False,
             prog="viasp")
         self.__cmd_parser = cmd_parser
 
+        # Positional arguments
+        self.__cmd_parser.add_argument('files',
+                help=textwrap.dedent("""\
+            : - Files containing ASP encodings. The answer set(s) will be visualized.
+
+              - A single JSON file using clingo's output option `--outf=2`.
+                In this case, the facts defining answer set will be loaded from each stable model."""),
+                            nargs='*')
+        self.__cmd_parser.add_argument('stdin',
+                help=textwrap.dedent("""\
+            : Standard input in one of the following formats:
+                - ASP encoding
+                - A json from clingo's output option `--outf=2`"""),
+            nargs='?',
+            default=sys.stdin)
         # Basic Options
         basic = cmd_parser.add_argument_group('Basic Options')
         basic.add_argument('--help',
@@ -301,8 +307,9 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
             sys.exit(0)
 
         # separate files, number of models and clingo options
+        fb = options['files']
         options['files'], clingo_options = [], []
-        for i in unknown:
+        for i in unknown + fb:
             if i == "-":
                 self.__add_file(options['files'], i)
             elif (re.match(r'^([0-9]|[1-9][0-9]+)$', i)):
@@ -346,25 +353,41 @@ License: The MIT License <https://opensource.org/licenses/MIT>"""
 class ViaspRunner():
 
     def run(self, args):
-        try:
-            self.run_wild(args)
-        except Exception as e:
-            error(ERROR.format(e))
-            error(ERROR_INFO)
-            sys.exit(1)
+        # try:
+        self.run_wild(args)
+    # except Exception as e:
+    #     error(ERROR.format(e))
+    #     error(ERROR_INFO)
+    #     sys.exit(1)
 
     def run_wild(self, args):
         vap = ViaspArgumentParser()
         options, clingo_options, prologue, file_warnings = vap.run(args)
 
+        # print clingo help
         if options['clingo_help'] > 0:
             subprocess.Popen(["clingo", "--help=" + str(options['clingo_help'])]).wait()
             sys.exit(0)
 
+        # prologue
         plain(prologue)
         for i in file_warnings:
             warn(WARNING_INCLUDED_FILE.format(i))
 
+        # read stdin
+        if not sys.stdin.isatty():
+            options['stdin'] = sys.stdin.read()
+        else:
+            options['stdin'] = ""
+
+        # read json
+        model_from_json, stdin_is_json = get_json(options['files'], options['stdin'])
+
+        # get ASP files
+        encoding_files = get_lp_files(options['files'], options['stdin'],
+                                      stdin_is_json)
+
+        # start the backend
         no_relaxer = options.get("no_relaxer", False)
         host = options.get("host", DEFAULT_BACKEND_HOST)
         port = options.get("port", DEFAULT_BACKEND_PORT)
@@ -382,30 +405,52 @@ class ViaspRunner():
         backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
         enable_python()
         ctl = viaspControl(ctl_options, viasp_backend_url=backend_url)
-        for path in options['files']:
-            ctl.load(path[-1])
-        if len(options['files']) == 0:
-            ctl.load("-")
-        ctl.ground([("base", [])])
-
-        with ctl.solve(yield_=True) as handle:
+        for path in encoding_files:
+            if path[1] == "-":
+                ctl.add("base", [], options['stdin'])
+            else:
+                ctl.load(path[1])
+        if model_from_json:
             models = {}
-            for m in handle:
-                plain(f"Answer: {m.number}\n{m}")
-                if len(m.cost) > 0:
-                    plain(f"Optimization: {m.cost}")
-                c = m.cost[0] if len(m.cost) > 0 else 0
-                models[clingo_model_to_stable_model(m)] = c
-            for m in list(
+            with SolveHandle(model_from_json) as handle:
+                for model in handle:
+                    plain(f"Answer: {model['number']}\n{model['representation']}")
+                    if len(model['cost']) > 0:
+                        plain(f"Optimization: {model['cost']}")
+                    c = model['cost'][0] if len(model['cost']) > 0 else 0
+                    symbols = parse_fact_string(model['facts'], raise_nonfact=True)
+                    stable_model = clingo_symbols_to_stable_model(symbols)
+                    models[stable_model] = c
+                for m in list(
                     filter(lambda i: models.get(i) == min(models.values()),
                         models.keys())):
-                ctl.viasp.mark(m)
-            plain(handle.get())
-            if handle.get().unsatisfiable and not no_relaxer:
-                ctl = ctl.viasp.relax_constraints(
-                    head_name=head_name,
-                    collect_variables=not no_collect_variables)
-        ctl.viasp.show()
+                    ctl.viasp.mark(m)
+                plain(handle.get())  # type: ignore
+                if handle.get().unsatisfiable and not no_relaxer:
+                    ctl = ctl.viasp.relax_constraints(
+                        head_name=head_name,
+                        collect_variables=not no_collect_variables)
+            ctl.viasp.show()
+        else:
+            ctl.ground([("base", [])])
+            with ctl.solve(yield_=True) as handle:
+                models = {}
+                for m in handle:
+                    plain(f"Answer: {m.number}\n{m}")
+                    if len(m.cost) > 0:
+                        plain(f"Optimization: {m.cost}")
+                    c = m.cost[0] if len(m.cost) > 0 else 0
+                    models[clingo_model_to_stable_model(m)] = c
+                for m in list(
+                        filter(lambda i: models.get(i) == min(models.values()),
+                            models.keys())):
+                    ctl.viasp.mark(m)
+                plain(handle.get())
+                if handle.get().unsatisfiable and not no_relaxer:
+                    ctl = ctl.viasp.relax_constraints(
+                        head_name=head_name,
+                        collect_variables=not no_collect_variables)
+            ctl.viasp.show()
         if len(options['clingraph_files']) > 0:
             for v in options['clingraph_files']:
                 ctl.viasp.clingraph(viz_encoding=v[-1],

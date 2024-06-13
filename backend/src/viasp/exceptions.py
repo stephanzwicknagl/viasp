@@ -8,3 +8,11 @@ class InvalidSyntax(Exception):
     """
     def __init__(self, *args):
         super().__init__("\n".join(str(arg) for arg in args))
+
+class InvalidSyntaxJSON(InvalidSyntax):
+    """
+    Exception returned when the input syntax is not expected
+    """
+
+    def __init__(self, *args):
+        super().__init__("\n".join(args))

@@ -5,9 +5,15 @@ from types import MappingProxyType
 from hashlib import sha1
 from flask import current_app, session
 from uuid import uuid4
+import json
+import jsonschema
+from jsonschema import validate
 
 from clingo.ast import ASTType, AST, parse_string
+import jsonschema.exceptions
 import networkx as nx
+from ..exceptions import InvalidSyntax, InvalidSyntaxJSON
+from .simple_logging import warn
 
 
 def get_start_node_from_graph(graph: nx.DiGraph) -> Any:
@@ -84,7 +90,7 @@ def hash_transformation_rules(rules: Tuple[Any, ...]) -> str:
 
 def get_rules_from_input_program(rules: Tuple) -> Sequence[str]:
     from ..server.database import get_database, get_or_create_encoding_id
-    
+
     rules_from_input_program: Sequence[str] = []
     encoding_id = get_or_create_encoding_id()
     db = get_database()
@@ -133,3 +139,142 @@ def get_ast_from_input_string(rules_str: Tuple[str, ...]) -> Tuple[AST, ...]:
             rule, lambda rule: rules_ast.append(rule)
             if rule.ast_type != ASTType.Program else None)
     return tuple(rules_ast)
+
+
+clingo_json_schema = {
+    "type": "object",
+    "required": ["Call", "Result"],
+    "properties": {
+        "Call": {
+            "type": "array",
+        },
+        "Result": {
+            "type": "string",
+        }
+    }
+}
+
+def parse_clingo_json(json_str):
+    """
+    Parses a json string from the output of clingo obtained using the option ``--outf=2``.
+    Expects a SATISFIABLE answer.
+
+    Args:
+        json_str (str): A string with the json
+
+    Returns:
+        (`list[str]`) A list with the programs as strings
+
+    Raises:
+        :py:class:`InvalidSyntax`: if the json format is invalid or is not a SAT result.
+    """
+    try:
+        j = json.loads(json_str.encode())
+        validate(instance=j, schema=clingo_json_schema)
+        if j['Result'] == 'UNSATISFIABLE':
+            warn(
+                "Passing an unsatisfiable instance in the JSON. This wont produce any results"
+            )
+
+        if not "Witnesses" in j["Call"][0]:
+            warn(
+                "No Witnesses (stable models) in the JSON output, no output will be produced by viasp"
+            )
+            witnesses = []
+        else:
+            witnesses = j["Call"][0]["Witnesses"]
+
+        models_prgs = []
+        for i, w in enumerate(witnesses):
+            facts_str = "\n".join([f"{v}." for v in w["Value"]])
+            output_str = " ".join([f"{v}" for v in w["Value"]])
+            costs = w.get("Costs", [])
+            models_prgs.append({"facts": facts_str, "representation": output_str, "number": i, "cost": costs})
+
+        return {"models": models_prgs, "unsatisfiable": j['Result'] == 'UNSATISFIABLE'}
+
+    except json.JSONDecodeError as e:
+        raise InvalidSyntax('The json can not be read.', str(e)) from None
+    except jsonschema.exceptions.ValidationError as e:
+        raise InvalidSyntaxJSON(
+            'The json does not have the expected structure. Make sure you used the -outf=2 option in clingo.',
+            str(e)) from None
+
+
+def get_json(files, stdin):
+    """
+    Gets the json from the arguments, in case one is provided
+    Also returns boolean indicating if the json was provided as stdin
+    """
+    json_str = None
+
+    for f in files:
+        if ".json" not in f[1]:
+            continue
+        if json_str is not None:
+            raise ValueError("Only one json file can be provided")
+        json_str = f[2].read()
+    try:
+        prg_list = parse_clingo_json(stdin)
+        if json_str is not None:
+            raise ValueError("Only one json can be provided as input.")
+        return prg_list, True
+    except InvalidSyntaxJSON as e:
+        raise e from None
+    except InvalidSyntax:
+        if json_str is None:
+            return None, False
+        try:
+            prg_list = parse_clingo_json(json_str)
+            return prg_list, False
+        except InvalidSyntaxJSON as e:
+            raise e from None
+        except InvalidSyntax as e:
+            return None, False
+
+
+def get_lp_files(files, stdin, stdin_is_json=False):
+    """
+    Gets the lp program paths from the arguments, raises error if non is provided and no stdin is provided
+    """
+    lp_files = []
+
+    for f in files:
+        if ".lp" not in f[1]:
+            continue
+        lp_files.append(f)
+    if lp_files == []:
+        if stdin == "" or stdin_is_json:
+            raise ValueError(
+                "No ASP encoding provided, no output will be produced by viasp"
+            )
+        lp_files.append("stdin")
+    return lp_files
+
+class SolveHandle:
+    class Unsat:
+        def __init__(self, unsat):
+            self.unsatisfiable = unsat
+
+        def __str__(self):
+            if self.unsatisfiable:
+                return "UNSAT"
+            else:
+                return "SAT"
+
+    def __init__(self, data):
+        self.data = data
+
+    def __iter__(self):
+        return iter(self.data['models'])
+
+    def __enter__(self):
+        # Set up resources here
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # Tear down resources here
+        pass
+
+    def get(self):
+        return self.Unsat(self.data['unsatisfiable'])
