@@ -171,15 +171,7 @@ def parse_clingo_json(json_str):
     try:
         j = json.loads(json_str.encode())
         validate(instance=j, schema=clingo_json_schema)
-        if j['Result'] == 'UNSATISFIABLE':
-            warn(
-                "Passing an unsatisfiable instance in the JSON. This wont produce any results"
-            )
-
         if not "Witnesses" in j["Call"][0]:
-            warn(
-                "No Witnesses (stable models) in the JSON output, no output will be produced by viasp"
-            )
             witnesses = []
         else:
             witnesses = j["Call"][0]["Witnesses"]

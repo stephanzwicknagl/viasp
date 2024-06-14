@@ -268,15 +268,17 @@ class ViaspArgumentParser:
         clingraph_group.add_argument(
             '--viz-encoding',
             type=str,
-            help=': The path to the visualization encoding.',
+            help=': Path to the visualization encoding.',
             default=None)
         clingraph_group.add_argument('--engine',
             type=str,
             help=': The visualization engine.',
             default="dot")
-        clingraph_group.add_argument('--graphviz-type',
+        clingraph_group.add_argument(
+            '--graphviz-type',
             type=str,
-            help=': The graph type.',
+            help=
+            ': The graph type, see clingraph documentation https://clingraph.readthedocs.io/en/latest/',
             default="graph")
 
         relaxer_group = cmd_parser.add_argument_group(
@@ -353,12 +355,55 @@ class ViaspArgumentParser:
 class ViaspRunner():
 
     def run(self, args):
-        # try:
-        self.run_wild(args)
-    # except Exception as e:
-    #     error(ERROR.format(e))
-    #     error(ERROR_INFO)
-    #     sys.exit(1)
+        try:
+            self.run_wild(args)
+        except Exception as e:
+            error(ERROR.format(e))
+            error(ERROR_INFO)
+            sys.exit(1)
+
+    def run_with_json(self, ctl, model_from_json, no_relaxer, head_name, no_collect_variables):
+        models = {}
+        with SolveHandle(model_from_json) as handle:
+            for model in handle:
+                plain(f"Answer: {model['number']}\n{model['representation']}")
+                if len(model['cost']) > 0:
+                    plain(f"Optimization: {model['cost']}")
+                c = model['cost'][0] if len(model['cost']) > 0 else 0
+                symbols = parse_fact_string(model['facts'], raise_nonfact=True)
+                stable_model = clingo_symbols_to_stable_model(symbols)
+                models[stable_model] = c
+            for m in list(
+                filter(lambda i: models.get(i) == min(models.values()),
+                    models.keys())):
+                ctl.viasp.mark(m)
+            plain(handle.get())  # type: ignore
+            if handle.get().unsatisfiable and not no_relaxer:
+                ctl = ctl.viasp.relax_constraints(
+                    head_name=head_name,
+                    collect_variables=not no_collect_variables)
+        return ctl
+
+    def run_with_clingo(self, ctl, no_relaxer, head_name, no_collect_variables):
+        ctl.ground([("base", [])])
+        with ctl.solve(yield_=True) as handle:
+            models = {}
+            for m in handle:
+                plain(f"Answer: {m.number}\n{m}")
+                if len(m.cost) > 0:
+                    plain(f"Optimization: {m.cost}")
+                c = m.cost[0] if len(m.cost) > 0 else 0
+                models[clingo_model_to_stable_model(m)] = c
+            for m in list(
+                    filter(lambda i: models.get(i) == min(models.values()),
+                        models.keys())):
+                ctl.viasp.mark(m)
+            plain(handle.get())
+            if handle.get().unsatisfiable and not no_relaxer:
+                ctl = ctl.viasp.relax_constraints(
+                    head_name=head_name,
+                    collect_variables=not no_collect_variables)
+        return ctl
 
     def run_wild(self, args):
         vap = ViaspArgumentParser()
@@ -411,46 +456,10 @@ class ViaspRunner():
             else:
                 ctl.load(path[1])
         if model_from_json:
-            models = {}
-            with SolveHandle(model_from_json) as handle:
-                for model in handle:
-                    plain(f"Answer: {model['number']}\n{model['representation']}")
-                    if len(model['cost']) > 0:
-                        plain(f"Optimization: {model['cost']}")
-                    c = model['cost'][0] if len(model['cost']) > 0 else 0
-                    symbols = parse_fact_string(model['facts'], raise_nonfact=True)
-                    stable_model = clingo_symbols_to_stable_model(symbols)
-                    models[stable_model] = c
-                for m in list(
-                    filter(lambda i: models.get(i) == min(models.values()),
-                        models.keys())):
-                    ctl.viasp.mark(m)
-                plain(handle.get())  # type: ignore
-                if handle.get().unsatisfiable and not no_relaxer:
-                    ctl = ctl.viasp.relax_constraints(
-                        head_name=head_name,
-                        collect_variables=not no_collect_variables)
-            ctl.viasp.show()
+            ctl = self.run_with_json(ctl, model_from_json, no_relaxer, head_name, no_collect_variables)
         else:
-            ctl.ground([("base", [])])
-            with ctl.solve(yield_=True) as handle:
-                models = {}
-                for m in handle:
-                    plain(f"Answer: {m.number}\n{m}")
-                    if len(m.cost) > 0:
-                        plain(f"Optimization: {m.cost}")
-                    c = m.cost[0] if len(m.cost) > 0 else 0
-                    models[clingo_model_to_stable_model(m)] = c
-                for m in list(
-                        filter(lambda i: models.get(i) == min(models.values()),
-                            models.keys())):
-                    ctl.viasp.mark(m)
-                plain(handle.get())
-                if handle.get().unsatisfiable and not no_relaxer:
-                    ctl = ctl.viasp.relax_constraints(
-                        head_name=head_name,
-                        collect_variables=not no_collect_variables)
-            ctl.viasp.show()
+            ctl = self.run_with_clingo(ctl, no_relaxer, head_name, no_collect_variables)
+        ctl.viasp.show()
         if len(options['clingraph_files']) > 0:
             for v in options['clingraph_files']:
                 ctl.viasp.clingraph(viz_encoding=v[-1],

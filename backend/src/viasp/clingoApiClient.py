@@ -93,10 +93,9 @@ class ClingoClient(ViaspClient):
             )
             return None
 
-    def clingraph(self, viz_encoding_path, engine, graphviz_type):
-        with open(viz_encoding_path, "r") as f:
-            prg = f.read().splitlines()
-            prg = '\n'.join(prg)
+    def clingraph(self, viz_encoding_file, engine, graphviz_type):
+        prg = viz_encoding_file.read().splitlines()
+        prg = '\n'.join(prg)
 
         serialized = json.dumps(
             {
