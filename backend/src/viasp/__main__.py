@@ -257,6 +257,16 @@ class ViaspArgumentParser:
             dest='max_models',
             metavar='<n>',
             default=1)
+        solving.add_argument('--select-model',
+            help = textwrap.dedent('''\
+                Select only one of the models when using a json input.
+                Defined by an index for accessing the models, starting in index 0.
+                Negative indexes are also allowed (-1 refers to the last model)
+                Can appear multiple times to select multiple models.'''),
+            type=int,
+            action='append',
+            nargs='?',
+            metavar="")
         # solving.add_argument('--project',
         #     dest='project',
         #     help=HELP_PROJECT,
@@ -362,21 +372,38 @@ class ViaspRunner():
             error(ERROR_INFO)
             sys.exit(1)
 
-    def run_with_json(self, ctl, model_from_json, no_relaxer, head_name, no_collect_variables):
+    def run_with_json(self, ctl, model_from_json, no_relaxer, head_name, no_collect_variables, select_model):
         models = {}
         with SolveHandle(model_from_json) as handle:
-            for model in handle:
-                plain(f"Answer: {model['number']}\n{model['representation']}")
-                if len(model['cost']) > 0:
-                    plain(f"Optimization: {model['cost']}")
-                c = model['cost'][0] if len(model['cost']) > 0 else 0
-                symbols = parse_fact_string(model['facts'], raise_nonfact=True)
-                stable_model = clingo_symbols_to_stable_model(symbols)
-                models[stable_model] = c
-            for m in list(
-                filter(lambda i: models.get(i) == min(models.values()),
-                    models.keys())):
-                ctl.viasp.mark(m)
+            # mark user model selection
+            if select_model is not None:
+                for m in select_model:
+                    if m>=len(model_from_json):
+                        raise ValueError(f"Invalid model number selected {m}")
+                    if m<0:
+                        if m<-1*len(model_from_json):
+                            raise ValueError(f"Invalid model number selected {m}")
+                        select_model.append(len(model_from_json) + m)
+                select_model_val = [
+                    f if i in select_model else None
+                    for i, f in enumerate(model_from_json)
+                ]
+                for m in select_model_val:
+                    ctl.viasp.mark(m)
+            # mark all (optimal) models
+            else:
+                for model in handle:
+                    plain(f"Answer: {model['number']}\n{model['representation']}")
+                    if len(model['cost']) > 0:
+                        plain(f"Optimization: {model['cost']}")
+                    c = model['cost'][0] if len(model['cost']) > 0 else 0
+                    symbols = parse_fact_string(model['facts'], raise_nonfact=True)
+                    stable_model = clingo_symbols_to_stable_model(symbols)
+                    models[stable_model] = c
+                for m in list(
+                    filter(lambda i: models.get(i) == min(models.values()),
+                        models.keys())):
+                    ctl.viasp.mark(m)
             plain(handle.get())  # type: ignore
             if handle.get().unsatisfiable and not no_relaxer:
                 ctl = ctl.viasp.relax_constraints(
@@ -440,6 +467,7 @@ class ViaspRunner():
 
         head_name = options.get("head_name", "unsat")
         no_collect_variables = options.get("no_collect_variables", False)
+        select_model = options.get("select_model", None)
 
         app = startup.run(host=host, port=port)
 
@@ -456,7 +484,7 @@ class ViaspRunner():
             else:
                 ctl.load(path[1])
         if model_from_json:
-            ctl = self.run_with_json(ctl, model_from_json, no_relaxer, head_name, no_collect_variables)
+            ctl = self.run_with_json(ctl, model_from_json, no_relaxer, head_name, no_collect_variables, select_model)
         else:
             ctl = self.run_with_clingo(ctl, no_relaxer, head_name, no_collect_variables)
         ctl.viasp.show()

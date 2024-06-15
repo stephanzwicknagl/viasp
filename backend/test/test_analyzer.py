@@ -422,3 +422,12 @@ def test_loop_recursion_gets_recognized(app_context):
     assert hash_transformation_rules(
         ("a :- a.",
          )) in recursive_rules, "Hash is determined by transformatinos."
+
+
+def test_signature_literal(app_context):
+    test_string = """
+    a :- Lit(b).
+    -h(R,T) :- b.
+    lit(c) :- b.
+    """
+    pass
