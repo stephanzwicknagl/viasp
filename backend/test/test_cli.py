@@ -1,6 +1,3 @@
-import clingo
-from flask.scaffold import F
-from numpy import test
 from viasp.__main__ import ViaspArgumentParser
 
 def parse(test_args):
