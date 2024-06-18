@@ -374,22 +374,22 @@ class ViaspRunner():
 
     def run_with_json(self, ctl, model_from_json, no_relaxer, head_name, no_collect_variables, select_model):
         models = {}
+        if select_model is not None:
+            for m in select_model:
+                if m>=len(model_from_json):
+                    raise ValueError(f"Invalid model number selected {m}")
+                if m<0:
+                    if m<-1*len(model_from_json):
+                        raise ValueError(f"Invalid model number selected {m}")
+                    select_model.append(len(model_from_json) + m)
         with SolveHandle(model_from_json) as handle:
             # mark user model selection
             if select_model is not None:
-                for m in select_model:
-                    if m>=len(model_from_json):
-                        raise ValueError(f"Invalid model number selected {m}")
-                    if m<0:
-                        if m<-1*len(model_from_json):
-                            raise ValueError(f"Invalid model number selected {m}")
-                        select_model.append(len(model_from_json) + m)
-                select_model_val = [
-                    f if i in select_model else None
-                    for i, f in enumerate(model_from_json)
-                ]
-                for m in select_model_val:
-                    ctl.viasp.mark(m)
+                for model in handle:
+                    if model['number']-1 in select_model:
+                        symbols = parse_fact_string(model['facts'], raise_nonfact=True)
+                        stable_model = clingo_symbols_to_stable_model(symbols)
+                        ctl.viasp.mark(stable_model)
             # mark all (optimal) models
             else:
                 for model in handle:

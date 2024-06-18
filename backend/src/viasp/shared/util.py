@@ -181,7 +181,7 @@ def parse_clingo_json(json_str):
             facts_str = "\n".join([f"{v}." for v in w["Value"]])
             output_str = " ".join([f"{v}" for v in w["Value"]])
             costs = w.get("Costs", [])
-            models_prgs.append({"facts": facts_str, "representation": output_str, "number": i, "cost": costs})
+            models_prgs.append({"facts": facts_str, "representation": output_str, "number": i+1, "cost": costs})
 
         return {"models": models_prgs, "unsatisfiable": j['Result'] == 'UNSATISFIABLE'}
 
