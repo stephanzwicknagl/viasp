@@ -39,6 +39,12 @@ function unpackMessageFromBackend(message) {
             text: `The program contains a rule that will cause false behaviour! Remove/Rephrase the following rule: ${message.ast}`
         }
     }
+    if (message.reason.value === "relaxer") {
+        return {
+            type: WARN,
+            text: message.message,
+        }
+    }
     return {
         type: WARN,
         text: `The program contains a rule that is not supported! The graph shown might be faulty! ${message.ast}`,

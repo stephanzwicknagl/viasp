@@ -1,8 +1,9 @@
 import json
+from re import I
 import sys
 
 from inspect import signature
-from typing import List, Union
+from typing import List, Union, Tuple
 
 from clingo import Control as InnerControl, Model
 from dataclasses import asdict, is_dataclass
@@ -67,7 +68,7 @@ class ShowConnector:
         kwargs = {"head_name": head_name, "collect_variables": collect_variables}
         return self._database.relax_constraints(**kwargs)
 
-    def relax_constraints(self, head_name:str = "unsat", collect_variables:bool = True):
+    def relax_constraints(self, head_name:str = "unsat", collect_variables:bool = True, relaxer_opt_mode:str="--opt-mode=opt"):
         r"""This method relaxes integrity constraints and returns
         a new viaspControl object with the relaxed program loaded
         and stable models marked.
@@ -84,7 +85,7 @@ class ShowConnector:
         kwargs = {"head_name": head_name, "collect_variables": collect_variables}
 
         relaxed_prg = self._database.relax_constraints(**kwargs)
-        ctl = Control(["--opt-mode=optN"])
+        ctl = Control([relaxer_opt_mode])
         ctl.add("base", [], relaxed_prg)
         ctl.ground([("base", [])])
         with ctl.solve(yield_=True) as handle:
@@ -96,6 +97,11 @@ class ShowConnector:
                     filter(lambda i: models.get(i) == min(models.values()),
                             models.keys())):
                 ctl.viasp.mark(m)
+        if "optN" not in relaxer_opt_mode and "enum" not in relaxer_opt_mode and "ignore" not in relaxer_opt_mode:
+            user_message = {
+                "reason": {"value": "relaxer"},
+                "message": "To show more relaxed answer sets, use --relaxer-opt-mode=optN"}
+            self._database.register_warning(user_message)
         return ctl
 
 

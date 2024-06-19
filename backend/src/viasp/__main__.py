@@ -308,6 +308,11 @@ class ViaspArgumentParser:
             action=NegatedBooleanOptionalAction,
             help=
             ': Do not collect variables from body as a tuple in the head literal.')
+        relaxer_group.add_argument(
+            '--relaxer-opt-mode',
+            type=self.__do_opt_mode,
+            help=': Clingo optimization mode for the relaxed program. Default is "opt" - only one optimal answer set is shown.',
+        )
 
 
         options, unknown = cmd_parser.parse_known_args(args=args)
@@ -352,6 +357,9 @@ class ViaspArgumentParser:
         opt_mode, bounds = options.get("opt_mode") or ('opt', [])
         options['opt_mode_str'] = f"--opt-mode={opt_mode}" + (f",{','.join(bounds)}"
                                                    if len(bounds) > 0 else "")
+        relaxer_opt_mode, relaxer_bounds = options.get("relaxer_opt_mode") or ('opt', [])
+        options['relaxer_opt_mode_str'] = f"--opt-mode={relaxer_opt_mode}" + (f",{','.join(relaxer_bounds)}"
+                                                    if len(relaxer_bounds) > 0 else "")
 
         # return
         return options, clingo_options, prologue, \
@@ -372,7 +380,7 @@ class ViaspRunner():
             error(ERROR_INFO)
             sys.exit(1)
 
-    def run_with_json(self, ctl, model_from_json, no_relaxer, head_name, no_collect_variables, select_model):
+    def run_with_json(self, ctl, model_from_json, no_relaxer, head_name, no_collect_variables, select_model, relaxer_opt_mode):
         models = {}
         if select_model is not None:
             for m in select_model:
@@ -408,10 +416,12 @@ class ViaspRunner():
             if handle.get().unsatisfiable and not no_relaxer:
                 ctl = ctl.viasp.relax_constraints(
                     head_name=head_name,
-                    collect_variables=not no_collect_variables)
+                    collect_variables=not no_collect_variables,
+                    relaxer_opt_mode=relaxer_opt_mode)
         return ctl
 
-    def run_with_clingo(self, ctl, no_relaxer, head_name, no_collect_variables):
+    def run_with_clingo(self, ctl, no_relaxer, head_name, no_collect_variables,
+                        relaxer_opt_mode):
         ctl.ground([("base", [])])
         with ctl.solve(yield_=True) as handle:
             models = {}
@@ -429,7 +439,8 @@ class ViaspRunner():
             if handle.get().unsatisfiable and not no_relaxer:
                 ctl = ctl.viasp.relax_constraints(
                     head_name=head_name,
-                    collect_variables=not no_collect_variables)
+                    collect_variables=not no_collect_variables,
+                    relaxer_opt_mode=relaxer_opt_mode)
         return ctl
 
     def run_wild(self, args):
@@ -468,6 +479,7 @@ class ViaspRunner():
         head_name = options.get("head_name", "unsat")
         no_collect_variables = options.get("no_collect_variables", False)
         select_model = options.get("select_model", None)
+        relax_opt_mode_str = options.get("relaxer_opt_mode_str", None)
 
         app = startup.run(host=host, port=port)
 
@@ -484,9 +496,12 @@ class ViaspRunner():
             else:
                 ctl.load(path[1])
         if model_from_json:
-            ctl = self.run_with_json(ctl, model_from_json, no_relaxer, head_name, no_collect_variables, select_model)
+            ctl = self.run_with_json(ctl, model_from_json, no_relaxer,
+                                     head_name, no_collect_variables,
+                                     select_model, relax_opt_mode_str)
         else:
-            ctl = self.run_with_clingo(ctl, no_relaxer, head_name, no_collect_variables)
+            ctl = self.run_with_clingo(ctl, no_relaxer, head_name,
+                                       no_collect_variables, relax_opt_mode_str)
         ctl.viasp.show()
         if len(options['clingraph_files']) > 0:
             for v in options['clingraph_files']:

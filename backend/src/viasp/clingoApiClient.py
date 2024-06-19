@@ -133,3 +133,11 @@ class ClingoClient(ViaspClient):
             error(
                 f"Registering transformer failed [{r.status_code}] ({r.text})"
             )
+
+    def register_warning(self, warning):
+        serializable_warning = json.dumps([warning], cls=DataclassJSONEncoder)
+        r = requests.post(f"{self.backend_url}/control/warnings",
+                          data=serializable_warning,
+                          headers={'Content-Type': 'application/json'})
+        if not r.ok:
+            error(f"Registering warning failed [{r.status_code}] ({r.text})")

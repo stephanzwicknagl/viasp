@@ -59,7 +59,7 @@ def test_detail_endpoint_returns_details_on_valid_uuid(client_with_a_single_node
     res = client.get(f"detail/{uuid.hex}")
     assert res.status_code == 200
     assert program[:-1] in str(res.json[1][0][1][0])
-    assert res.json[0] == "Stable Model"
+    assert res.json[0] == "Answer Set"
 
 
 def test_get_transformation(client_with_a_graph):
