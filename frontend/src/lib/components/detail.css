@@ -41,7 +41,7 @@
     width: fit-content;
     padding: 5px;
     margin: 5px;
-    border-radius: 10px 10px 10px 10px;
+    border-radius: 0.7em;
 }
 
 .detail_atom_view_content_container {

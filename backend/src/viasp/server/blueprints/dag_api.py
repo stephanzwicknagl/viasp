@@ -295,11 +295,11 @@ def get_kind(uuid: str) -> str:
     if recursive:
         return "Model"
     if len(graph.out_edges(node)) == 0:
-        return "Stable Model"
+        return "Answer Set"
     elif len(graph.in_edges(node)) == 0:
         return "Facts"
     else:
-        return "Model"
+        return "Answer Set"
 
 
 @bp.route("/detail/<uuid>")

@@ -1,20 +1,18 @@
 {
-    "primary": "#879ee7",
-    "light": "#F4F5FA",
-    "dark": "#444444",
-    "warn": "#FFC107",
-    "error": "#F44336",
-    "infoBackground": "#d6a985",
+    "primary": "rgba(103, 153, 247, 1)",
+    "light": "rgba(255, 255, 255, 1)",
+    "dark": "rgba(68, 68, 68, 1)",
+    "warn": "rgba(255, 193, 7, 1)",
+    "error": "rgba(244, 67, 54, 1)",
+    "infoBackground": "rgba(215, 255, 171,  1)",
     "rowShading": [
-        "#dde851bf",
-        "#c9c9c9bf"
+        "rgba(255, 233,  50, 0.5)",
+        "rgba(255, 255, 255, 0.5)"
     ],
-    "explanationSuccess": "#e2b38a", 
+    "explanationSuccess": "rgba(215, 255, 171,  1)  ", 
     "explanationHighlights": [
-        "#98f4e2",
-        "#9a8298",
-        "#bbf9a9",
-        "#14ceaf",
-        "#e1ed5c"
+        "rgba(192,140,44, 1)",
+        "rgba(153,181,49, 1)",
+        "rgba(69,219,52, 1)"
     ]
 }
