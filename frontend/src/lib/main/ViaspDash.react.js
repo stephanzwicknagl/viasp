@@ -373,7 +373,6 @@ function MainWindow(props) {
     return (
         <>
             <div className="content" id="content" ref={contentDivRef}>
-                <Search />
                 <div
                     style={{
                         position: 'absolute',
@@ -414,7 +413,6 @@ function MainWindow(props) {
                     transform={mapShiftValue}
                 />
             </div>
-            <Detail />
         </>
     );
 }
