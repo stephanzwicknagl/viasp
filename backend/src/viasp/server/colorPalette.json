@@ -6,8 +6,8 @@
     "error": "rgba(244, 67, 54, 1)",
     "infoBackground": "rgba(215, 255, 171,  1)",
     "rowShading": [
-        "rgba(50, 149, 255, 0.10)",
-        "rgba(255, 255, 255, 0.5)"
+        "rgba(255, 255, 255, 0.5)",
+        "rgba(50, 149, 255, 0.10)"
     ],
     "explanationSuccess": "rgba(103, 153, 247, 1)", 
     "explanationHighlights": [

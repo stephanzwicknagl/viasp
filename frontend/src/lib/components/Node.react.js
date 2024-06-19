@@ -398,7 +398,7 @@ export function Node(props) {
     );
 
     const notifyClick = (node) => {
-        setShownDetail(node.uuid);
+        // setShownDetail(node.uuid);
     };
     React.useEffect(() => {
         const dispatch = dispatchShownNodesRef.current;
