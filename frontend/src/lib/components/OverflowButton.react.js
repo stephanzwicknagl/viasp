@@ -4,42 +4,74 @@ import {useColorPalette} from '../contexts/ColorPalette';
 import {useTransformations, setNodeIsExpandAllTheWay} from '../contexts/transformations';
 import {NODE} from '../types/propTypes';
 import {IconWrapper} from '../LazyLoader';
+import rgba from 'color-rgba';
 
 export function OverflowButton(props) {
     const {transformationId, nodes} = props;
     const [isIconRotated, setIsIconRotated] = React.useState(false);
     const colorPalette = useColorPalette();
-    const {dispatch, state: {shownRecursion}} = useTransformations();
+    const {
+        dispatch,
+        state: {shownRecursion},
+    } = useTransformations();
 
     function handleClick(e) {
         e.stopPropagation();
-        nodes.forEach(node => {
+        nodes.forEach((node) => {
             if (shownRecursion.indexOf(node.uuid) === -1) {
-                dispatch(setNodeIsExpandAllTheWay(transformationId, node.uuid, node.isExpandableV));
-                node.recursive.forEach(subnode =>
-                    dispatch(setNodeIsExpandAllTheWay(transformationId, subnode.uuid, node.isExpandableV))
+                dispatch(
+                    setNodeIsExpandAllTheWay(
+                        transformationId,
+                        node.uuid,
+                        node.isExpandableV
+                    )
                 );
-            }
-            else {
-                node.recursive.forEach(subnode => {
-                    dispatch(setNodeIsExpandAllTheWay(transformationId, subnode.uuid, subnode.isExpandableV));
-                })
-                dispatch(setNodeIsExpandAllTheWay(transformationId, node.uuid, node.recursive.some(n => n.isExpandableV)));
+                node.recursive.forEach((subnode) =>
+                    dispatch(
+                        setNodeIsExpandAllTheWay(
+                            transformationId,
+                            subnode.uuid,
+                            node.isExpandableV
+                        )
+                    )
+                );
+            } else {
+                node.recursive.forEach((subnode) => {
+                    dispatch(
+                        setNodeIsExpandAllTheWay(
+                            transformationId,
+                            subnode.uuid,
+                            subnode.isExpandableV
+                        )
+                    );
+                });
+                dispatch(
+                    setNodeIsExpandAllTheWay(
+                        transformationId,
+                        node.uuid,
+                        node.recursive.some((n) => n.isExpandableV)
+                    )
+                );
             }
         });
     }
-    
-    const expandableValues = nodes.map(node => {
+
+    const expandableValues = nodes
+        .map((node) => {
             if (shownRecursion.indexOf(node.uuid) === -1) {
                 return node.isExpandableV;
             }
-            return node.recursive.map(sn => sn.isExpandableV).join(',');
-    }).join(',');
+            return node.recursive.map((sn) => sn.isExpandableV).join(',');
+        })
+        .join(',');
     React.useEffect(() => {
         setIsIconRotated(!expandableValues.includes('true'));
     }, [expandableValues]);
 
-    const gradientColor1 = `${colorPalette.dark}41`
+    const [r, g, b, _] = rgba(colorPalette.dark);
+
+    // Construct the new color
+    const gradientColor1 = `rgba(${r}, ${g}, ${b}, 0.2)`;
     const gradientColor2 = `transparent`;
 
     return (
@@ -51,18 +83,14 @@ export function OverflowButton(props) {
             className={'bauchbinde'}
             onClick={handleClick}
         >
-            <div
-                className={'bauchbinde_text'}
-                >
+            <div className={'bauchbinde_text'}>
                 <Suspense fallback={<div>...</div>}>
                     <IconWrapper
-                        icon={"arrowDownDoubleFill"}
+                        icon={'arrowDownDoubleFill'}
                         className={isIconRotated ? 'rotate_icon' : ''}
                     />
                 </Suspense>
-         
-
-                </div>
+            </div>
         </div>
     );
 }

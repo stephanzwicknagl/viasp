@@ -1,25 +1,21 @@
-import React, {useCallback} from 'react';
-import PropTypes from 'prop-types';
+import React from 'react';
 import {MAPZOOMSTATE} from '../types/propTypes';
 import * as Constants from '../constants';
+import { useColorPalette } from '../contexts/ColorPalette';
 import {Box} from './Box.react';
 import './boxrow.css';
 import {useTransformations} from '../contexts/transformations';
-import debounce from 'lodash/debounce';
-import useResizeObserver from '@react-hook/resize-observer';
-import {useColorPalette} from '../contexts/ColorPalette';
 
 export function Boxrow(props) {
     const {transform} = props;
-    const [isOverflowH, setIsOverflowH] = React.useState(false);
-    const [overflowBreakingPoint, setOverflowBreakingPoint] =
-        React.useState(null);
     const boxrowRef = React.useRef(null);
+    const colorPalette = useColorPalette();
     const {
-        state: {transformationDropIndices, clingraphGraphics},
+        state: {transformations, transformationDropIndices, clingraphGraphics},
     } = useTransformations();
     const [style, setStyle] = React.useState({
         opacity: 1.0,
+        background: colorPalette.rowShading[(transformations.length + 1) % colorPalette.rowShading.length],
         });
 
     React.useEffect(() => {

@@ -52,9 +52,9 @@
 
 .set_value {
     font-family: monospace;
-    font-size: 14pt;
+    font-size: 12pt;
     width: fit-content;
-    margin: .3em .43em .43em .43em;
+    margin: .38em 1em .5em 1em;
 
     position: relative;
     flex: 0 0 auto;
@@ -112,7 +112,7 @@
 }
 
 .loading {
-    background: linear-gradient(90deg, #f3f3f3 25%, #e0e0e0 50%, #f3f3f3 75%);
+    background: linear-gradient(90deg, #ffffff 25%, #e0e0e0 50%, #ffffff 75%);
     background-size: 200em 100%;
     border-radius: 0.8em;
     animation: loading 1.5s infinite;
