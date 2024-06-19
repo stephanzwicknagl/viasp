@@ -19,7 +19,7 @@ function ClearMarked() {
 
     const hoverFactor = 0.08;
     const style = {
-        background: colorPalette.infoBackground,
+        background: colorPalette.explanationSuccess,
         color: colorPalette.dark,
         border: `1px solid ${colorPalette.dark}`,
     };
@@ -43,7 +43,7 @@ function ClearMarked() {
                 onMouseLeave={handleMouseLeave}
                 onMouseDown={handleMouseDown}
                 onMouseUp={handleMouseUp}>
-            clear marked symbols</span>
+            CLEAR</span>
 }
 
 export default function Settings() {
