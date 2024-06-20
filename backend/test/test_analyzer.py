@@ -2,7 +2,7 @@ import pytest
 from clingo.ast import AST
 
 from viasp.asp.ast_types import (SUPPORTED_TYPES, UNSUPPORTED_TYPES)
-from viasp.asp.reify import ProgramAnalyzer
+from viasp.asp.reify import ProgramAnalyzer, collect_literals, make_signature
 from viasp.shared.util import hash_transformation_rules
 from viasp.server.database import GraphAccessor, get_or_create_encoding_id
 
@@ -348,7 +348,7 @@ def test_body_conditional_literal_sorted_in_show_term(app_context):
     rules = ["hc(U,V) :- edge(U,V).", "#show allnodes : node(X): hc(_,X)."]
     program = """
     node(1..2). edge(1,2). edge(2,1).
-    """ + "\n".join(rules) 
+    """ + "\n".join(rules)
     transformer = ProgramAnalyzer()
     result = transformer.sort_program(program)
     assert len(result) == len(rules)
@@ -424,10 +424,82 @@ def test_loop_recursion_gets_recognized(app_context):
          )) in recursive_rules, "Hash is determined by transformatinos."
 
 
-def test_signature_literal(app_context):
-    test_string = """
-    a :- Lit(b).
-    -h(R,T) :- b.
-    lit(c) :- b.
-    """
-    pass
+def test_signature_pool():
+    pool = """holds(X) :- map(a(X);a(X+1))."""
+    literals = collect_literals(pool)
+    assert len(literals) == 2
+    assert make_signature(literals[0]) == ('holds', 1)
+    assert make_signature(literals[1]) == ('map', 1)
+
+
+def test_signature_boolean_constant():
+    boolean_constant = """a:- #true."""
+    literals = collect_literals(boolean_constant)
+    assert make_signature(literals[0]) == ('a', 0)
+    assert make_signature(literals[1]) == None
+
+def test_signature_theory_atom():
+    theory_atom = """b:- &diff { T1-T2 } <= -D."""
+    literals = collect_literals(theory_atom)
+    assert make_signature(literals[0]) == ('b', 0)
+    with pytest.raises(ValueError) as e_info:
+        make_signature(literals[1])
+
+def test_signature_aggregate():
+    aggregate = """a:- 1{b(X):c(X)}."""
+    literals = collect_literals(aggregate)
+    assert make_signature(literals[0]) == ('a', 0)
+    assert make_signature(literals[1]) == None # ?
+    assert make_signature(literals[2]) == ('b', 1)
+    assert make_signature(literals[3]) == ('c', 1)
+
+def test_signature_body_aggregate():
+    body_aggregate= """a:- 1=#sum{b(X):c(X)}."""
+    literals = collect_literals(body_aggregate)
+    assert make_signature(literals[0]) == ('a', 0)
+    assert make_signature(literals[1]) == None
+    assert make_signature(literals[2]) == ('c', 1)
+
+def test_signature_comparison():
+    comparison = """a:- Z<X+Y."""
+    literals = collect_literals(comparison)
+    assert make_signature(literals[0]) == ('a', 0)
+    assert make_signature(literals[1]) == None # ?
+
+def test_signature_unary_operation():
+    unary_operation = """a:- -b."""
+    literals = collect_literals(unary_operation)
+    assert make_signature(literals[0]) == ('a', 0)
+    assert make_signature(literals[1]) == ('b', 0)
+
+    unary_operation = """-a:- b."""
+    literals = collect_literals(unary_operation)
+    assert make_signature(literals[0]) == ('a', 0)
+    assert make_signature(literals[1]) == ('b', 0)
+
+def test_signature_function():
+    function = """a:- b."""
+    literals = collect_literals(function)
+    assert make_signature(literals[0]) == ('a', 0)
+    assert make_signature(literals[1]) == ('b', 0)
+
+def test_signature_function_with_variable():
+    function_with_variable = """a:- b(X,Y,Z)."""
+    literals = collect_literals(function_with_variable)
+    assert make_signature(literals[0]) == ('a', 0)
+    assert make_signature(literals[1]) == ('b', 3)
+
+def test_signature_function_with_interval():
+    function_with_interval = """b(X) :- a(1..2)."""
+    literals = collect_literals(function_with_interval)
+    assert make_signature(literals[0]) == ('b', 1)
+    assert make_signature(literals[1]) == ('a', 1)
+
+
+def test_signature_conditional_literal():
+    conditional_literal = """a:- b(X):c(X)."""
+    literals = collect_literals(conditional_literal)
+    assert make_signature(literals[0]) == ('a', 0)
+    assert make_signature(literals[1]) == ('b', 1)
+    assert make_signature(literals[2]) == ('c', 1)
+    # signature of the conditional literal itself

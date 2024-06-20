@@ -9,6 +9,8 @@ from clingo.ast import (
     parse_string,
     ASTType,
     AST,
+    Literal as astLiteral,
+    SymbolicAtom as astSymbolicAtom
 )
 from viasp.shared.util import hash_transformation_rules
 
@@ -26,27 +28,48 @@ from ..shared.simple_logging import error
 def is_fact(rule, dependencies):
     return len(rule.body) == 0 and not len(dependencies)
 
+def make_signature_from_terms(term) -> Optional[Tuple[str, int]]:
+    if term.ast_type == ASTType.SymbolicTerm:
+        return term.symbol.name, 0
+    elif term.ast_type == ASTType.Variable:
+        return (term.name, 0)
+    elif term.ast_type == ASTType.UnaryOperation:
+        return make_signature_from_terms(term.argument)
+    elif term.ast_type == ASTType.BinaryOperation:
+        return None
+    elif term.ast_type == ASTType.Interval:
+        return None
+    elif term.ast_type == ASTType.Function:
+        return (term.name, len(term.arguments))
+    elif term.ast_type == ASTType.Pool:
+        return make_signature_from_terms(term.arguments[0])
+    raise ValueError(f"Could not make signature of {term}.")
 
-def make_signature(literal: ast.Literal) -> Tuple[str, int]:  # type: ignore
-    if literal.atom.ast_type in [
-            ASTType.BodyAggregate, ASTType.BooleanConstant
-    ]:
-        return literal, 0
-    unpacked = literal.atom.symbol
-    if unpacked.ast_type in [ASTType.Variable, ASTType.Function]:
-        return (
-            unpacked.name,
-            len(unpacked.arguments) if hasattr(unpacked, "arguments") else 0,
-        )
-    if unpacked.ast_type == ASTType.SymbolicTerm:
-        return (
-            unpacked.symbol.name,
-            len(unpacked.arguments) if hasattr(unpacked, "arguments") else 0,
-        )
-    if unpacked.ast_type == ASTType.Pool:
-        unpacked = unpacked.arguments[0]
-        return (unpacked.name, len(unpacked.arguments))
-    raise ValueError(f"Could not make signature of {literal}")
+def make_signature(ast: Union[ast.Literal, ast.ConditionalLiteral]) -> Optional[Tuple[str, int]]:  # type: ignore
+    """
+    Is used to create a signature for a literal or conditional literal for placing it in the dependency graph.
+    `None` is returned for types of literals that are unsupported or neglected in the dependency graph.
+    """
+    if ast.ast_type == ASTType.Literal:
+        atom = ast.atom
+    else:
+        return None
+
+    if atom.ast_type == ASTType.BodyAggregate:
+        return None
+    elif atom.ast_type == ASTType.BooleanConstant:
+        return None
+    elif atom.ast_type == ASTType.Comparison:
+        return None
+    elif atom.ast_type == ASTType.Aggregate:
+        return None
+    elif atom.ast_type == ASTType.TheoryAtom:
+        raise ValueError(f"Could not make signature of {ast}.")
+    elif atom.ast_type == ASTType.SymbolicAtom:
+        term = atom.symbol
+        return make_signature_from_terms(term)
+
+    raise ValueError(f"Could not make signature of {ast}, {ast.ast_type}.")
 
 
 def filter_body_arithmetic(elem: ast.Literal):  # type: ignore
@@ -222,7 +245,7 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         transformations.
         """
         return self._get_conflict_free_version_of_name("n")
-    
+
     def get_conflict_free_derivable(self):
         """
         For use in generation of subgraphs at recursive
@@ -369,7 +392,8 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
             conditions: List[ast.Literal]) -> None:  # type: ignore
         for c in conditions:
             c_sig = make_signature(c)
-            self.conditions[c_sig].add(rule)
+            if c_sig is not None:
+                self.conditions[c_sig].add(rule)
 
     def register_rule_dependencies(
         self,
@@ -381,15 +405,18 @@ class ProgramAnalyzer(DependencyCollector, FilteredTransformer):
         for (cond, pos_cond) in deps.values():
             for c in filter(filter_body_arithmetic, cond):
                 c_sig = make_signature(c)
-                self.conditions[c_sig].add(rule)
+                if c_sig is not None:
+                    self.conditions[c_sig].add(rule)
             for c in filter(filter_body_arithmetic, pos_cond):
                 c_sig = make_signature(c)
-                self.positive_conditions[c_sig].add(rule)
+                if c_sig is not None:
+                    self.positive_conditions[c_sig].add(rule)
 
         for v in deps.keys():
             if v.ast_type == ASTType.Literal and v.atom.ast_type != ASTType.BooleanConstant:
                 v_sig = make_signature(v)
-                self.dependants[v_sig].add(rule)
+                if v_sig is not None:
+                    self.dependants[v_sig].add(rule)
 
     def get_body_aggregate_elements(self, body: Sequence[AST]) -> List[AST]:
         body_aggregate_elements: List[AST] = []
@@ -911,3 +938,22 @@ def reify_recursion_transformation(transformation: Transformation,
     for rule in transformation.rules.ast:
         result.extend(cast(Iterable[AST], visitor.visit(rule)))
     return result
+
+
+class LiteralsCollector(Transformer):
+
+    def visit_Literal(
+            self,
+            literal: ast.Literal,  # type: ignore
+            **kwargs: Any) -> AST:
+        literals: List[AST] = kwargs.get("literals", [])
+        literals.append(literal)
+        return literal.update(**self.visit_children(literal, **kwargs))
+
+
+def collect_literals(program: str):
+    visitor = LiteralsCollector()
+    literals = []
+    parse_string(program,
+                 lambda rule: visitor.visit(rule, literals=literals) and None)
+    return literals
