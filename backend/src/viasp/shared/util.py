@@ -240,7 +240,7 @@ def get_lp_files(files, stdin, stdin_is_json=False):
             raise ValueError(
                 "No ASP encoding provided, no output will be produced by viasp"
             )
-        lp_files.append("stdin")
+        lp_files.append(("stdin", "-"))
     return lp_files
 
 class SolveHandle:
