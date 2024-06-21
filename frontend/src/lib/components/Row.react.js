@@ -252,7 +252,7 @@ export function Row(props) {
                     ruleContainer={transformation.rules}
                 />
             )}
-            {dragHandleProps === null || !isSortable ? null : (
+            {dragHandleProps === null || !isSortable || transformation.adjacent_sort_indices.lower_bound === transformation.adjacent_sort_indices.upper_bound ? null : (
                 <DragHandle
                     ref={handleRef}
                     dragHandleProps={dragHandleProps}
