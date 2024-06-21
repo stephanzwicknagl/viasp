@@ -11,7 +11,7 @@ from clingraph.graphviz import compute_graphs, render
 from .dag_api import generate_graph, set_current_graph, wrap_marked_models, \
         load_program, load_transformer, load_models, \
         load_clingraph_names
-from ..database import CallCenter, get_database, insert_graph_relation, save_dependency_graph, save_recursive_transformations_hashes, set_models, clear_models, save_many_sorts, save_sort, save_clingraph, clear_clingraph, save_transformer, save_warnings, clear_warnings, load_warnings, save_warnings, set_sortable, clear_all_sorts
+from ..database import CallCenter, get_database, insert_graph_relation, save_dependency_graph, save_recursive_transformations_hashes, set_models, clear_models, save_many_sorts, save_sort, save_clingraph, clear_clingraph, save_transformer, save_warnings, clear_warnings, load_warnings, save_warnings, clear_all_sorts
 from ...asp.reify import ProgramAnalyzer
 from ...asp.relax import ProgramRelaxer, relax_constraints
 from ...shared.model import ClingoMethodCall, StableModel, Transformation, TransformerTransport

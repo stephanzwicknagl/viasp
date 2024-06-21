@@ -202,7 +202,7 @@ RowTemplate.propTypes = {
 export function Row(props) {
     const {transformation, dragHandleProps, transform, transformationWrapper} = props;
     const {
-        state: {transformations, transformationNodesMap, isSortable},
+        state: {transformations, transformationNodesMap},
     } = useTransformations();
     const [nodes, setNodes] = React.useState(make_default_nodes());
     const rowbodyRef = React.useRef(null);
@@ -244,27 +244,28 @@ export function Row(props) {
 
 
     return (
-        <div
-            className={`row_container ${transformation.hash}`}
-            >
+        <div className={`row_container ${transformation.hash}`}>
             {transformation.rules.str_.length === 0 ? null : (
-                <RowHeader
-                    ruleContainer={transformation.rules}
-                />
+                <RowHeader ruleContainer={transformation.rules} />
             )}
-            {dragHandleProps === null || !isSortable || transformation.adjacent_sort_indices.lower_bound === transformation.adjacent_sort_indices.upper_bound ? null : (
-                <DragHandle
-                    ref={handleRef}
-                    dragHandleProps={dragHandleProps}
-                />
+            {dragHandleProps === null ||
+            transformation.adjacent_sort_indices === null ||
+            transformation.adjacent_sort_indices.lower_bound ===
+                transformation.adjacent_sort_indices.upper_bound ? null : (
+                <DragHandle ref={handleRef} dragHandleProps={dragHandleProps} />
             )}
             {!showNodes ? null : (
-                <div ref={rowbodyRef} 
-                className="row_row"
-                style={{
-                    width: `${nodes.length === 1 ? 100 : transform.scale * 100}%`,
-                    transform: `translateX(${nodes.length === 1 ? 0 : transform.translation.x}px)`,
-                }}
+                <div
+                    ref={rowbodyRef}
+                    className="row_row"
+                    style={{
+                        width: `${
+                            nodes.length === 1 ? 100 : transform.scale * 100
+                        }%`,
+                        transform: `translateX(${
+                            nodes.length === 1 ? 0 : transform.translation.x
+                        }px)`,
+                    }}
                 >
                     {nodes.map((child, index) => {
                         const space_multiplier = child.space_multiplier * 100;
@@ -309,13 +310,14 @@ export function Row(props) {
                     })}
                 </div>
             )}
-            { !transformationWrapper.allNodesShowMini && (transformationWrapper.isExpandableV || transformationWrapper.isCollapsibleV) ?  (
+            {!transformationWrapper.allNodesShowMini &&
+            (transformationWrapper.isExpandableV ||
+                transformationWrapper.isCollapsibleV) ? (
                 <OverflowButton
                     transformationId={transformation.id}
                     nodes={nodes}
-                    />
+                />
             ) : null}
-
         </div>
     );
 }

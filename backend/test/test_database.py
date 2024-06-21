@@ -201,15 +201,6 @@ def test_clingraph_database():
     assert type(r) == list
     assert len(r) == 0
 
-def test_sortable_database(app_context):
-    db = GraphAccessor()
-    encoding_id = "test"
-    assert db.is_sortable(encoding_id) == True
-    db.set_sortable(False, encoding_id)
-    assert db.is_sortable(encoding_id) == False
-    db.set_sortable(True, encoding_id)
-    assert db.is_sortable(encoding_id) == True
-
 
 def test_warnings(app_context, load_analyzer, program_simple):
     db = GraphAccessor()

@@ -158,14 +158,6 @@ class GraphAccessor:
                 FOREIGN KEY(encoding_id) REFERENCES encodings(id)
             )
         """)
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS sortable (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                encoding_id TEXT UNIQUE,
-                sortable INTEGER,
-                FOREIGN KEY(encoding_id) REFERENCES encodings(id)
-            )
-        """)
         self.conn.commit()
 
     # # # # # # #
@@ -503,25 +495,6 @@ class GraphAccessor:
             result[0]) if result is not None else None
 
     # # # # # # # #
-    #   SORTABLE  #
-    # # # # # # # #
-
-    def set_sortable(self, sortable: bool, encoding_id: str):
-        self.cursor.execute(
-            """
-            INSERT OR REPLACE INTO sortable (sortable, encoding_id) VALUES (?, ?)
-        """, (int(sortable), encoding_id))
-        self.conn.commit()
-
-    def is_sortable(self, encoding_id: str) -> bool:
-        self.cursor.execute(
-            """
-            SELECT sortable FROM sortable WHERE encoding_id = (?)
-        """, (encoding_id, ))
-        result = self.cursor.fetchone()
-        return bool(result[0]) if result is not None else True
-
-    # # # # # # # #
     #   GENERAL   #
     # # # # # # # #
 
@@ -664,16 +637,6 @@ def load_clingraph_names():
 def load_transformer() -> Optional[Transformer]:
     encoding_id = get_or_create_encoding_id()
     return get_database().load_transformer(encoding_id)
-
-
-def set_sortable(sortable: bool):
-    encoding_id = get_or_create_encoding_id()
-    get_database().set_sortable(sortable, encoding_id)
-
-
-def is_sortable() -> bool:
-    encoding_id = get_or_create_encoding_id()
-    return get_database().is_sortable(encoding_id)
 
 def clear_graph():
     get_database().clear()

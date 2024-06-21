@@ -42,15 +42,6 @@ function fetchSortHash(backendURL) {
     });
 }
 
-function fetchSortable(backendURL) {
-    return fetch(`${backendURL('graph/sortable')}`).then((r) => {
-        if (r.ok) {
-            return r.json();
-        }
-        throw new Error(r.statusText);
-    });
-}
-
 function loadFacts(backendURL) {
     return fetch(`${backendURL('graph/facts')}`).then((r) => {
         if (!r.ok) {
@@ -104,7 +95,6 @@ const initialState = {
     currentSort: '',
     transformationNodesMap: null,
     clingraphGraphics: [],
-    isSortable: true,
     shownRecursion: [],
 };
 
@@ -136,10 +126,8 @@ const checkTransformationExpandableCollapsible = (tid) => ({type: CHECK_TRANSFOR
  * */
 const ADD_SORT = 'APP/SORT/ADD';
 const SET_CURRENT_SORT = 'APP/TRANSFORMATIONS/SETCURRENTSORT';
-const SET_SORTABLE = 'APP/TRANSFORMATIONS/SETSORTABLE';
 const addSort = (s) => ({type: ADD_SORT, s});
 const setCurrentSort = (s) => ({type: SET_CURRENT_SORT, s});
-const setSortable = (s) => ({type: SET_SORTABLE, s});
 /**
  * Manage Nodes
 */
@@ -537,12 +525,6 @@ const transformationReducer = (state = initialState, action) => {
             }),
         };
     }
-    if (action.type === SET_SORTABLE) {
-        return {
-            ...state,
-            isSortable: action.s,
-        };
-    }
     if (action.type === SET_TRANSFORMATION_DROP_INDICES) {
         return {
             ...state,
@@ -713,17 +695,6 @@ const TransformationProvider = ({children}) => {
             .then((hash) => {
                 if (mounted) {
                     dispatch(addSort(hash));
-                }
-            });
-        fetchSortable(backendUrlRef.current)
-            .catch((error) => {
-                messageDispatchRef.current(
-                    showError(`Failed to get sortable: ${error}`)
-                );
-            })
-            .then((answer) => {
-                if (mounted) {
-                    dispatch(setSortable(answer));
                 }
             });
         fetchGraphRef.current([]);
