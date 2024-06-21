@@ -4,9 +4,6 @@
 
 ## viASP generates an interactive visualization of your ASP program and its stable models
 
-Try it out in Binder!
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/potassco/viasp/main?filepath=examples%2FIntroduction%20to%20viASP.ipynb)
-
 ![Example visualization](docs/img/header.png)
 
 viASP allows you to explore the visualization in a variety of ways:
@@ -16,8 +13,6 @@ viASP allows you to explore the visualization in a variety of ways:
 * Explain the derivation of individual symbols with arrows
 * Inspect iterations of recursive rules
 * Visualize unsatisfiable programs
-* Add #show statements on the fly
-* Search models and signatures
 * Move rules to follow a preferred order
 * Zoom in and out of parts of the graph
 
