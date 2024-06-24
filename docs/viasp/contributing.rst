@@ -34,7 +34,10 @@ Developing the frontend
 4. Run a modified viASP App to see changes on the frontend immediately :code:`python DevApp.py 0 encoding.lp`
 
 .. Note::
-    The JavaScript and CSS files are located at ``/frontend/src/lib``. The frontend code needs to be packed before changes become visible to the webpage.
+    The JavaScript and CSS files are located at ``/frontend/src/lib``. 
+
+5. To build the frontend for production run :code:`npm run build`
+
 
 Code your heart out!
 

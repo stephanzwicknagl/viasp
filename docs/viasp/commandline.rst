@@ -2,14 +2,15 @@
 Command line functionality
 ##########################
 
-viASP provides command line functionality to generate graphs from files. The graphs can then be inspected in the browser.
-
-
-To use viASP from the command line, simply run
+viASP provides command line functionality to create visualizations. It acts as a proxy to the clingo command meaning that it is usually sufficient to replace `clingo` with `viasp`:
 
 .. code-block:: bash
 
-    $ viasp encoding.lp
+    $ clingo encoding.lp -n0
+
+.. code-block:: bash
+
+    $ viasp encoding.lp -n0
 
 You can now inspect the visualization at http://localhost:8050/. To stop the server, press ``CTRL+C``.
 
@@ -83,12 +84,25 @@ To define how many models should be included at most, use the ``--models`` or ``
 Loading from stdin
 ==================
 
-To load a program from stdin, use `-` as the file path.
+Programs can be loaded from stdin
 
 .. code-block:: bash
 
-    $ cat hamiltonian.lp | viasp -
+    $ cat hamiltonian.lp | viasp
 
+Run clingo to obtain answer sets formatted as json with option `--outf=2`.
+
+.. code-block:: bash
+
+    $ clingo hamiltonian.lp --outf=2 | viasp hamiltonian.lp
+
+Note that the program is passed as an argument to viasp. It is not possible to pipe the program and answer sets at the same time.
+
+Load a json file in the style of clingo's output directly in viASP. This avoids recalculating the answer sets using clingo. Optionally, select one or multiple answer sets from the file using the answer set's index starting with index 0.
+
+.. code-block:: bash
+
+    $ viasp hamiltonian.json hamiltonian.lp --select-model=1
 
 ************
 Optimization
@@ -108,7 +122,7 @@ To specify the optimization mode, use the ``--opt-mode`` option. The optimizatio
 Clingraph
 *********
 
-viASP can include clingraph visualizations in the frontend. To do so, pass the path to a separte visualization program as an argument.
+viASP can integrate clingraph visualizations. To do so, pass the path to a separte visualization program as an argument.
 
 .. code-block:: bash
 
@@ -125,7 +139,7 @@ To pass additional arguments to clingraph, use the ``--engine`` and ``--graphviz
 Relaxer
 *******
 
-By default, viASP supports the visualization of unsatisfiable programs using the relaxer. viASP transforms the integrity constraints of unsatisfiable programs into weak constraints and visualizes the resulting program. The resulting graph can be used to inspect the reason for unsatisfiability.
+By default, viASP supports the visualization of unsatisfiable programs using the relaxer. viASP transforms the integrity constraints of unsatisfiable programs into weak constraints and visualizes the resulting program. The resulting graph can be used to find the reason for unsatisfiability.
 
 By default, variables in the body of integrity constraints are collected in the heads of constraints. To turn off this behavior, use the ``--no-collect-variables`` option.
 
@@ -135,6 +149,11 @@ To specify the head name of the weak constraint, use the ``--head-name`` option.
 
     $ viasp encoding.lp --head-name _unsat
 
+The relaxer mode only shows one of the optimal answer sets of the transformed program. To change the optimization mode, use the ``--relaxer-opt-mode`` option. The optimization mode is one of clingo's opt mode options. 
+
+.. code-block:: bash
+
+    $ viasp encoding.lp --relaxer-opt-mode=optN
 
 To turn off the relaxer, use the ``--no-relaxer`` or ``-r`` option.
 

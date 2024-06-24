@@ -9,24 +9,22 @@ The default file contains the following JSON object:
 .. code-block:: JSON
 
     {
-        "primary": "#879ee7",
-        "light": "#F4F5FA",
-        "dark": "#444",
-        "warn": "#FFC107",
-        "error": "#F44336",
-        "infoBackground": "#B3BAC5",
-        "rowShading": {
-            "0": "#a9a9a92f",
-            "1": "#ffffff"
-        },
-        "explanationSuccess": "#36B37E", 
-        "explanationHighlights": {
-            "0": "#d48521",
-            "1": "#9a8298",
-            "2": "#e0e4ac",
-            "3": "#98f4e2",
-            "4": "#21d485"
-        }
+        "primary": "rgba(103, 153, 247, 1)",
+        "light": "rgba(255, 255, 255, 1)",
+        "dark": "rgba(68, 68, 68, 1)",
+        "warn": "rgba(255, 193, 7, 1)",
+        "error": "rgba(244, 67, 54, 1)",
+        "infoBackground": "rgba(215, 255, 171,  1)",
+        "rowShading": [
+            "rgba(255, 255, 255, 0.5)",
+            "rgba(50, 149, 255, 0.10)"
+        ],
+        "explanationSuccess": "rgba(103, 153, 247, 1)", 
+        "explanationHighlights": [
+            "rgba(137,207,118, 1)",
+            "rgba(204,195,126, 1)",
+            "rgba(201,134,140, 1)"
+        ]
     }
 
 To permanently change the colors used in a viASP installation, edit the file at the site packages directory of your environment. Use the command `which viasp` to find the directory.

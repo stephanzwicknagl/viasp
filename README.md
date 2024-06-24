@@ -2,14 +2,13 @@
 
 [![Build and Test](https://github.com/potassco/viasp/actions/workflows/build_and_test.yml/badge.svg?branch=main)](https://github.com/potassco/viasp/actions/workflows/build_and_test.yml) [![Documentation Status](https://readthedocs.org/projects/viasp/badge/?version=latest)](https://viasp.readthedocs.io/en/latest/?badge=latest)
 
-## viASP generates an interactive visualization of your ASP program and its stable models
+## viASP generates interactive visualizations of ASP encodings and stable models
 
 ![Example visualization](docs/img/header.png)
 
 viASP allows you to explore the visualization in a variety of ways:
 
-* Follow the derivation of stable models step-by-step
-* Inspect single models and their atoms
+* Follow the derivation of answer sets step-by-step
 * Explain the derivation of individual symbols with arrows
 * Inspect iterations of recursive rules
 * Visualize unsatisfiable programs
@@ -29,6 +28,9 @@ Alternatively, viASP is also available on [PyPI](https://pypi.org/project/viasp/
 ```bash
 pip install viasp
 ```
+
+| :memo:        | To support the use of clingraph in viASP, install [graphviz](<https://www.graphviz.org/download/>)  (version 2.50 or greater) manually.       |
+|---------------|:------------------------|
 
 ## Usage
 

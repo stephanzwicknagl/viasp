@@ -4,22 +4,19 @@ viASP: An interactive ASP visualizer
 
 viASP generates interactive explanations of ASP programs and their stable models. A step-by-step break-down shows how the atoms of the stable models are derived.
 
-To use viASP the programs have to executed them using the clingo python API.
+viASP can be used via the command line or its Python API.
 
 ..
    comment viASP uses the clingo python API, a Flask server and a Dash frontend to generate the visualizations.
 
 .. image:: ./img/header.png
 
-viASP allows you to explore the visualization in a variety of ways:
+viASP allows exploration of ASP encodings in a variety of ways:
 
-* Follow the derivation of stable models step-by-step
-* Inspect single models and their atoms
+* Follow the derivation of answer sets step-by-step
 * Explain the derivation of individual symbols with arrows
 * Inspect iterations of recursive rules
 * Visualize unsatisfiable programs
-* Add #show statements on the fly
-* Search models and signatures
 * Move rules to follow a preferred order
 * Zoom in and out of parts of the graph
 

@@ -13,7 +13,7 @@ The conda viasp package can be found `here <https://anaconda.org/stephanzwicknag
 
 
 .. warning:: 
-    To support the usage of clingraph in viASP, install `graphviz <https://www.graphviz.org/download/>`__  (version 2.50 or greater) manually.
+    To support the use of clingraph in viASP, install `graphviz <https://www.graphviz.org/download/>`__  (version 2.50 or greater) manually.
 
 Installing with pip 
 ===================
@@ -24,8 +24,8 @@ The python viasp package can be found `here <https://pypi.org/project/viasp/>`__
 
     $ pip install viasp
 
-.. note:: 
-    Consider that an installation of graphviz is required, as discussed above.
+.. warning:: 
+    To support the use of clingraph in viASP, install `graphviz <https://www.graphviz.org/download/>`__  (version 2.50 or greater) manually.
 
 Installing from source
 ======================
