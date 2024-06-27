@@ -1,5 +1,5 @@
 from itertools import tee
-from typing import Any, TypeVar, Iterable, Tuple, List, Sequence
+from typing import Any, TypeVar, Iterable, Tuple, List, Sequence, Dict
 from collections import defaultdict
 from types import MappingProxyType
 from hashlib import sha1
@@ -242,6 +242,23 @@ def get_lp_files(files, stdin, stdin_is_json=False):
             )
         lp_files.append(("stdin", "-"))
     return lp_files
+
+
+def get_optimal_models(models: Dict) -> Dict:
+    number_of_opt_vars = len(next(iter(models.values()))) 
+    for i in range(number_of_opt_vars):
+        values_at_index_i = list(map(lambda opt_value_list: opt_value_list[i], models.values()))
+        minimum_at_index_i = min(values_at_index_i)
+
+        to_be_removed = []
+
+        for model, model_opt_value in models.items():
+            if model_opt_value[i] != minimum_at_index_i:
+                to_be_removed.append(model)
+        
+        for model in to_be_removed:
+            models.pop(model, None)
+    return models
 
 class SolveHandle:
     class Unsat:

@@ -14,7 +14,7 @@ from viasp.api import parse_fact_string
 from viasp.server import startup
 from viasp.shared.defaults import DEFAULT_BACKEND_HOST, DEFAULT_BACKEND_PORT, DEFAULT_FRONTEND_PORT, DEFAULT_BACKEND_PROTOCOL
 from viasp.shared.io import clingo_model_to_stable_model, clingo_symbols_to_stable_model
-from viasp.shared.util import get_json, get_lp_files, SolveHandle
+from viasp.shared.util import get_json, get_lp_files, SolveHandle, get_optimal_models
 from viasp.shared.simple_logging import error, warn, plain
 
 #
@@ -373,12 +373,12 @@ class ViaspArgumentParser:
 class ViaspRunner():
 
     def run(self, args):
-        try:
-            self.run_wild(args)
-        except Exception as e:
-            error(ERROR.format(e))
-            error(ERROR_INFO)
-            sys.exit(1)
+        # try:
+        self.run_wild(args)
+        # except Exception as e:
+        #     error(ERROR.format(e))
+        #     error(ERROR_INFO)
+        #     sys.exit(1)
 
     def run_with_json(self, ctl, model_from_json, no_relaxer, head_name, no_collect_variables, select_model, relaxer_opt_mode):
         models = {}
@@ -403,14 +403,12 @@ class ViaspRunner():
                 for model in handle:
                     plain(f"Answer: {model['number']}\n{model['representation']}")
                     if len(model['cost']) > 0:
-                        plain(f"Optimization: {model['cost']}")
-                    c = model['cost'][0] if len(model['cost']) > 0 else 0
+                        plain(f"Optimization: {' '.join(map(str,model['cost']))}")
+                    c = model['cost'] if len(model['cost']) > 0 else []
                     symbols = parse_fact_string(model['facts'], raise_nonfact=True)
                     stable_model = clingo_symbols_to_stable_model(symbols)
                     models[stable_model] = c
-                for m in list(
-                    filter(lambda i: models.get(i) == min(models.values()),
-                        models.keys())):
+                for m in get_optimal_models(models).keys():
                     ctl.viasp.mark(m)
             plain(handle.get())  # type: ignore
             if handle.get().unsatisfiable and not no_relaxer:
@@ -428,12 +426,10 @@ class ViaspRunner():
             for m in handle:
                 plain(f"Answer: {m.number}\n{m}")
                 if len(m.cost) > 0:
-                    plain(f"Optimization: {m.cost}")
-                c = m.cost[0] if len(m.cost) > 0 else 0
+                    plain(f"Optimization: {' '.join(map(str,m.cost))}")
+                c = m.cost
                 models[clingo_model_to_stable_model(m)] = c
-            for m in list(
-                    filter(lambda i: models.get(i) == min(models.values()),
-                        models.keys())):
+            for m in get_optimal_models(models).keys():
                 ctl.viasp.mark(m)
             plain(handle.get())
             if handle.get().unsatisfiable and not no_relaxer:
