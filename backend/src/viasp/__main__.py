@@ -404,7 +404,7 @@ class ViaspRunner():
                     plain(f"Answer: {model['number']}\n{model['representation']}")
                     if len(model['cost']) > 0:
                         plain(f"Optimization: {' '.join(map(str,model['cost']))}")
-                    c = model['cost'] if len(model['cost']) > 0 else []
+                    c = model['cost']
                     symbols = parse_fact_string(model['facts'], raise_nonfact=True)
                     stable_model = clingo_symbols_to_stable_model(symbols)
                     models[stable_model] = c
