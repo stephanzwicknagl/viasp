@@ -3,66 +3,67 @@ import { make_atoms_string } from "../utils/index";
 import './symbol.css';
 import PropTypes from "prop-types";
 import { SYMBOLIDENTIFIER } from "../types/propTypes";
-import { useColorPalette } from "../contexts/ColorPalette";
 import { useHighlightedSymbol } from "../contexts/HighlightedSymbol";
 
 
 export function Symbol(props) {
     const { symbolIdentifier, isSubnode, handleClick } = props;
     const [isHovered, setIsHovered] = useState(false);
-    const [isClicked, setIsClicked] = useState(false);
-    const colorPalette = useColorPalette();
 
     let atomString = make_atoms_string(symbolIdentifier.symbol)
     const suffix = `_${isSubnode ? "sub" : "main"}`
     let classNames = "symbol";
     let style = null;
-    const { highlightedSymbol: compareHighlightedSymbol } = useHighlightedSymbol();
+    const {highlightedSymbol: compareHighlightedSymbol, getNextHoverColor} =
+        useHighlightedSymbol();
 
-    const i = compareHighlightedSymbol.map(item => item.tgt).indexOf(symbolIdentifier.uuid);
-    const j = compareHighlightedSymbol.map(item => item.src).indexOf(symbolIdentifier.uuid);
-    if (i !== -1) {
-        classNames += " mark_symbol";
-        // all colors where item.tgt is equal to symbol
-        const colors = compareHighlightedSymbol.map(item => item.tgt).map((item, index) => item === symbolIdentifier.uuid ? index : -1).filter(item => item !== -1).map(item => compareHighlightedSymbol[item].color).reverse();
-        const gradientStops = colors.map((color, index, array) => {
-            const start = (index / array.length) * 100;
-            const end = ((index + 1) / array.length) * 100;
-            return `${color} ${start}%, ${color} ${end}%`;
-        }).join(', ');
-        style = { background: `linear-gradient(-45deg, ${gradientStops})` };
-    }
-    else if (j !== -1) {
-        classNames += " mark_symbol";
+    const combinedIndices = compareHighlightedSymbol
+        .flatMap((item, index) =>
+            [item.tgt, item.src].includes(symbolIdentifier.uuid) ? index : []
+        )
+        .filter((value, index, self) => self.indexOf(value) === index);
+
+    if (combinedIndices.length > 0) {
+        classNames += ' mark_symbol';
+        const uniqueColors = [
+            ...new Set(
+                combinedIndices.map(
+                    (index) => compareHighlightedSymbol[index].color
+                ).reverse()
+            ),
+        ];
+
+        const gradientStops = uniqueColors
+            .map((color, index, array) => {
+                const start = (index / array.length) * 100;
+                const end = ((index + 1) / array.length) * 100;
+                return `${color} ${start}%, ${color} ${end}%`;
+            })
+            .join(', ');
+        style = {background: `linear-gradient(-45deg, ${gradientStops})`};
     }
 
     atomString = atomString.length === 0 ? "" : atomString;
 
     if (symbolIdentifier.has_reason && isHovered) {
-        // if (reasons !== undefined && reasons.length !== 0 && isHovered) {
-        style = {backgroundColor: colorPalette.explanationSuccess};
-    }
-    if (symbolIdentifier.has_reason && isClicked) {
-        // if (reasons !== undefined && reasons.length !== 0 && isClicked) {
-        style = {backgroundColor: colorPalette.infoBackground};
+        style = getNextHoverColor(
+            compareHighlightedSymbol,
+            symbolIdentifier.uuid
+        );
     }
 
     const handleMouseEnter = () => setIsHovered(true);
     const handleMouseLeave = () => setIsHovered(false);
-    const handleMouseDown = () => setIsClicked(true);
-    const handleMouseUp = () => setIsClicked(false);
 
-    return (<div 
+    return (<span 
             className={classNames} 
             id={symbolIdentifier.uuid + suffix} 
             style={style} 
             onClick={(e) => handleClick(e, symbolIdentifier)} 
             onMouseEnter={handleMouseEnter} 
-            onMouseLeave={handleMouseLeave} 
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}>
+            onMouseLeave={handleMouseLeave}>
                 {atomString}
-            </div>);
+            </span>);
 }
 
 Symbol.propTypes = {

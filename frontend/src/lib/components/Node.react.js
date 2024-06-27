@@ -322,14 +322,17 @@ RecursionButton.propTypes = {
 function useHighlightedNodeToCreateClassName(node) {
     const [highlightedNode] = useHighlightedNode();
     const [classNames, setClassNames] = React.useState(
-        `node_border mouse_over_shadow ${node.uuid} ${
+        `txt-elem node_border mouse_over_shadow ${node.uuid} ${
             highlightedNode === node.uuid ? 'highlighted_node' : null
         }`
     );
 
     React.useEffect(() => {
+        if(highlightedNode === node.uuid) {
+            console.log('highlighted node', node.uuid)
+        }
         setClassNames(
-            `node_border mouse_over_shadow ${node.uuid} ${
+            `txt-elem node_border mouse_over_shadow ${node.uuid} ${
                 highlightedNode === node.uuid ? 'highlighted_node' : null
             }`
         );

@@ -36,8 +36,8 @@ export const HighlightedSymbolProvider = ({ children }) => {
 
     const getNextColor = React.useCallback(
         (l, arrowsColors) => {
-            var c = JSON.stringify(colorArray[l % colorArray.length]);
-            if (arrowsColors.indexOf(c) === -1 || l >= colorArray.length) {
+            var c = colorArray[l % colorArray.length];
+            if (arrowsColors.indexOf(c) === -1 || l >= 2*colorArray.length) {
                 return c;
             }
             return getNextColor(l + 1, arrowsColors);
@@ -57,12 +57,12 @@ export const HighlightedSymbolProvider = ({ children }) => {
                         srcNode: item.srcNode,
                     })
                 );
-                arrowsColors.push(JSON.stringify(item.color));
+                arrowsColors.push(item.color);
             });
-            const c = getNextColor(
+            const c = `${getNextColor(
                 new Set(currentHighlightedSymbol.map((item) => item.src)).size,
                 arrowsColors
-            );
+            )}`;
 
             arrows.forEach((a) => {
                 var value = JSON.stringify(a);
@@ -78,13 +78,35 @@ export const HighlightedSymbolProvider = ({ children }) => {
             setHighlightedSymbol(
                 arrowsSrcTgt.map((item, i) => {
                     var obj = JSON.parse(item);
-                    obj.color = JSON.parse(arrowsColors[i]);
+                    obj.color = arrowsColors[i];
                     return obj;
                 })
             );
         },
         [setHighlightedSymbol, getNextColor]
     );
+
+    const getNextHoverColor = React.useCallback(
+        (currentHighlightedSymbol, symbol) => {
+            const searchSymbolSourceIndex = currentHighlightedSymbol
+                .map((item) => item.src)
+                .indexOf(symbol);
+            if (searchSymbolSourceIndex !== -1) {
+                return {backgroundColor: currentHighlightedSymbol[searchSymbolSourceIndex].color};
+            }
+            var arrowsColors = [];
+            currentHighlightedSymbol.forEach((item) => {
+                arrowsColors.push(item.color);
+            });
+            const g = getNextColor(
+                new Set(currentHighlightedSymbol.map((item) => item.src)).size,
+                arrowsColors
+            );
+            return {backgroundColor: g};
+        },
+        [getNextColor]
+    );
+
 
     const toggleReasonOf = React.useCallback((sourceid, nodeId, currentHighlightedSymbol) => {
         fetchReasonOf(backendUrlRef.current, sourceid, nodeId).then(reasons => {
@@ -98,45 +120,19 @@ export const HighlightedSymbolProvider = ({ children }) => {
             });
     }, [messageDispatchRef, toggleHighlightedSymbol]);
 
-    // const reloadHighlightedSymbol = React.useCallback(
-    //     (currentHighlightedSymbol) => {
-    //         const reasonsOf = [];
-    //         highlightedSymbolRef.current.forEach((item) => {
-    //             if (reasonsOf.map((r) => r.src).includes(item.src)) {
-    //                 reasonsOf.push({src: item.src, srcNode: item.srcNode});
-    //             }
-    //         });
-    //         setHighlightedSymbol([]);
-
-    //         reasonsOf.forEach((item) => {
-    //             toggleReasonOf(
-    //                 item.src,
-    //                 item.srcNode,
-    //                 currentHighlightedSymbol
-    //             );
-    //         });
-    //     },
-    //     [setHighlightedSymbol, toggleReasonOf]
-    // );
-
-    // React.useEffect(
-    //     () => {
-    //         console.log('reloadHighlightedSymbol dependency changed');
-
-    //         reloadHighlightedSymbol(highlightedSymbolRef.current);
-    //     },
-    //     [
-    //         reloadHighlightedSymbol,
-    //         shownRecursion,
-    //         activeFilters,
-    //         transformations,
-    //     ]
-    // );
-
-
-
-    return <HighlightedSymbolContext.Provider
-        value={{highlightedSymbol, toggleHighlightedSymbol, setHighlightedSymbol, toggleReasonOf}}>{children}</HighlightedSymbolContext.Provider>
+    return (
+        <HighlightedSymbolContext.Provider
+            value={{
+                highlightedSymbol,
+                toggleHighlightedSymbol,
+                setHighlightedSymbol,
+                toggleReasonOf,
+                getNextHoverColor,
+            }}
+        >
+            {children}
+        </HighlightedSymbolContext.Provider>
+    );
 }
 
 HighlightedSymbolProvider.propTypes = {

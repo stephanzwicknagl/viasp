@@ -14,7 +14,7 @@ export function RowHeader(props) {
                 color: colorPalette.light,
                 borderColor: colorPalette.primary,
             }}
-            className="row_header"
+            className="txt-elem row_header"
         >
             {ruleContainer.str_.map((rule) => (
                 <div

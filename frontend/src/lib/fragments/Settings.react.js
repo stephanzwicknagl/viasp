@@ -6,7 +6,7 @@ import { darken } from 'polished';
 
 
 function makeClassNameFromMarkedSymbol(highlightedSymbol) {
-    const className = `noselect toggle_part unselected ${highlightedSymbol.length === 0 ? "fadeOut" : "fadeIn"}`;
+    const className = `txt-elem noselect toggle_part unselected ${highlightedSymbol.length === 0 ? "fadeOut" : "fadeIn"}`;
     return className;
 }
 
@@ -20,8 +20,7 @@ function ClearMarked() {
     const hoverFactor = 0.08;
     const style = {
         background: colorPalette.explanationSuccess,
-        color: colorPalette.dark,
-        border: `1px solid ${colorPalette.dark}`,
+        color: colorPalette.light,
     };
 
     if (isHovered) {
@@ -43,7 +42,7 @@ function ClearMarked() {
                 onMouseLeave={handleMouseLeave}
                 onMouseDown={handleMouseDown}
                 onMouseUp={handleMouseUp}>
-            CLEAR</span>
+            clear</span>
 }
 
 export default function Settings() {

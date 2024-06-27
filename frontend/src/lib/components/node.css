@@ -1,15 +1,15 @@
 .set_container {
     width: fit-content;
     position: relative;
-    line-height: 1.5em;
-    min-height: 1.5em;
+    line-height: 18pt;
+    min-height: 18pt;
     cursor: pointer;
 }
 
 .node_border {
     border-radius: 0.7em;
-    border: .14em solid;
-    margin: 1em 3% 1em 3%;
+    border: 1pt solid;
+    margin: 12pt 3% 12pt 3%;
     position: relative;
     height: max-content;
     overflow: hidden;
@@ -51,8 +51,6 @@
 }
 
 .set_value {
-    font-family: monospace;
-    font-size: 12pt;
     width: fit-content;
     margin: .38em 1em .5em 1em;
 
