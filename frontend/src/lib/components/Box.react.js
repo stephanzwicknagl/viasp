@@ -160,6 +160,7 @@ export function Box(props) {
                             src={`${backendURL('graph/clingraph')}/${
                                 node.uuid
                             }`}
+                            // width={`30px`}
                             alt="Clingraph"
                         />
                     )}
