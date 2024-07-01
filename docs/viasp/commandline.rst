@@ -135,15 +135,72 @@ To pass additional arguments to clingraph, use the ``--engine`` and ``--graphviz
     $ viasp encoding.lp --viz-encoding viz_encoding.lp --engine clingraph --graphviz-type dot
 
 
-*******
-Relaxer
-*******
+**********
+Relaxation
+**********
 
-By default, viASP supports the visualization of unsatisfiable programs using the relaxer. viASP transforms the integrity constraints of unsatisfiable programs into weak constraints and visualizes the resulting program. The resulting graph can be used to find the reason for unsatisfiability.
+Unsatisfiable programs can not be visualized by viASP. When such a program is encountered, viASP suggests using the relaxation mode through the ``--relax`` or ``-r`` option. The relaxation mode transforms the program into a relaxed program that can be visualized.
+
+.. admonition:: Example
+
+    An unsatisfiable program
+
+    .. code-block:: bash
+    
+        a(1..3). 
+        b(X) :- a(X+1).
+        :- a(X), b(X).
+        :- c(1).
+
+    is passed to viASP.
+
+    .. code-block:: bash
+
+        $ viasp unsat-example.lp
+        viasp version 2.1.0
+        Reading from unsat-example.lp
+
+        Starting backend at http://localhost:5050
+        UNSAT
+        [INFO] The input program is unsatisfiable. To visualize the relaxed program 
+        use --relax or -r.
+
+    When using the relaxer the program is transformed 
+
+    .. code-block:: bash
+
+        $ viasp unsat-example.lp --relax
+        viasp version 2.1.0
+        Reading from unsat-example.lp
+        UNSAT
+        [INFO] Set models.
+        [INFO] Reconstructing in progress.
+        [INFO] No answer sets found. Switching to transformed visualization.
+        [INFO] Successfully transformed program constraints.
+        [INFO] Set models.
+        [INFO] Reconstructing in progress.
+        [INFO] Drawing in progress.
+        Dash is running on http://localhost:8050/
+
+    and results in the visualization of the program
+
+    .. code-block:: bash
+
+        a(1..3).
+        b(X) :- a(X+1).
+        unsat(r1, (X,)) :- a(X), b(X).
+        unsat(r2) :- c(1).
+        :~ unsat(R,T). [1@0,R,T]
+
+
+    .. image:: ../img/relaxer-program.png
+
+    From the (optimal) answer set to this transformed program, it becomes clear, that the original program is unsatisfiable due to the first integrity constraint. It is violated for the variables ``X=1`` and ``X=2``.
+    
 
 By default, variables in the body of integrity constraints are collected in the heads of constraints. To turn off this behavior, use the ``--no-collect-variables`` option.
 
-To specify the head name of the weak constraint, use the ``--head-name`` option. By default, the head name is ``unsat``, but a different name should be specified, if the program already contains the predicate.
+To specify the head name of the weak constraint, use the ``--head-name`` option. By default, the head name is ``unsat``, but a different name has to be specified, if the program already contains the predicate.
 
 .. code-block:: bash
 
@@ -155,7 +212,6 @@ The relaxer mode only shows one of the optimal answer sets of the transformed pr
 
     $ viasp encoding.lp --relaxer-opt-mode=optN
 
-To turn off the relaxer, use the ``--no-relaxer`` or ``-r`` option.
 
 *************
 Other options

@@ -11,14 +11,14 @@ viASP can be used via the command line or its Python API.
 
 .. image:: ./img/header.png
 
-viASP allows exploration of ASP encodings in a variety of ways:
+Explore ASP programs and their answer sets with viASP:
 
 * Follow the derivation of answer sets step-by-step
-* Explain the derivation of individual symbols with arrows
+* Explain the derivation of individual atoms
 * Inspect iterations of recursive rules
-* Visualize unsatisfiable programs
-* Move rules to follow a preferred order
-* Zoom in and out of parts of the graph
+* Relax and visualize unsatisfiable programs
+* Reorder rules
+* Zoom in and out with Ctrl + mouse wheel
 
 .. toctree::
    :maxdepth: 2

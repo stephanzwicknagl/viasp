@@ -245,6 +245,8 @@ def get_lp_files(files, stdin, stdin_is_json=False):
 
 
 def get_optimal_models(models: Dict) -> Dict:
+    if len(models) == 0:
+        return {}
     number_of_opt_vars = len(next(iter(models.values()))) 
     for i in range(number_of_opt_vars):
         values_at_index_i = list(map(lambda opt_value_list: opt_value_list[i], models.values()))

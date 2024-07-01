@@ -1,4 +1,5 @@
 import argparse
+from curses import meta
 import textwrap
 import sys
 import re
@@ -80,19 +81,6 @@ class MyArgumentParser(argparse.ArgumentParser):
     def print_help(self, file=None):
         if file is None:
             file = sys.stdout
-        file.write(textwrap.dedent(r"""
-               _        _____ _____  
-              (_)  /\  / ____|  __ \ 
-        __   ___  /  \| (___ | |__) |
-        \ \ / / |/ /\ \\___ \|  ___/ 
-         \ V /| / ____ \___) | |     
-          \_/ |/_/    \_\___/|_|     
-                    
-        viASP is a package to generate interactive 
-        visualizations of ASP programs and 
-        their stable models.
-
-        """))
         file.write("viasp version {}\n".format(VERSION))
         argparse.ArgumentParser.print_help(self, file)
 
@@ -101,6 +89,11 @@ class MyArgumentParser(argparse.ArgumentParser):
 
 
 class NegatedBooleanOptionalAction(argparse.BooleanOptionalAction):
+
+    def __init__(self, *args, **kwargs):
+        super(NegatedBooleanOptionalAction, self).__init__(*args, **kwargs)
+        self.option_strings = [opt for opt in self.option_strings if not opt.startswith('--no-no')]
+        
 
     def __call__(self, parser, namespace, values, option_string=None):
         if option_string != None and option_string in self.option_strings:
@@ -191,16 +184,13 @@ class ViaspArgumentParser:
         # Positional arguments
         self.__cmd_parser.add_argument('files',
                 help=textwrap.dedent("""\
-            : - Files containing ASP encodings. The answer set(s) will be visualized.
-
-              - A single JSON file using clingo's output option `--outf=2`.
-                In this case, the facts defining answer set will be loaded from each stable model."""),
-                            nargs='*')
+            : Files containing ASP encodings
+              Optionally, a single JSON file defining the answer set(s) in clingo's 
+              `--outf=2` format"""),
+            nargs='*')
         self.__cmd_parser.add_argument('stdin',
                 help=textwrap.dedent("""\
-            : Standard input in one of the following formats:
-                - ASP encoding
-                - A json from clingo's output option `--outf=2`"""),
+            : Standard input in form of an ASP encoding or JSON in clingo's `--outf=2` format"""),
             nargs='?',
             default=sys.stdin)
         # Basic Options
@@ -222,22 +212,22 @@ class ViaspArgumentParser:
             action='store_true',
             help=': Print version information and exit')
         basic.add_argument('--host',
+            metavar='<host>',
             type=str,
             help=': The host for the backend and frontend',
             default=DEFAULT_BACKEND_HOST)
         basic.add_argument('-p',
             '--port',
+            metavar='<port>',
             type=int,
             help=': The port for the backend',
             default=DEFAULT_BACKEND_PORT)
         basic.add_argument('-f',
             '--frontend-port',
+            metavar='<port>',
             type=int,
             help=': The port for the frontend',
             default=DEFAULT_FRONTEND_PORT)
-        #basic.add_argument('--minimize', dest='minimize',
-        #                   help=argparse.SUPPRESS,
-        #                   action='store_true')
 
         # Solving Options
         solving = cmd_parser.add_argument_group('Solving Options')
@@ -258,60 +248,60 @@ class ViaspArgumentParser:
             metavar='<n>',
             default=1)
         solving.add_argument('--select-model',
-            help = textwrap.dedent('''\
-                Select only one of the models when using a json input.
-                Defined by an index for accessing the models, starting in index 0.
-                Negative indexes are also allowed (-1 refers to the last model)
-                Can appear multiple times to select multiple models.'''),
+            help = textwrap.dedent("""\
+            : Select only one of the models when using a json input
+              Defined by an index for accessing the models, starting in index 0
+              Can appear multiple times to select multiple models"""),
+            metavar='<index>',
             type=int,
             action='append',
-            nargs='?',
-            metavar="")
-        # solving.add_argument('--project',
-        #     dest='project',
-        #     help=HELP_PROJECT,
-        #     action='store_true')
+            nargs='?')
 
 
         clingraph_group = cmd_parser.add_argument_group(
-            'Clingraph', 'If included, a clingraph visualization will be made.')
+            'Clingraph Options', 'If included, a Clingraph visualization will be made.')
         clingraph_group.add_argument(
             '--viz-encoding',
+            metavar='<path>',
             type=str,
-            help=': Path to the visualization encoding.',
+            help=': Path to the visualization encoding',
             default=None)
         clingraph_group.add_argument('--engine',
             type=str,
-            help=': The visualization engine.',
+            metavar='<ENGINE>',
+            help=': The visualization engine (refer to clingraph documentation)',
             default="dot")
         clingraph_group.add_argument(
             '--graphviz-type',
             type=str,
+            metavar='<type>',
             help=
-            ': The graph type, see clingraph documentation https://clingraph.readthedocs.io/en/latest/',
+            ': The graph type (refer to clingraph documentation)',
             default="graph")
 
         relaxer_group = cmd_parser.add_argument_group(
-            'Relaxer',
+            'Relaxation Options',
             'Options for the relaxation of integrity constraints in unsatisfiable programs.'
         )
         relaxer_group.add_argument('-r',
-            '--no-relaxer',
+            '--relax',
             action=NegatedBooleanOptionalAction,
-            help=': Do not use the relaxer')
+            help=': Use the relaxer and visualize the transformed program')
         relaxer_group.add_argument('--head-name',
             type=str,
-            help=': The name of the head predicate.',
+            metavar='<name>',
+            help=': The name of the head predicate',
             default="unsat")
         relaxer_group.add_argument(
             '--no-collect-variables',
             action=NegatedBooleanOptionalAction,
             help=
-            ': Do not collect variables from body as a tuple in the head literal.')
+            ': Do not collect variables from body as a tuple in the head literal')
         relaxer_group.add_argument(
             '--relaxer-opt-mode',
+            metavar='<mode>',
             type=self.__do_opt_mode,
-            help=': Clingo optimization mode for the relaxed program. Default is "opt" - only one optimal answer set is shown.',
+            help=': Clingo optimization mode for the relaxed program',
         )
 
 
@@ -373,14 +363,14 @@ class ViaspArgumentParser:
 class ViaspRunner():
 
     def run(self, args):
-        # try:
-        self.run_wild(args)
-        # except Exception as e:
-        #     error(ERROR.format(e))
-        #     error(ERROR_INFO)
-        #     sys.exit(1)
+        try:
+            self.run_wild(args)
+        except Exception as e:
+            error(ERROR.format(e))
+            error(ERROR_INFO)
+            sys.exit(1)
 
-    def run_with_json(self, ctl, model_from_json, no_relaxer, head_name, no_collect_variables, select_model, relaxer_opt_mode):
+    def run_with_json(self, ctl, model_from_json, relax, head_name, no_collect_variables, select_model, relaxer_opt_mode):
         models = {}
         if select_model is not None:
             for m in select_model:
@@ -411,14 +401,21 @@ class ViaspRunner():
                 for m in get_optimal_models(models).keys():
                     ctl.viasp.mark(m)
             plain(handle.get())  # type: ignore
-            if handle.get().unsatisfiable and not no_relaxer:
-                ctl = ctl.viasp.relax_constraints(
-                    head_name=head_name,
-                    collect_variables=not no_collect_variables,
-                    relaxer_opt_mode=relaxer_opt_mode)
+            if handle.get().unsatisfiable:
+                if relax:
+                    ctl = ctl.viasp.relax_constraints(
+                        head_name=head_name,
+                        collect_variables=not no_collect_variables,
+                        relaxer_opt_mode=relaxer_opt_mode)
+                else:
+                    self.warn_unsat()
         return ctl
 
-    def run_with_clingo(self, ctl, no_relaxer, head_name, no_collect_variables,
+    def warn_unsat(self):
+        plain("[INFO] The input program is unsatisfiable. To visualize the relaxed program use --relax or -r.")
+        sys.exit(0)
+
+    def run_with_clingo(self, ctl, relax, head_name, no_collect_variables,
                         relaxer_opt_mode):
         ctl.ground([("base", [])])
         with ctl.solve(yield_=True) as handle:
@@ -432,11 +429,14 @@ class ViaspRunner():
             for m in get_optimal_models(models).keys():
                 ctl.viasp.mark(m)
             plain(handle.get())
-            if handle.get().unsatisfiable and not no_relaxer:
-                ctl = ctl.viasp.relax_constraints(
-                    head_name=head_name,
-                    collect_variables=not no_collect_variables,
-                    relaxer_opt_mode=relaxer_opt_mode)
+            if handle.get().unsatisfiable:
+                if relax:
+                    ctl = ctl.viasp.relax_constraints(
+                        head_name=head_name,
+                        collect_variables=not no_collect_variables,
+                        relaxer_opt_mode=relaxer_opt_mode)
+                else:
+                    self.warn_unsat()
         return ctl
 
     def run_wild(self, args):
@@ -467,7 +467,7 @@ class ViaspRunner():
                                       stdin_is_json)
 
         # start the backend
-        no_relaxer = options.get("no_relaxer", False)
+        relax = options.get("relax", False)
         host = options.get("host", DEFAULT_BACKEND_HOST)
         port = options.get("port", DEFAULT_BACKEND_PORT)
         frontend_port = options.get("frontend_port", DEFAULT_FRONTEND_PORT)
@@ -492,11 +492,11 @@ class ViaspRunner():
             else:
                 ctl.load(path[1])
         if model_from_json:
-            ctl = self.run_with_json(ctl, model_from_json, no_relaxer,
+            ctl = self.run_with_json(ctl, model_from_json, relax,
                                      head_name, no_collect_variables,
                                      select_model, relax_opt_mode_str)
         else:
-            ctl = self.run_with_clingo(ctl, no_relaxer, head_name,
+            ctl = self.run_with_clingo(ctl, relax, head_name,
                                        no_collect_variables, relax_opt_mode_str)
         ctl.viasp.show()
         if len(options['clingraph_files']) > 0:
