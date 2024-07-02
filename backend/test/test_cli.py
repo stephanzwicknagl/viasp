@@ -119,12 +119,12 @@ def test_clingraph():
 
 def test_relaxer():
     test_args = [
-        'test/resources/sample_encoding.lp', '--no-relaxer',
+        'test/resources/sample_encoding.lp', '--relax',
         '--no-collect-variables',
         '--head-name', 'testhead'
     ]
     options = parse(test_args)[0]
-    assert options['no_relaxer'] == True
+    assert options['relax'] == True
     assert options['no_collect_variables'] == True
     assert options['head_name'] == 'testhead'
 
