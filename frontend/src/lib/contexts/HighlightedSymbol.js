@@ -35,12 +35,33 @@ export const HighlightedSymbolProvider = ({ children }) => {
     const backendUrlRef = React.useRef(backendURL);
 
     const getNextColor = React.useCallback(
-        (l, arrowsColors) => {
-            var c = colorArray[l % colorArray.length];
-            if (arrowsColors.indexOf(c) === -1 || l >= 2*colorArray.length) {
-                return c;
-            }
-            return getNextColor(l + 1, arrowsColors);
+        (currentHighlightedSymbol) => {
+            const colorCounter = {};
+            colorArray.forEach((i) => (colorCounter[i] = 0));
+
+            const distinctExplanationsColors = currentHighlightedSymbol.reduce(
+                (acc, item) => {
+                    const key = `${item.src}-${item.color}`;
+                    if (!acc.some((i) => `${i.src}-${i.color}` === key)) {
+                        acc.push(item);
+                    }
+                    return acc;
+                },
+                []
+            );
+            distinctExplanationsColors.forEach((item) => {
+                colorCounter[item.color] = colorCounter[item.color] + 1;
+            });
+
+            let leastOccurences = Infinity;
+            let leastOccuringColor = '';
+            colorArray.forEach((color) => {
+                if (colorCounter[color] < leastOccurences) {
+                    leastOccurences = colorCounter[color];
+                    leastOccuringColor = color;
+                }
+            });
+            return leastOccuringColor
         },
         [colorArray]
     );
@@ -59,10 +80,7 @@ export const HighlightedSymbolProvider = ({ children }) => {
                 );
                 arrowsColors.push(item.color);
             });
-            const c = `${getNextColor(
-                new Set(currentHighlightedSymbol.map((item) => item.src)).size,
-                arrowsColors
-            )}`;
+            const c = `${getNextColor(currentHighlightedSymbol)}`;
 
             arrows.forEach((a) => {
                 var value = JSON.stringify(a);
@@ -94,14 +112,7 @@ export const HighlightedSymbolProvider = ({ children }) => {
             if (searchSymbolSourceIndex !== -1) {
                 return {backgroundColor: currentHighlightedSymbol[searchSymbolSourceIndex].color};
             }
-            var arrowsColors = [];
-            currentHighlightedSymbol.forEach((item) => {
-                arrowsColors.push(item.color);
-            });
-            const g = getNextColor(
-                new Set(currentHighlightedSymbol.map((item) => item.src)).size,
-                arrowsColors
-            );
+            const g = getNextColor(currentHighlightedSymbol);
             return {backgroundColor: g};
         },
         [getNextColor]
