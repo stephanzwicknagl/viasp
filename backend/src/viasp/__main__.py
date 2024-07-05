@@ -8,6 +8,7 @@ import webbrowser
 import subprocess
 
 import importlib.metadata
+from click import option
 from clingo.script import enable_python
 
 from viasp import Control as viaspControl
@@ -93,7 +94,7 @@ class NegatedBooleanOptionalAction(argparse.BooleanOptionalAction):
     def __init__(self, *args, **kwargs):
         super(NegatedBooleanOptionalAction, self).__init__(*args, **kwargs)
         self.option_strings = [opt for opt in self.option_strings if not opt.startswith('--no-no')]
-        
+
 
     def __call__(self, parser, namespace, values, option_string=None):
         if option_string != None and option_string in self.option_strings:
@@ -245,8 +246,7 @@ class ViaspArgumentParser:
             help=": Compute at most <n> models (0 for all)",
             type=int,
             dest='max_models',
-            metavar='<n>',
-            default=1)
+            metavar='<n>')
         solving.add_argument('--select-model',
             help = textwrap.dedent("""\
             : Select only one of the models when using a json input
@@ -343,13 +343,23 @@ class ViaspArgumentParser:
         if options['viz_encoding']:
             self.__add_file(options['clingraph_files'], options.pop('viz_encoding'))
 
-        # handle opt mode
+        # handle opt mode and set max_models accordingly
+        options['original_max_models'] = options['max_models']
         opt_mode, bounds = options.get("opt_mode") or ('opt', [])
+        options['opt_mode'] = opt_mode
+        if opt_mode == "optN":
+            options['max_models'] = 0
+        if opt_mode == "opt":
+            if options['max_models'] == None:
+                options['max_models'] = 0
+
         options['opt_mode_str'] = f"--opt-mode={opt_mode}" + (f",{','.join(bounds)}"
                                                    if len(bounds) > 0 else "")
         relaxer_opt_mode, relaxer_bounds = options.get("relaxer_opt_mode") or ('opt', [])
         options['relaxer_opt_mode_str'] = f"--opt-mode={relaxer_opt_mode}" + (f",{','.join(relaxer_bounds)}"
                                                     if len(relaxer_bounds) > 0 else "")
+        if options['max_models'] == None:
+            options['max_models'] = 1
 
         # return
         return options, clingo_options, prologue, \
@@ -370,35 +380,41 @@ class ViaspRunner():
             error(ERROR_INFO)
             sys.exit(1)
 
-    def run_with_json(self, ctl, model_from_json, relax, head_name, no_collect_variables, select_model, relaxer_opt_mode):
-        models = {}
+    def run_with_json(self, ctl, model_from_json, relax, head_name,
+                      no_collect_variables, select_model, relaxer_opt_mode):
         if select_model is not None:
             for m in select_model:
-                if m>=len(model_from_json):
+                if m >= len(model_from_json):
                     raise ValueError(f"Invalid model number selected {m}")
-                if m<0:
-                    if m<-1*len(model_from_json):
+                if m < 0:
+                    if m < -1 * len(model_from_json):
                         raise ValueError(f"Invalid model number selected {m}")
                     select_model.append(len(model_from_json) + m)
         with SolveHandle(model_from_json) as handle:
             # mark user model selection
             if select_model is not None:
                 for model in handle:
-                    if model['number']-1 in select_model:
-                        symbols = parse_fact_string(model['facts'], raise_nonfact=True)
+                    if model['number'] - 1 in select_model:
+                        symbols = parse_fact_string(model['facts'],
+                                                    raise_nonfact=True)
                         stable_model = clingo_symbols_to_stable_model(symbols)
                         ctl.viasp.mark(stable_model)
             # mark all (optimal) models
             else:
+                models_to_mark = []
                 for model in handle:
-                    plain(f"Answer: {model['number']}\n{model['representation']}")
+                    plain(
+                        f"Answer: {model['number']}\n{model['representation']}"
+                    )
                     if len(model['cost']) > 0:
                         plain(f"Optimization: {' '.join(map(str,model['cost']))}")
-                    c = model['cost']
                     symbols = parse_fact_string(model['facts'], raise_nonfact=True)
                     stable_model = clingo_symbols_to_stable_model(symbols)
-                    models[stable_model] = c
-                for m in get_optimal_models(models).keys():
+                    if len(handle.opt()) == 0:
+                        models_to_mark.append(stable_model)
+                    if len(handle.opt()) > 0 and model["cost"] == handle.opt():
+                        models_to_mark.append(stable_model)
+                for m in models_to_mark:
                     ctl.viasp.mark(m)
             plain(handle.get())  # type: ignore
             if handle.get().unsatisfiable:
@@ -412,21 +428,44 @@ class ViaspRunner():
         return ctl
 
     def warn_unsat(self):
-        plain("[INFO] The input program is unsatisfiable. To visualize the relaxed program use --relax or -r.")
+        plain(
+            "[INFO] The input program is unsatisfiable. To visualize the relaxed program use --relax or -r."
+        )
         sys.exit(0)
 
+    def warn_optimality_not_guaranteed(self):
+        warn(
+            "(clingo): #models not 0: optimality of last model not guaranteed."
+        )
+
     def run_with_clingo(self, ctl, relax, head_name, no_collect_variables,
-                        relaxer_opt_mode):
+                        relaxer_opt_mode, original_max_models, max_models, opt_mode):
         ctl.ground([("base", [])])
         with ctl.solve(yield_=True) as handle:
-            models = {}
+            models_to_mark = []
             for m in handle:
+                if (len(m.cost) > 0 and
+                    opt_mode == "opt" and
+                    max_models != 0):
+                    self.warn_optimality_not_guaranteed()
+
                 plain(f"Answer: {m.number}\n{m}")
                 if len(m.cost) > 0:
                     plain(f"Optimization: {' '.join(map(str,m.cost))}")
-                c = m.cost
-                models[clingo_model_to_stable_model(m)] = c
-            for m in get_optimal_models(models).keys():
+
+                if opt_mode == "opt" and len(m.cost) > 0:
+                    models_to_mark = [clingo_model_to_stable_model(m)]
+                else:
+                    models_to_mark.append(clingo_model_to_stable_model(m))
+
+                if len(m.cost) == 0 and original_max_models == None:
+                    break
+                if (len(m.cost) == 0 and
+                    original_max_models != None and
+                    original_max_models == m.number):
+                    break
+
+            for m in models_to_mark:
                 ctl.viasp.mark(m)
             plain(handle.get())
             if handle.get().unsatisfiable:
@@ -445,7 +484,8 @@ class ViaspRunner():
 
         # print clingo help
         if options['clingo_help'] > 0:
-            subprocess.Popen(["clingo", "--help=" + str(options['clingo_help'])]).wait()
+            subprocess.Popen(
+                ["clingo", "--help=" + str(options['clingo_help'])]).wait()
             sys.exit(0)
 
         # prologue
@@ -460,7 +500,8 @@ class ViaspRunner():
             options['stdin'] = ""
 
         # read json
-        model_from_json, stdin_is_json = get_json(options['files'], options['stdin'])
+        model_from_json, stdin_is_json = get_json(options['files'],
+                                                  options['stdin'])
 
         # get ASP files
         encoding_files = get_lp_files(options['files'], options['stdin'],
@@ -478,9 +519,12 @@ class ViaspRunner():
         relax_opt_mode_str = options.get("relaxer_opt_mode_str", None)
 
         app = startup.run(host=host, port=port)
-
-        ctl_options = ['--models', str(options['max_models']), options['opt_mode_str']]
-        for k,v in options['constants'].items():
+        ctl_options = [
+            '--models',
+            str(options['max_models']),
+            options['opt_mode_str']
+        ]
+        for k, v in options['constants'].items():
             ctl_options.extend(["--const", f"{k}={v}"])
         ctl_options.extend(clingo_options)
         backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
@@ -492,12 +536,16 @@ class ViaspRunner():
             else:
                 ctl.load(path[1])
         if model_from_json:
-            ctl = self.run_with_json(ctl, model_from_json, relax,
-                                     head_name, no_collect_variables,
-                                     select_model, relax_opt_mode_str)
+            ctl = self.run_with_json(ctl, model_from_json, relax, head_name,
+                                     no_collect_variables, select_model,
+                                     relax_opt_mode_str)
         else:
             ctl = self.run_with_clingo(ctl, relax, head_name,
-                                       no_collect_variables, relax_opt_mode_str)
+                                       no_collect_variables,
+                                       relax_opt_mode_str,
+                                       options['original_max_models'],
+                                       options['max_models'],
+                                       options['opt_mode'])
         ctl.viasp.show()
         if len(options['clingraph_files']) > 0:
             for v in options['clingraph_files']:

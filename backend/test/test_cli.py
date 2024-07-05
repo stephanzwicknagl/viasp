@@ -86,14 +86,14 @@ def test_opt_mode():
         '--opt-mode=optN',
     ]
     options = parse(test_args)[0]
-    assert options['opt_mode'] == ('optN', [])
+    assert options['opt_mode_str'] == '--opt-mode=optN'
 
     test_args = [
         'test/resources/sample_encoding.lp',
         '--opt-mode=opt,1,2',
     ]
     options = parse(test_args)[0]
-    assert options['opt_mode'] == ('opt', ['1','2'])
+    assert options['opt_mode_str'] == '--opt-mode=opt,1,2'
 
 
 def test_select_model():
