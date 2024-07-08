@@ -283,10 +283,15 @@ class ViaspArgumentParser:
             'Relaxation Options',
             'Options for the relaxation of integrity constraints in unsatisfiable programs.'
         )
-        relaxer_group.add_argument('-r',
+        relaxer_group.add_argument(
+            '-r',
             '--relax',
             action=NegatedBooleanOptionalAction,
             help=': Use the relaxer and visualize the transformed program')
+        relaxer_group.add_argument(
+            '--print-relax',
+            action=NegatedBooleanOptionalAction,
+            help=': Use the relaxer and output the transformed program')
         relaxer_group.add_argument('--head-name',
             type=str,
             metavar='<name>',
@@ -429,7 +434,7 @@ class ViaspRunner():
 
     def warn_unsat(self):
         plain(
-            "[INFO] The input program is unsatisfiable. To visualize the relaxed program use --relax or -r."
+            "[INFO] The input program is unsatisfiable. To visualize the relaxed program use --print-relax or --relax."
         )
         sys.exit(0)
 
@@ -478,20 +483,29 @@ class ViaspRunner():
                     self.warn_unsat()
         return ctl
 
+    def relax_program_and_print(self, host, port, encoding_files, stdin,  head_name, no_collect_variables):
+        from contextlib import redirect_stdout
+        import atexit
+        with open('viasp.log', 'w') as f:
+            with redirect_stdout(f):
+                app = startup.run(host=host, port=port)
+
+                ctl = viaspControl()
+                # get ASP files
+                for path in encoding_files:
+                    if path[1] == "-":
+                        ctl.add("base", [], stdin)
+                    else:
+                        ctl.load(path[1])
+                relaxed_program = ctl.viasp.get_relaxed_program(
+                    head_name, not no_collect_variables) or ""
+                atexit._run_exitfuncs()
+            plain(relaxed_program)
+        sys.exit(0)
+
     def run_wild(self, args):
         vap = ViaspArgumentParser()
         options, clingo_options, prologue, file_warnings = vap.run(args)
-
-        # print clingo help
-        if options['clingo_help'] > 0:
-            subprocess.Popen(
-                ["clingo", "--help=" + str(options['clingo_help'])]).wait()
-            sys.exit(0)
-
-        # prologue
-        plain(prologue)
-        for i in file_warnings:
-            warn(WARNING_INCLUDED_FILE.format(i))
 
         # read stdin
         if not sys.stdin.isatty():
@@ -517,6 +531,21 @@ class ViaspRunner():
         no_collect_variables = options.get("no_collect_variables", False)
         select_model = options.get("select_model", None)
         relax_opt_mode_str = options.get("relaxer_opt_mode_str", None)
+        
+        # print clingo help
+        if options['clingo_help'] > 0:
+            subprocess.Popen(
+                ["clingo", "--help=" + str(options['clingo_help'])]).wait()
+            sys.exit(0)
+
+        # print relaxed program
+        if options['print_relax']:
+            self.relax_program_and_print(host, port, encoding_files, options['stdin'], head_name, no_collect_variables)
+
+        # prologue
+        plain(prologue)
+        for i in file_warnings:
+            warn(WARNING_INCLUDED_FILE.format(i))
 
         app = startup.run(host=host, port=port)
         ctl_options = [

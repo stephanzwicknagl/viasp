@@ -139,7 +139,9 @@ To pass additional arguments to clingraph, use the ``--engine`` and ``--graphviz
 Relaxation
 **********
 
-Unsatisfiable programs can not be visualized by viASP. When such a program is encountered, viASP suggests using the relaxation mode through the ``--relax`` or ``-r`` option. The relaxation mode transforms the program into a relaxed program that can be visualized.
+Unsatisfiable programs can not be visualized by viASP. When such a program is encountered, viASP suggests using the relaxation mode through the ``--print-relax`` or ``--relax`` options. 
+
+The relaxation mode transforms all integrity constraints of the input program into a relaxed version. Answer sets of the transformed program can point to which of the integrity constraints is violated.
 
 .. admonition:: Example
 
@@ -163,9 +165,32 @@ Unsatisfiable programs can not be visualized by viASP. When such a program is en
         Starting backend at http://localhost:5050
         UNSAT
         [INFO] The input program is unsatisfiable. To visualize the relaxed program 
-        use --relax or -r.
+        use --print-relax or --relax.
 
-    When using the relaxer the program is transformed 
+    Using the ``--print-relax`` option outputs the transformed program
+
+    .. code-block:: bash
+
+        $ viasp unsat-example.lp --print-relax
+        #program base.
+        a((1..3)).
+        b(X) :- a((X+1)).
+        unsat(r1,(X,)) :- a(X); b(X).
+        unsat(r2) :- c(1).
+        :~ unsat(R,T). [1@0,R,T]
+
+When solving the relaxed program, the atom ``unsat(r1, (X,))`` will be derived, if the constraint ``r1`` is violated for the variable ``X``. Answer sets with a minimal number of violated constraints is considered optimal.
+
+.. admonition:: Example
+
+
+    This relaxed program can be piped into viasp for a visualization
+
+    .. code-block:: bash
+
+        $ viasp unsat-example.lp --print-relax | viasp
+
+    Alternatively, the relaxation and visualization can be executed at once with the ``--relax`` option.
 
     .. code-block:: bash
 
@@ -182,20 +207,10 @@ Unsatisfiable programs can not be visualized by viASP. When such a program is en
         [INFO] Drawing in progress.
         Dash is running on http://localhost:8050/
 
-    and results in the visualization of the program
-
-    .. code-block:: bash
-
-        a(1..3).
-        b(X) :- a(X+1).
-        unsat(r1, (X,)) :- a(X), b(X).
-        unsat(r2) :- c(1).
-        :~ unsat(R,T). [1@0,R,T]
-
-
     .. image:: ../img/relaxer-program.png
 
-    From the (optimal) answer set to this transformed program, it becomes clear, that the original program is unsatisfiable due to the first integrity constraint. It is violated for the variables ``X=1`` and ``X=2``.
+
+    The visualized answer set to this transformed program shows that the original program is unsatisfiable due to the first integrity constraint. It is violated for the variables ``X=1`` or ``X=2``.
     
 
 By default, variables in the body of integrity constraints are collected in the heads of constraints. To turn off this behavior, use the ``--no-collect-variables`` option.
