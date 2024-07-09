@@ -13,3 +13,4 @@ igraph>=0.8
 numpy
 clingraph
 retrying
+waitress

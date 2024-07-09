@@ -51,8 +51,11 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     else:
         backend_url = f"{DEFAULT_BACKEND_PROTOCOL}://{host}:{port}"
 
-    command = ["viasp_server", "--host", host, "--port", str(port)]
-
+    env = os.getenv("ENV", "production")
+    if env == "production":
+        command = ["waitress-serve", "--host", host, "--port", str(port), "--call", "viasp.server.factory:create_app"]
+    else: 
+        command = ["viasp_server", "--host", host, "--port", str(port)]
     # if 'ipykernel_launcher.py' in sys.argv[0]:
     #     display_refresh_button()
 
@@ -60,8 +63,7 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
     log = open('viasp.log', 'w', encoding="utf-8")
     viasp_backend = Popen(command, stdout=log, stderr=log)
 
-    color_palette = json.load(
-        open(COLOR_PALETTE_PATH, "r"))
+    color_palette = json.load(open(COLOR_PALETTE_PATH, "r"))
     app = Dash(__name__)
     app.layout = viasp_dash.ViaspDash(id="myID",
                                       backendURL=backend_url,
@@ -79,18 +81,17 @@ def run(host=DEFAULT_BACKEND_HOST, port=DEFAULT_BACKEND_PORT):
         wait_exponential_max=10000,
     )
     def wait_for_backend():
-        try: 
+        try:
             assert clingoApiClient.backend_is_running(backend_url)
         except Exception as e:
             raise Exception("Backend did not start in time.") from e
-        
+
     try:
         wait_for_backend()
     except Exception as final_error:
         print(f"Error: {final_error}")
         viasp_backend.terminate()
         raise final_error
-
 
     def terminate_process(process):
         """ kill the backend on keyboard interruptions"""
