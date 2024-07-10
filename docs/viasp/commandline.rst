@@ -116,7 +116,12 @@ To specify the optimization mode, use the ``--opt-mode`` option. The optimizatio
 
     $ viasp encoding.lp --opt-mode=optN
 
+When using optimization, not all models listed by clingo are visualized. Depending on the optimization mode, different models are marked marked for visualization: 
 
+- ``opt``: Only the last (optimal) model is marked
+- ``optN``: All optimal models are marked
+- ``enum``: All models are marked
+- ``ignore``: All models are marked
 
 *********
 Clingraph

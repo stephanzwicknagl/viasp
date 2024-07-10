@@ -31,6 +31,12 @@ ERROR_OPEN = "<cmd>: error: file could not be opened:\n  {}\n"
 ERROR_PARSING = "parsing failed"
 WARNING_INCLUDED_FILE = "<cmd>: already included file:\n  {}\n"
 HELP_CLINGO_HELP = ": Print {1=basic|2=more|3=full} clingo help and exit"
+PRINT_RELAX_HELP = textwrap.dedent("""\
+    : Use the relaxer and output the transformed program""")
+USE_RELAX_HELP = textwrap.dedent("""\
+    : Use the relaxer and visualize the transformed program""")
+RELAXER_GROUP_HELP = textwrap.dedent("""\
+    Options for the relaxation of integrity constraints in unsatisfiable programs.""")
 
 try:
     VERSION = importlib.metadata.version("viasp")
@@ -281,17 +287,17 @@ class ViaspArgumentParser:
 
         relaxer_group = cmd_parser.add_argument_group(
             'Relaxation Options',
-            'Options for the relaxation of integrity constraints in unsatisfiable programs.'
+            RELAXER_GROUP_HELP
         )
+        relaxer_group.add_argument(
+            '--print-relax',
+            action='store_true',
+            help=PRINT_RELAX_HELP)
         relaxer_group.add_argument(
             '-r',
             '--relax',
-            action=NegatedBooleanOptionalAction,
-            help=': Use the relaxer and visualize the transformed program')
-        relaxer_group.add_argument(
-            '--print-relax',
-            action=NegatedBooleanOptionalAction,
-            help=': Use the relaxer and output the transformed program')
+            action='store_true',
+            help=USE_RELAX_HELP)
         relaxer_group.add_argument('--head-name',
             type=str,
             metavar='<name>',
@@ -434,8 +440,11 @@ class ViaspRunner():
 
     def warn_unsat(self):
         plain(
-            "[INFO] The input program is unsatisfiable. To visualize the relaxed program use --print-relax or --relax."
-        )
+            textwrap.dedent(f"""\
+            [INFO] The input program is unsatisfiable. To visualize the relaxed program use: 
+                    {RELAXER_GROUP_HELP}
+                    --print-relax{PRINT_RELAX_HELP}
+                    --relax      {USE_RELAX_HELP}"""))
         sys.exit(0)
 
     def warn_optimality_not_guaranteed(self):
@@ -534,7 +543,7 @@ class ViaspRunner():
         no_collect_variables = options.get("no_collect_variables", False)
         select_model = options.get("select_model", None)
         relax_opt_mode_str = options.get("relaxer_opt_mode_str", None)
-        
+
         # print clingo help
         if options['clingo_help'] > 0:
             subprocess.Popen(
