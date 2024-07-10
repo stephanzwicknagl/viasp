@@ -460,6 +460,9 @@ class ViaspRunner():
 
                 if opt_mode == "opt" and len(m.cost) > 0:
                     models_to_mark = [clingo_model_to_stable_model(m)]
+                elif opt_mode == "optN":
+                    if m.optimality_proven:
+                        models_to_mark.append(clingo_model_to_stable_model(m))
                 else:
                     models_to_mark.append(clingo_model_to_stable_model(m))
 
