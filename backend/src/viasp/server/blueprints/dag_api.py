@@ -1,4 +1,3 @@
-from itertools import pairwise
 import os
 from collections import defaultdict
 from typing import Union, Collection, Dict, List, Iterable
@@ -13,7 +12,7 @@ from ...asp.reify import ProgramAnalyzer, reify_list
 from ...asp.justify import build_graph
 from ...shared.defaults import STATIC_PATH
 from ...shared.model import Transformation, Node, Signature
-from ...shared.util import get_start_node_from_graph, is_recursive, hash_from_sorted_transformations
+from ...shared.util import get_start_node_from_graph, is_recursive, hash_from_sorted_transformations, pairwise
 from ...asp.utils import register_adjacent_sorts
 from ...shared.io import StableModel
 from ..database import load_recursive_transformations_hashes, save_graph, get_graph, clear_graph, set_current_graph, get_current_graph_hash, get_current_sort, load_program, load_transformer, load_models, load_clingraph_names, save_sort, load_dependency_graph

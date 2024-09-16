@@ -95,17 +95,6 @@ class MyArgumentParser(argparse.ArgumentParser):
         raise argparse.ArgumentError(None, "In context <viasp>: " + message)
 
 
-class NegatedBooleanOptionalAction(argparse.BooleanOptionalAction):
-
-    def __init__(self, *args, **kwargs):
-        super(NegatedBooleanOptionalAction, self).__init__(*args, **kwargs)
-        self.option_strings = [opt for opt in self.option_strings if not opt.startswith('--no-no')]
-
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        if option_string != None and option_string in self.option_strings:
-            setattr(namespace, self.dest, not option_string.startswith('--no-no'))
-
 #
 # class ViaspArgumentParser
 #
@@ -305,7 +294,8 @@ class ViaspArgumentParser:
             default="unsat")
         relaxer_group.add_argument(
             '--no-collect-variables',
-            action=NegatedBooleanOptionalAction,
+            action='store_true',
+            default=False,
             help=
             ': Do not collect variables from body as a tuple in the head literal')
         relaxer_group.add_argument(

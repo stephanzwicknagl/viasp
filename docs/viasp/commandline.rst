@@ -164,7 +164,7 @@ The relaxation mode transforms all integrity constraints of the input program in
     .. code-block:: bash
 
         $ viasp unsat-example.lp
-        viasp version 2.1.0
+        viasp version 2.1.1
         Reading from unsat-example.lp
 
         Starting backend at http://localhost:5050
@@ -200,7 +200,7 @@ When solving the relaxed program, the atom ``unsat(r1, (X,))`` will be derived, 
     .. code-block:: bash
 
         $ viasp unsat-example.lp --relax
-        viasp version 2.1.0
+        viasp version 2.1.1
         Reading from unsat-example.lp
         UNSAT
         [INFO] Set models.

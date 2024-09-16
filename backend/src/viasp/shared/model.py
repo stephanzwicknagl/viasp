@@ -38,7 +38,7 @@ class Node:
     atoms: FrozenSet[SymbolIdentifier] = field(default_factory=frozenset, hash=True)
     reason: Union[
         Dict[str, List[Symbol]],
-        MappingProxyType[str, List[SymbolIdentifier]]] \
+        MappingProxyType] \
         = field(default_factory=DefaultMappingProxyType, hash=True)
     recursive: List = field(default_factory=list, hash=False)
     space_multiplier: float = field(default=1.0, hash=False)

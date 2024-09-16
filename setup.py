@@ -29,8 +29,8 @@ DESCRIPTION = 'a visualization tool for clingo.'
 URL = 'https://github.com/potassco/viasp'
 EMAIL = 'Luis.Glaser@uni-potsdam.de'
 AUTHOR = 'Luis Glaser'
-REQUIRES_PYTHON = '>=3.7.0'
-VERSION = '2.1.0'
+REQUIRES_PYTHON = '>=3.8.0'
+VERSION = '2.1.1'
 
 # What packages are required for this module to be executed?
 REQUIRED = [
