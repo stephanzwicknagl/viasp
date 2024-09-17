@@ -167,7 +167,7 @@ jobs:
         shell: bash -l {0}
         run: |
           pip install --upgrade --upgrade-strategy eager -r requirements.txt
-          pip install "viasp_backend-$(sh .github/backend-version.sh)-py3-none-any.whl"
+          pip install "test_viasp_backend-$(sh .github/backend-version.sh)-py3-none-any.whl"
         if: steps.cache.outputs.cache-hit != 'true'
       
       - name: Setup Graphviz
@@ -180,7 +180,7 @@ jobs:
       - name: Setup ViaspDash
         shell: bash -l {0}
         run: |
-          pip install "viasp_dash-$(sh .github/backend-version.sh)-py3-none-any.whl"
+          pip install "test_viasp_dash-$(sh .github/backend-version.sh)-py3-none-any.whl"
 
       - name: Run Tests
         working-directory: backend
@@ -219,8 +219,8 @@ jobs:
         shell: bash -l {0}
         run: |
           pip install --upgrade --upgrade-strategy eager -r requirements.txt
-          pip install "viasp_backend-$(sh .github/backend-version.sh)-py3-none-any.whl"
-          pip install "viasp_dash-$(sh .github/frontend-version.sh)-py3-none-any.whl"
+          pip install "test_viasp_backend-$(sh .github/backend-version.sh)-py3-none-any.whl"
+          pip install "test_viasp_dash-$(sh .github/frontend-version.sh)-py3-none-any.whl"
         #if: steps.cache.outputs.cache-hit != 'true'
 
       - name: Run Tests
