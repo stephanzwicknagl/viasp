@@ -32,7 +32,7 @@ jobs:
         if: ${{ github.event.inputs.backend == 'true' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository_url: https://test.pypi.org/legacy/
+          repository-url: https://test.pypi.org/legacy/
   frontend:
     name: Publish frontend
     runs-on: ubuntu-latest
@@ -51,7 +51,7 @@ jobs:
         if: ${{ github.event.inputs.frontend == 'true' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository_url: https://test.pypi.org/legacy/
+          repository-url: https://test.pypi.org/legacy/
   wrapper:
     needs: [ frontend, backend ]
     name: Publish container
@@ -80,5 +80,5 @@ jobs:
       - name: Publish on TestPyPi
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository_url: https://test.pypi.org/legacy/
+          repository-url: https://test.pypi.org/legacy/
           packages-dir: dist
