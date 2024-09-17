@@ -28,11 +28,11 @@ jobs:
           path: dist
           commit: ${{ github.sha }}
           name: backend-${{ github.sha }}
-      - name: Publish on PyPi
+      - name: Publish on TestPyPi
         if: ${{ github.event.inputs.backend == 'true' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: https://test.pypi.org/legacy/
+          repository_url: https://test.pypi.org/legacy/
   frontend:
     name: Publish frontend
     runs-on: ubuntu-latest
@@ -47,11 +47,11 @@ jobs:
           path: dist
           commit: ${{ github.sha }}
           name: frontend-${{ github.sha }}
-      - name: Publish on PyPi
+      - name: Publish on TestPyPi
         if: ${{ github.event.inputs.frontend == 'true' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: https://test.pypi.org/legacy/
+          repository_url: https://test.pypi.org/legacy/
   wrapper:
     needs: [ frontend, backend ]
     name: Publish container
@@ -77,8 +77,8 @@ jobs:
       - name: Building wrapper
         run: python -m build --sdist --wheel --outdir dist/;
 
-      - name: Publish on PyPi
+      - name: Publish on TestPyPi
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: https://test.pypi.org/legacy/
+          repository_url: https://test.pypi.org/legacy/
           packages-dir: dist
